@@ -19,6 +19,17 @@ library
   hs-source-dirs:  src
   build-depends:   
                    base >= 4,
-                   lens >=4.0.1 && <4.1
+                   lens >=4.0.1 && <4.1,
+                   aeson >=0.7.0 && <0.8,
+                   HDBC >=2.3.1 && <2.4,
+                   HDBC-postgresql >=2.3.2 && <2.4,
+                   HDBC-sqlite3 >=2.3.3 && <2.4
   ghc-options:     -Wall
+  exposed-modules: 
+                   Hedsql.Common.Constructor,
+                   Hedsql.Common.DataStructure.Base,
+                   Hedsql.Common.Driver,
+                   Hedsql.Common.Parser,
+                   Hedsql.Connectors.Connection,
+                   Hedsql.Connectors.Hdbc.Connection
 
