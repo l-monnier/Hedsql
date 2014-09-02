@@ -47,9 +47,9 @@ library
                    base >= 4,
                    lens >=4.0.1,
                    aeson >=0.7.0,
-                   HDBC >=2.4,
-                   HDBC-postgresql >=2.4,
-                   HDBC-sqlite3 >=2.4,
+                   HDBC >=2.3,
+                   HDBC-postgresql >=2.3,
+                   HDBC-sqlite3 >=2.3,
                    template-haskell >=2.8.0 && <2.9
   ghc-options:      -Wall
   exposed-modules:  
