@@ -50,7 +50,8 @@ library
                    HDBC >=2.3,
                    HDBC-postgresql >=2.3,
                    HDBC-sqlite3 >=2.3,
-                   template-haskell >=2.8.0 && <2.9
+                   template-haskell >=2.8.0,
+                   unordered-containers >=0.2
   ghc-options:      -Wall
   exposed-modules:  
                    Hedsql.Common.DataStructure.Base,
