@@ -77,7 +77,7 @@ prop_filterKeys keys tuple = filterKeysWith elem keys map == filterKeys keys map
 
 {-|
 Test the extract happens as planned, by testing the keys.
-They keys which are present in the intial supplied map must also be found in the
+They keys which are present in the initial supplied map must also be found in the
 filtered one. However, it does not mean they need to be in the same order.
 Also, a duplicate key should be found only once.
 -}

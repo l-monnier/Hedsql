@@ -11,7 +11,8 @@
 -}
 
 module Hedsql.Drivers.PostgreSQL.Parser (
-      module Hedsql.Commun.DefaultParser
+      module Hedsql.Common.DefaultParser
+    , postgreSQLParser
     , toSqlString
     ) where
 
@@ -22,6 +23,25 @@ import Hedsql.Common.DefaultParser
 import Hedsql.Common.Parser
 import Hedsql.Common.Quoter
 import Hedsql.Drivers.PostgreSQL.Driver
+
+-- Private.
+
+-- | PostgreSQL quoter.
+postgreSqlQuoter :: Q PostgreSQL
+postgreSqlQuoter = Q quoteElemFunc quoteValFunc
+
+-- Public.
+
+instance Parseable (DropTable PostgreSQL) where
+    parse a = (postgreSQLParser^.parseDropTable) a postgreSQLParser
+
+-- | PostgreSQL parser.
+postgreSQLParser :: P PostgreSQL
+postgreSQLParser = P
+    parseTableNameFunc
+    parseDropTableFunc
+    parseDropViewFunc
+    postgreSqlQuoter
 
 {-|
     Parser instance for the PostgreSQL driver. It is basically a call to the

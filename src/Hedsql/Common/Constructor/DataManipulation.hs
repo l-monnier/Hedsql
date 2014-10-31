@@ -58,7 +58,7 @@ assign ::
 assign c value = Assignment (column c) (toAssignedVal value)
 
 -- | Create a DELETE FROM statement.
-deleteFrom :: TableConstructor a => a -> Delete
+deleteFrom :: TableConstructor a => a -> Delete a
 deleteFrom t = Delete (table t) Nothing
 
 -- | Create an INSERT INTO statement.

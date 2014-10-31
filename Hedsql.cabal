@@ -81,3 +81,21 @@ test-suite tests
                    tests
   main-is:         Test.hs
 
+test-suite integration
+  type:            exitcode-stdio-1.0
+  x-uses-tf:       true
+  ghc-options:     -Wall -rtsopts
+  build-depends:   
+                   base >= 4,
+                   HUnit >= 1.2,
+                   QuickCheck >= 2.4,
+                   test-framework >= 0.4.1,
+                   test-framework-quickcheck2,
+                   test-framework-hunit,
+                   random >=1.0.1
+  other-modules:   
+                          Hedsql.Default
+  hs-source-dirs:  
+                   src,
+                   tests/IntegrationTests
+  main-is:         Test.hs

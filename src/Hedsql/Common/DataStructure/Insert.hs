@@ -1,21 +1,33 @@
--- file : Hedsql/common/dataStructure/insert
 {-# LANGUAGE TemplateHaskell #-}
 
 {-|
-    INSERT statement data type definitions.
--}
+Module      : Hedsql/Common/DataStructure/Insert.hs
+Description : Constructor functions for columns.
+Copyright   : (c) Leonard Monnier, 2014
+License     : GPL-3
+Maintainer  : leonard.monnier@gmail.com
+Stability   : experimental
+Portability : portable
 
+INSERT statement data type definitions.
+-}
 module Hedsql.Common.DataStructure.Insert where
 
 import Hedsql.Common.DataStructure.Select
+
 import Control.Lens
 
+-- Private functions.
+
+-- Public functions.
+
 -- | INSERT query.
-data Insert = Insert {
-      _insertTable :: Table
-    , _insertColumns :: Maybe [Column]
-    , _insertValues :: [[SqlValue]]
-}
+data Insert a = Insert
+    {
+      _insertTable   :: Table a
+    , _insertColumns :: Maybe [Column a]
+    , _insertValues  :: [[SqlValue]]
+    } deriving (Show)
 
 -- Make the lenses.
 makeLenses ''Insert

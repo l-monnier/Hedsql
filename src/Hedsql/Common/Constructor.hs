@@ -106,6 +106,7 @@ module Hedsql.Common.Constructor
     , module Hedsql.Common.Constructor.Operators
     , module Hedsql.Common.Constructor.Select
     , module Hedsql.Common.Constructor.Tables
+    , module Hedsql.Common.Constructor.TablesManipulation
     , module Hedsql.Common.Constructor.Types
     , module Hedsql.Common.Constructor.Values
     ) where
@@ -117,5 +118,6 @@ import Hedsql.Common.Constructor.DataManipulation
 import Hedsql.Common.Constructor.Operators
 import Hedsql.Common.Constructor.Select
 import Hedsql.Common.Constructor.Tables
+import Hedsql.Common.Constructor.TablesManipulation
 import Hedsql.Common.Constructor.Values
 import Hedsql.Common.Constructor.Types

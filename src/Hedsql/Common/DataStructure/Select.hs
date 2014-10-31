@@ -1,21 +1,27 @@
--- file : Hedsql/Commun/DataStructure/Select
-{-# LANGUAGE
-      ExistentialQuantification
-    , FlexibleContexts
-    , FlexibleInstances
-    , MultiParamTypeClasses
-    , TemplateHaskell
-    , UndecidableInstances #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts          #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE TemplateHaskell           #-}
+{-# LANGUAGE UndecidableInstances      #-}
 
 {-|
-    Data structure of the SELECT statement and of the key components
-    such as columns and tables.
--}
+Module      : Hedsql/Commun/DataStructure/Select.hs
+Description : Data structure of the SELECT statements and key components.
+Copyright   : (c) Leonard Monnier, 2014
+License     : GPL-3
+Maintainer  : leonard.monnier@gmail.com
+Stability   : experimental
+Portability : portable
 
+Data structure of the SELECT statement and of the key components
+such as columns and tables.
+-}
 module Hedsql.Common.DataStructure.Select where
 
 import Hedsql.Common.Driver
 import Hedsql.Common.Parser
+
 import Control.Lens
 
 -- Types
@@ -23,14 +29,6 @@ import Control.Lens
 type Label = String
 
 -- Values.
-
--- | SQL values.
-data SqlValue =
-      SqlValueDefault
-    | SqlValueInt Int
-    | SqlValueNull
-    | SqlValueString String
-      deriving (Show)
 
 -- | SQL data types.
 data SqlDataType =
@@ -45,67 +43,78 @@ data SqlDataType =
             --   range from -9223372036854775808 to +9223372036854775807.
      deriving (Show)
 
+-- | SQL values.
+data SqlValue =
+      SqlValueDefault
+    | SqlValueInt Int
+    | SqlValueNull
+    | SqlValueString String
+      deriving (Show)
+
 -- Table components.
 
 -- | Table definition.
-data Table = Table {
+data Table a = Table {
       _tableName  :: String
-    , _tableAlias :: Maybe TableReferenceAlias
+    , _tableAlias :: Maybe (TableRefAs a)
     } deriving (Show)
 
 {-|
     A table reference might be a table, a table join or a sub-query used
     in a FROM clause.
 -}
-data TableReference =
-      TableTableReference Table
-    | TableJoinReference Join
-    | LateralTableReference SelectQuery TableReferenceAlias
-    | SelectTableReference SelectQuery TableReferenceAlias
+data TableRef a =
+      LateralTableRef (Select a) (TableRefAs a)
+    | SelectTableRef  (Select a) (TableRefAs a)
+    | TableJoinRef    (Join a)
+    | TableTableRef   (Table a)
     deriving (Show)
 
 -- | Table reference (table or join) alias. 
-data TableReferenceAlias = TableReferenceAlias {
-      _tableReferenceAliasName :: String
-    , _tableReferenceAliasColumns :: [String]
-} deriving (Show)
+data TableRefAs a = TableRefAs
+    {
+      _tableRefAliasName    ::  String
+    , _tableRefAliasColumns :: [String]
+    } deriving (Show)
 
 -- Column components
 
 -- | Column definition used for data queries such as SELECT queries.
-data Column = Column {
-      _colName :: String
-    , _colDataType :: Maybe SqlDataType
-    , _colConstraints :: Maybe [ColConstraint]
-    , _colTable :: Maybe Table -- ^ If provided, the qualified column name will
-                               --   be used.
-} deriving (Show)
+data Column a = Column
+    {
+      _colName        :: String
+    , _colDataType    :: Maybe SqlDataType
+    , _colConstraints :: Maybe [ColConstraint a]
+    , _colTable       :: Maybe (Table a) -- ^ If provided, the qualified column
+                                         --   name will be used.
+    } deriving (Show)
 
 -- | Constraint on a column.
-data ColConstraint = ColConstraint {
-        _colConstraintName :: Maybe String
-      , _colConstraintType :: ColConstraintType
-} deriving (Show)
+data ColConstraint a = ColConstraint
+    {
+      _colConstraintName :: Maybe String
+    , _colConstraintType :: (ColConstraintType a)
+    } deriving (Show)
 
 -- | Column constraints types.
-data ColConstraintType =
-      Check Condition
+data ColConstraintType a =
+      Check (Condition a)
     -- TODO: | Collate
-    | Default Expression
+    | Default (Expression a)
     | NotNull
     | Null
-    | Primary Bool -- ^ Primary key.
-                   --   If true, the primary key will have an AUTOINCREMENT.
-    | Reference Table Column (Maybe OnAction) -- ^ Foreign key.
+    | Primary Bool  -- ^ Primary key.
+                    --   If true, the primary key will have an AUTOINCREMENT.
+    | Reference (Table a) (Column a) (Maybe OnAction) -- ^ Foreign key.
     | Unique
       deriving (Show)
 
 {- |
- Generic definition of a column reference used in the SELECT clause
- of the query.
+Generic definition of a column reference used in the SELECT clause of the query.
 -}
-data ColRef = ColRef {
-      _colRefExpr :: Expression
+data ColRef a = ColRef
+    {
+      _colRefExpr :: Expression a
     , _colRefLabel :: Maybe Label
     } deriving (Show)
 
@@ -127,18 +136,18 @@ data SqlAction =
 -- Expression.
 
 {-|
-    Generic expression which can then be used in a SELECT or WHERE part.
-    An expression can either be:
-    - the name of a column
-    - a function
-    - a select query
-    - a value.
+Generic expression which can then be used in a SELECT or WHERE part.
+An expression can either be:
+- the name of a column
+- a function
+- a select query
+- a value.
 -}
-data Expression =
-      ColExpr Column
-    | FuncExpr Function
-    | OperatorExpr Operator
-    | SelectExpr SelectQuery
+data Expression a =
+      ColExpr (Column a)
+    | FuncExpr (Function a)
+    | OperatorExpr (Operator a)
+    | SelectExpr (Select a)
     | ValueExpr SqlValue
     | ValueExprs [SqlValue]
       deriving (Show)
@@ -146,65 +155,63 @@ data Expression =
 -- SELECT components.
 
 -- | SELECT query.
-data SelectQuery = SelectQuery {
-      _selectClause :: Select
-    , _fromClause   :: Maybe From
-    , _whereClause :: Maybe Where
-    , _groupByClause :: Maybe GroupBy
-    , _orderByClause :: Maybe OrderBy
-} deriving (Show)
-
--- | SELECT part of a query.
-data Select = Select {
-      _selectColRef :: [ColRef]
-    , _selectType :: Maybe SelectType
+data Select a = Select
+    {
+      _selectColRef  :: [ColRef a]
+    , _selectType    :: Maybe (SelectType a)
+    , _fromClause    :: Maybe (From a)
+    , _whereClause   :: Maybe (Where a)
+    , _groupByClause :: Maybe (GroupBy a)
+    , _orderByClause :: Maybe (OrderBy a)
 } deriving (Show)
 
 -- | Type of SELECT query (ALL or DISTINCT).
-data SelectType =
+data SelectType a =
       All
    |  Distinct
-   |  DistinctOn [Expression]
+   |  DistinctOn [Expression a]
       deriving (Show)
 
 
 -- | FROM part of a query.
-data From =
-    From [TableReference]
+data From a =
+    From [TableRef a]
     deriving (Show)
 
 {-|
-    A JOIN between two tables.
-    
-    The JoinTable are joins which take only tables as parameter - CROSS and NATURAL joins -.
-    The JoinColumn are the joins having a ON or USING clause.
-    
-    An alias can be defined in the Maybe String type.
+A JOIN between two tables.
+
+The JoinTable are joins which take only tables as parameter - CROSS and NATURAL
+joins -.
+The JoinColumn are the joins having a ON or USING clause.
+
+An alias can be defined in the Maybe String type.
 -}
-data Join =
-      JoinTable {
-      _joinTableType :: JoinTypeTable
-    , _joinTableTable1 :: Table
-    , _joinTableTable2 :: Table
-    , _joinTableAlias :: Maybe String
+data Join a =
+    JoinTable
+    {
+      _joinTableType   :: JoinTypeTable a
+    , _joinTableTable1 :: (Table a)
+    , _joinTableTable2 :: (Table a)
+    , _joinTableAlias  :: Maybe String
     }
-    | JoinColumn {
-      _joinColumnType :: JoinTypeColumn
-    , _joinColumnTable1 :: Table
-    , _joinColumnTable2 :: Table
-    , _joinColumnClause :: JoinClause
-    , _joinColumnAlias :: Maybe String
-    }
-    deriving (Show)
+    | JoinColumn
+    {
+      _joinColumnType   :: JoinTypeCol a
+    , _joinColumnTable1 :: (Table a)
+    , _joinColumnTable2 :: (Table a)
+    , _joinColumnClause :: (JoinClause a)
+    , _joinColumnAlias  :: Maybe String
+    } deriving (Show)
 
 -- | JOIN clause: ON or USING.
-data JoinClause =
-      JoinClauseOn Condition
-    | JoinClauseUsing [Column]
+data JoinClause a =
+      JoinClauseOn (Condition a)
+    | JoinClauseUsing [Column a]
       deriving (Show)
 
 -- | JOIN on columns.
-data JoinTypeColumn =
+data JoinTypeCol a =
       FullJoin 
     | LeftJoin
     | InnerJoin
@@ -212,7 +219,7 @@ data JoinTypeColumn =
     deriving (Show)
 
 -- | JOIN on tables.
-data JoinTypeTable =
+data JoinTypeTable a =
       CrossJoin
     | NaturalInnerJoin
     | NaturalLeftJoin
@@ -221,41 +228,41 @@ data JoinTypeTable =
     deriving (Show)
 
 {- |
-    WHERE part of the query consisting of a condition. A can be single predicate or an AND or OR
-    list of conditions.
+WHERE part of the query consisting of a condition. A can be single predicate or
+an AND or OR list of conditions.
 -}
-data Where = Where Condition
+data Where a = Where (Condition a)
     deriving (Show)
 
 -- | SQL Condition.
-data Condition =
-      FunctionCondition FunctionBoolean
-    | And [Condition]
-    | Or [Condition]
+data Condition a =
+      FuncCond (FuncBool a)
+    | And [Condition a]
+    | Or [Condition a]
       deriving (Show)
 
 -- | GROUP BY query part.
-data GroupBy = GroupBy {
-      _groupByCols :: [ColRef]
-    , _groupByHaving :: Maybe Condition
+data GroupBy a = GroupBy {
+      _groupByCols   :: [ColRef a]
+    , _groupByHaving :: Maybe (Condition a)
    } deriving (Show)
 
 {- |
-    ORDER BY query part.
-    
-    LIMIT and OFFSET can also be specified on top of the ORDER BY. Those are specified here
-    - and not as query parts - because defining a limit or an offset without any order by clause
-    would result in inconsistant results since SQL does not guarantee any specific return order
-    unless explicitely specified.
+ORDER BY query part.
+
+LIMIT and OFFSET can also be specified on top of the ORDER BY.
+Those are specified here - and not as query parts - because defining a limit or
+an offset without any order by clause would result in inconsistant results since
+SQL does not guarantee any specific return order unless explicitely specified.
 -}
-data OrderBy = OrderBy {
-      _partOrderByColumns :: [SortRef]
-    , _partOrderByLimit :: Maybe Limit
-    , _partOrderByOffset :: Maybe Offset
+data OrderBy a = OrderBy {
+      _partOrderByColumns :: [SortRef a]
+    , _partOrderByLimit   :: Maybe Int
+    , _partOrderByOffset  :: Maybe Int
 } deriving (Show)
 
 -- | NULLS FIRST and NULLS LAST parameters for sorting.
-data SortNulls =
+data SortNulls a =
       NullsFirst
     | NullsLast
       deriving (Show)
@@ -267,137 +274,98 @@ data SortOrder =
       deriving (Show)
 
 -- | Defines how a given column has to be sorted.
-data SortRef = SortRef {
-      _sortRefCol :: ColRef
+data SortRef a = SortRef {
+      _sortRefCol :: ColRef a
     , _sortRefOrder :: Maybe SortOrder
-    , _sortRefNulls :: Maybe SortNulls
-} deriving (Show)
-
--- | OFFSET clause
-data Offset = Offset {
-    _offsetValue :: Int
-} deriving (Show)
-
--- | LIMIT clause
-data Limit = Limit {
-    _limitValue :: Int
+    , _sortRefNulls :: Maybe (SortNulls a)
 } deriving (Show)
 
 -- | Combined query such as UNION.
-data CombinedQuery =
-      CombinedQuerySingle SelectQuery
-    | CombinedQueryExcept [CombinedQuery]
-    | CombinedQueryExceptAll [CombinedQuery]
-    | CombinedQueryIntersect [CombinedQuery]
-    | CombinedQueryIntersectAll [CombinedQuery]
-    | CombinedQueryUnion [CombinedQuery]
-    | CombinedQueryUnionAll [CombinedQuery]
+data CombinedQuery a =
+      CombinedQuerySingle (Select a)
+    | CombinedQueryExcept [CombinedQuery a]
+    | CombinedQueryExceptAll [CombinedQuery a]
+    | CombinedQueryIntersect [CombinedQuery a]
+    | CombinedQueryIntersectAll [CombinedQuery a]
+    | CombinedQueryUnion [CombinedQuery a]
+    | CombinedQueryUnionAll [CombinedQuery a]
       deriving (Show)
 
 -- Functions.
 
-data Function = forall a. (Functionable a, Show a) => Function a
+data Function a =
+      CountF       (Count a)
+    | CurrentDateF (CurrentDate a)
+    | MaxF         (Max a)
+    | MinF         (Min a)
+    | JokerF       (Joker a) -- ^ TODO: have it somewhere else,
+                             --         since it is a colref!
+    | RandomF      (Random a)
+    | SumF         (Sum a)
+      deriving (Show)
 
--- Define the functions.
-class Functionable b where
-    toSqlFunctionString :: (
-          Driver a
-        , Parser a CurrentDate
-        , Parser a Joker
-        , Parser a Random
-        , Parser a Sum
-        ) => a -> b -> String
-
-instance Show Function where
-     show (Function a) = show a
-
-instance Functionable Joker where
-    toSqlFunctionString = toSqlString
-
-instance Functionable CurrentDate where
-    toSqlFunctionString = toSqlString
-
-instance Functionable Random where
-    toSqlFunctionString = toSqlString
-
-instance Functionable Sum where
-    toSqlFunctionString = toSqlString
-
--- | COUNT function.
-data Count = Count Expression deriving (Show)
-
--- | Generic current date function which shall be customised depending on the vendor.
-data CurrentDate = CurrentDate deriving (Show)
-
--- | MAX function.
-data Max = Max Expression deriving (Show)
-
--- | MIN function.
-data Min = Min Expression deriving (Show)
-
--- | SUM function.
-data Sum = Sum Expression deriving (Show)
-
--- | RANDOM function.
-data Random = Random deriving (Show)
-
--- | * character.
-data Joker = Joker deriving (Show)
+data Count a = Count (Expression a) deriving (Show)
+data CurrentDate a = CurrentDate a deriving (Show)
+data Max a = Max (Expression a) deriving (Show)
+data Min a = Min (Expression a) deriving (Show)
+data Joker a= Joker deriving (Show) 
+data Random a = Random deriving (Show)
+data Sum a = Sum (Expression a) deriving (Show)
+    
 
 -- | Functions returning TRUE or FALSE.
-data FunctionBoolean =
-      Between ColRef ColRef ColRef
-    | Exists ColRef
-    | IsFalse ColRef
-    | IsNotFalse ColRef
-    | IsNotNull ColRef
-    | IsNotTrue ColRef
-    | IsNotUnknown ColRef
-    | IsNull ColRef
-    | IsTrue ColRef
-    | IsUnknown ColRef
-    | NotBetween ColRef ColRef ColRef
-    | Equal ColRef ColRef -- ^ =
-    | GreaterThan ColRef ColRef -- ^ >
-    | GreaterThanOrEqualTo ColRef ColRef -- ^ >=
-    | In ColRef ColRef -- ^ IN
-    | IsDistinctFrom ColRef ColRef -- ^ IS DISTINCT FROM
-    | IsNotDistinctFrom ColRef ColRef -- ^ IS NOT DISTINCT FROM
-    | Like ColRef ColRef -- ^ LIKE
-    | NotEqual ColRef ColRef -- ^ <>
-    | NotIn ColRef ColRef -- ^ NOT IN
-    | SmallerThan ColRef ColRef -- ^ <
-    | SmallerThanOrEqualTo ColRef ColRef -- ^ <=
+data FuncBool a =
+      Between (ColRef a) (ColRef a) (ColRef a)    -- ^ BETWEEN
+    | Exists (ColRef a)                           -- ^ EXISTS
+    | IsFalse (ColRef a)                          -- ^ IS FALSE
+    | IsNotFalse (ColRef a)                       -- ^ IS NOT FALSE
+    | IsNotNull (ColRef a)                        -- ^ IS NOT NULL
+    | IsNotTrue (ColRef a)                        -- ^ IS NOT TRUE
+    | IsNotUnknown (ColRef a)                     -- ^ IS NOT UNKNOWN
+    | IsNull (ColRef a)                           -- ^ IS NULL
+    | IsTrue (ColRef a)                           -- ^ IS TRUE
+    | IsUnknown (ColRef a)                        -- ^ IS UNKNOWN
+    | NotBetween (ColRef a) (ColRef a) (ColRef a) -- ^ NOT BETWEEN
+    | Equal (ColRef a) (ColRef a)                 -- ^ =
+    | GreaterThan (ColRef a) (ColRef a)           -- ^ \>
+    | GreaterThanOrEqTo (ColRef a) (ColRef a)     -- ^ \>=
+    | In (ColRef a) (ColRef a)                    -- ^ IN
+    | IsDistinctFrom (ColRef a) (ColRef a)        -- ^ IS DISTINCT FROM
+    | IsNotDistinctFrom (ColRef a) (ColRef a)     -- ^ IS NOT DISTINCT FROM
+    | Like (ColRef a) (ColRef a)                  -- ^ LIKE
+    | NotEqual (ColRef a) (ColRef a)              -- ^ <>
+    | NotIn (ColRef a) (ColRef a)                 -- ^ NOT IN
+    | SmallerThan (ColRef a) (ColRef a)           -- ^ <
+    | SmallerThanOrEqTo (ColRef a) (ColRef a)     -- ^ \<=
     deriving (Show)
 
 -- | Operators such as "+", "-" or "*".
-data Operator =
-      Abs ColRef ColRef -- ^ Absolute value ("@") operator.
-    | Add ColRef ColRef -- ^ Addition ("+") operator.
-    | BitwiseAnd ColRef ColRef -- ^ Bitwise AND ("&") operator.
-    | BitwiseOr ColRef ColRef -- ^ Bitwise OR ("|") operator.
-    | BitwiseShiftLeft ColRef ColRef -- ^ Bitwise shift left  ("<<") operator.
-    | BitwiseShiftRight ColRef ColRef -- ^ Bitwise shift right  (">>") operator.
-    | Concatenate ColRef ColRef -- ^ String concatenation ("||") operator.
-    | Divide ColRef ColRef -- ^ Division ("/") operator.
-    | Modulo ColRef ColRef -- ^ Modulo - remainder - ("%") operator.
-    | Multiply ColRef ColRef -- ^ "*" Multiplication operator.
-    | Substract ColRef ColRef -- ^ Substraction "-" operator.
+data Operator a =
+      Add (ColRef a) (ColRef a)               -- ^ Addition ("+") operator.
+    | BitwiseAnd (ColRef a) (ColRef a)        -- ^ Bitwise AND ("&") operator.
+    | BitwiseOr (ColRef a) (ColRef a)         -- ^ Bitwise OR ("|") operator.
+    | BitwiseShiftLeft (ColRef a) (ColRef a)  -- ^ Bitwise shift left  ("<<")
+                                              --   operator.
+    | BitwiseShiftRight (ColRef a) (ColRef a) -- ^ Bitwise shift right  (">>")
+                                              --   operator.
+                                              --   operator.
+    | Divide (ColRef a) (ColRef a)            -- ^ Division ("/") operator.
+    | Modulo (ColRef a) (ColRef a)            -- ^ Modulo - remainder - ("%")
+                                              --   operator.
+    | Multiply (ColRef a) (ColRef a)          -- ^ "*" Multiplication operator.
+    | Substract (ColRef a) (ColRef a)         -- ^ Subtraction "-" operator.
       deriving (Show)
 
 -- Lenses.
 makeLenses ''GroupBy
 makeLenses ''Join
-makeLenses ''Limit
-makeLenses ''Offset
 makeLenses ''From
 makeLenses ''OrderBy
-makeLenses ''Select
 makeLenses ''Where
 makeLenses ''ColConstraint
 makeLenses ''ColRef
 makeLenses ''Column
-makeLenses ''SelectQuery
+makeLenses ''Select
 makeLenses ''SortRef
 makeLenses ''Table
-makeLenses ''TableReferenceAlias
+makeLenses ''TableRefAs

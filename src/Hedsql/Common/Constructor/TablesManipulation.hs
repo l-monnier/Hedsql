@@ -89,19 +89,19 @@ defaultValue = Default . toExpr
 -- | Create a DROP TABLE statement.
 dropTable ::
        String -- ^ Name of the table. 
-    -> DropTable
+    -> DropTable a
 dropTable = DropTable False . table
 
 dropTableIfExists ::
        TableConstructor a
     => a -- ^ Table or name of the table.
-    -> DropTable
+    -> DropTable a
 dropTableIfExists name = DropTable True $ table name
 
 -- | Create a DROP VIEW query.
 dropView ::
        String -- ^ Name of the view.
-    -> DropView
+    -> DropView a
 dropView = DropView
 
 -- | Create a FOREIGN KEY constraint.

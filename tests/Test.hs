@@ -9,6 +9,7 @@ import Test.QuickCheck
 import qualified Hedsql.Helpers.MapTest
 
 -- | Run the tests.
+main :: IO()
 main = defaultMain tests
 
 tests = [

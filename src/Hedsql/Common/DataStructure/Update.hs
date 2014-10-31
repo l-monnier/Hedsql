@@ -11,16 +11,16 @@ import Hedsql.Common.DataStructure.Select
 import Control.Lens
 
 -- | UPDATE query.
-data Update = Update {
-      _updateTable :: Table
-    , _updateAssignments :: [Assignment]
-    , _updateWherePart :: Maybe Where
+data Update a = Update {
+      _updateTable :: Table a
+    , _updateAssignments :: [Assignment a]
+    , _updateWherePart :: Maybe (Where a)
 } deriving (Show)
 
 -- | A value assigned to a column (used in the SET clause of an UPDATE statement).
-data Assignment = Assignment {
-      _assignmentCol :: Column
-    , _assignmentVal :: Expression
+data Assignment a = Assignment {
+      _assignmentCol :: Column a
+    , _assignmentVal :: Expression a
 } deriving (Show)
 
 -- Make the lenses.
