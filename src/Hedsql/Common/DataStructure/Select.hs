@@ -19,9 +19,6 @@ such as columns and tables.
 -}
 module Hedsql.Common.DataStructure.Select where
 
-import Hedsql.Common.Driver
-import Hedsql.Common.Parser
-
 import Control.Lens
 
 -- Types
@@ -146,7 +143,6 @@ An expression can either be:
 data Expression a =
       ColExpr (Column a)
     | FuncExpr (Function a)
-    | OperatorExpr (Operator a)
     | SelectExpr (Select a)
     | ValueExpr SqlValue
     | ValueExprs [SqlValue]
@@ -268,15 +264,15 @@ data SortNulls a =
       deriving (Show)
 
 -- | Sorting order.
-data SortOrder =
+data SortOrder a =
       Asc
     | Desc
       deriving (Show)
 
 -- | Defines how a given column has to be sorted.
 data SortRef a = SortRef {
-      _sortRefCol :: ColRef a
-    , _sortRefOrder :: Maybe SortOrder
+      _sortRefCol   :: ColRef a
+    , _sortRefOrder :: Maybe (SortOrder a)
     , _sortRefNulls :: Maybe (SortNulls a)
 } deriving (Show)
 
@@ -294,7 +290,23 @@ data CombinedQuery a =
 -- Functions.
 
 data Function a =
-      CountF       (Count a)
+    -- Operators.
+      AddF (Add a)                     -- ^ Addition ("+") operator.
+    | BitAndF (BitAnd a)               -- ^ Bitwise AND ("&") operator.
+    | BitOrF (BitOr a)                 -- ^ Bitwise OR ("|") operator.
+    | BitShiftLeftF (BitShiftLeft a)   -- ^ Bitwise shift left  ("<<")
+                                       --   operator.
+    | BitShiftRightF (BitShiftRight a) -- ^ Bitwise shift right  (">>")
+                                       --   operator.
+                                       --   operator.
+    | DivideF (Divide a)               -- ^ Division ("/") operator.
+    | ModuloF (Modulo a)               -- ^ Modulo - remainer - ("%")
+                                       --   operator.
+    | MultiplyF (Multiply a)           -- ^ "*" Multiplication operator.
+    | SubstractF (Substract a)         -- ^ Subtraction "-" operator.
+
+    -- Functions.
+    | CountF       (Count a)
     | CurrentDateF (CurrentDate a)
     | MaxF         (Max a)
     | MinF         (Min a)
@@ -304,6 +316,16 @@ data Function a =
     | SumF         (Sum a)
       deriving (Show)
 
+data Add a = Add (ColRef a) (ColRef a) deriving (Show)
+data BitAnd a= BitAnd (ColRef a) (ColRef a) deriving (Show)
+data BitOr a = BitOr (ColRef a) (ColRef a) deriving (Show)
+data BitShiftLeft a = BitShiftLeft (ColRef a) (ColRef a) deriving (Show)
+data BitShiftRight a = BitShiftRight (ColRef a) (ColRef a) deriving (Show)
+data Divide a = Divide (ColRef a) (ColRef a) deriving (Show) 
+data Modulo a = Modulo (ColRef a) (ColRef a) deriving (Show)
+data Multiply a = Multiply (ColRef a) (ColRef a) deriving (Show)
+data Substract a = Substract (ColRef a) (ColRef a) deriving (Show)
+
 data Count a = Count (Expression a) deriving (Show)
 data CurrentDate a = CurrentDate a deriving (Show)
 data Max a = Max (Expression a) deriving (Show)
@@ -311,50 +333,58 @@ data Min a = Min (Expression a) deriving (Show)
 data Joker a= Joker deriving (Show) 
 data Random a = Random deriving (Show)
 data Sum a = Sum (Expression a) deriving (Show)
-    
 
 -- | Functions returning TRUE or FALSE.
 data FuncBool a =
-      Between (ColRef a) (ColRef a) (ColRef a)    -- ^ BETWEEN
-    | Exists (ColRef a)                           -- ^ EXISTS
-    | IsFalse (ColRef a)                          -- ^ IS FALSE
-    | IsNotFalse (ColRef a)                       -- ^ IS NOT FALSE
-    | IsNotNull (ColRef a)                        -- ^ IS NOT NULL
-    | IsNotTrue (ColRef a)                        -- ^ IS NOT TRUE
-    | IsNotUnknown (ColRef a)                     -- ^ IS NOT UNKNOWN
-    | IsNull (ColRef a)                           -- ^ IS NULL
-    | IsTrue (ColRef a)                           -- ^ IS TRUE
-    | IsUnknown (ColRef a)                        -- ^ IS UNKNOWN
-    | NotBetween (ColRef a) (ColRef a) (ColRef a) -- ^ NOT BETWEEN
-    | Equal (ColRef a) (ColRef a)                 -- ^ =
-    | GreaterThan (ColRef a) (ColRef a)           -- ^ \>
-    | GreaterThanOrEqTo (ColRef a) (ColRef a)     -- ^ \>=
-    | In (ColRef a) (ColRef a)                    -- ^ IN
-    | IsDistinctFrom (ColRef a) (ColRef a)        -- ^ IS DISTINCT FROM
-    | IsNotDistinctFrom (ColRef a) (ColRef a)     -- ^ IS NOT DISTINCT FROM
-    | Like (ColRef a) (ColRef a)                  -- ^ LIKE
-    | NotEqual (ColRef a) (ColRef a)              -- ^ <>
-    | NotIn (ColRef a) (ColRef a)                 -- ^ NOT IN
-    | SmallerThan (ColRef a) (ColRef a)           -- ^ <
-    | SmallerThanOrEqTo (ColRef a) (ColRef a)     -- ^ \<=
+      BetweenF (Between a)                     -- ^ BETWEEN
+    | ExistsF (Exists a)                       -- ^ EXISTS
+    | IsFalseF (IsFalse a)                     -- ^ IS FALSE
+    | IsNotFalseF (IsNotFalse a)               -- ^ IS NOT FALSE
+    | IsNotNullF (IsNotNull a)                 -- ^ IS NOT NULL
+    | IsNotTrueF (IsNotTrue a)                 -- ^ IS NOT TRUE
+    | IsNotUnknownF (IsNotUnknown a)           -- ^ IS NOT UNKNOWN
+    | IsNullF (IsNull a)                       -- ^ IS NULL
+    | IsTrueF (IsTrue a)                       -- ^ IS TRUE
+    | IsUnknownF (IsUnknown a)                 -- ^ IS UNKNOWN
+    | NotBetweenF (NotBetween a)               -- ^ NOT BETWEEN
+    | EqualF (Equal a)                         -- ^ =
+    | GreaterThanF (GreaterThan a)             -- ^ \>
+    | GreaterThanOrEqToF (GreaterThanOrEqTo a) -- ^ \>=
+    | InF (In a)                               -- ^ IN
+    | IsDistinctFromF (IsDistinctFrom a)       -- ^ IS DISTINCT FROM
+    | IsNotDistinctFromF (IsNotDistinctFrom a) -- ^ IS NOT DISTINCT FROM
+    | LikeF (Like a)                           -- ^ LIKE
+    | NotEqualF (NotEqual a)                   -- ^ <>
+    | NotInF (NotIn a)                         -- ^ NOT IN
+    | SmallerThanF (SmallerThan a)             -- ^ <
+    | SmallerThanOrEqToF (SmallerThanOrEqTo a) -- ^ \<=
     deriving (Show)
 
--- | Operators such as "+", "-" or "*".
-data Operator a =
-      Add (ColRef a) (ColRef a)               -- ^ Addition ("+") operator.
-    | BitwiseAnd (ColRef a) (ColRef a)        -- ^ Bitwise AND ("&") operator.
-    | BitwiseOr (ColRef a) (ColRef a)         -- ^ Bitwise OR ("|") operator.
-    | BitwiseShiftLeft (ColRef a) (ColRef a)  -- ^ Bitwise shift left  ("<<")
-                                              --   operator.
-    | BitwiseShiftRight (ColRef a) (ColRef a) -- ^ Bitwise shift right  (">>")
-                                              --   operator.
-                                              --   operator.
-    | Divide (ColRef a) (ColRef a)            -- ^ Division ("/") operator.
-    | Modulo (ColRef a) (ColRef a)            -- ^ Modulo - remainder - ("%")
-                                              --   operator.
-    | Multiply (ColRef a) (ColRef a)          -- ^ "*" Multiplication operator.
-    | Substract (ColRef a) (ColRef a)         -- ^ Subtraction "-" operator.
-      deriving (Show)
+data Between a = Between (ColRef a) (ColRef a) (ColRef a) deriving (Show)
+data Exists a = Exists (ColRef a) deriving (Show)
+data IsFalse a = IsFalse (ColRef a) deriving (Show)
+data IsNotFalse a = IsNotFalse (ColRef a) deriving (Show)
+data IsNotNull a = IsNotNull (ColRef a) deriving (Show)
+data IsNotTrue a = IsNotTrue (ColRef a) deriving (Show)
+data IsUnknown a = IsUnknown (ColRef a) deriving (Show)
+data IsNotUnknown a = IsNotUnknown (ColRef a) deriving (Show)
+data NotBetween a = NotBetween (ColRef a) (ColRef a) (ColRef a) deriving (Show)
+data Equal a = Equal (ColRef a) (ColRef a) deriving (Show)
+data GreaterThan a = GreaterThan (ColRef a) (ColRef a) deriving (Show)
+data GreaterThanOrEqTo a =
+    GreaterThanOrEqTo (ColRef a) (ColRef a) deriving (Show)
+data In a = In (ColRef a) (ColRef a) deriving (Show)
+data IsDistinctFrom a = IsDistinctFrom (ColRef a) (ColRef a)  deriving (Show)
+data IsNotDistinctFrom a =
+    IsNotDistinctFrom (ColRef a) (ColRef a) deriving (Show)
+data IsNull a = IsNull (ColRef a) deriving (Show)
+data IsTrue a = IsTrue (ColRef a) deriving (Show)
+data Like a = Like (ColRef a) (ColRef a) deriving (Show)
+data NotEqual a = NotEqual (ColRef a) (ColRef a) deriving (Show)
+data NotIn a = NotIn (ColRef a) (ColRef a) deriving (Show)
+data SmallerThan a = SmallerThan (ColRef a) (ColRef a) deriving (Show)
+data SmallerThanOrEqTo a =
+    SmallerThanOrEqTo (ColRef a) (ColRef a) deriving (Show)
 
 -- Lenses.
 makeLenses ''GroupBy

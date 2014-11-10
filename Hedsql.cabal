@@ -10,7 +10,6 @@ description:    Provide an easy way to write SQL in Haskell.
 category:       Database
 license:        GPL-3
 copyright:      Leonard Monnier
-tested-with:    GHC==7.4.2
 data-files:     
                 src/Hedsql/Common/DataStructure/Base.hs,
                 src/Hedsql/Common/DataStructure/Create.hs,
@@ -40,6 +39,7 @@ data-files:
                 src/Hedsql/PostgreSQL.hs,
                 src/Hedsql/SqLite.hs,
                 Hedsql.cabal
+tested-with:    GHC==7.8.2
 
 library
   hs-source-dirs:   src

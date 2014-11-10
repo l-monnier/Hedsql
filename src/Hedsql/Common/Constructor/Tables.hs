@@ -1,4 +1,7 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-} 
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 {-|
 Module      : Hedsql/Common/Constructor/Tables.hs
@@ -13,65 +16,60 @@ Constructor functions for table references which can then be used in queries.
 -}
 module Hedsql.Common.Constructor.Tables
     (
-      AliasConstruct
-    , TableConstructor
-    , TableRefConstruct
-    , alias
+      alias
+    , coerce
     , table
-    , toTableRef
-    , toTableRefs
     ) where
 
 import Hedsql.Common.DataStructure.Base
 
-import Control.Lens
-
--- private functions.
+import Control.Lens hiding (coerce)
 
 -- public functions.
 
--- | Create table aliases using AS.
-class AliasConstruct a where
-    alias :: a -> String -> a
+-- | Create a table alias using AS.
+alias :: Table a -> String -> Table a
+alias t name = set tableAlias (Just (TableRefAs name [])) t
 
-instance AliasConstruct Table where
-    alias t name = set tableAlias (Just (TableReferenceAlias name [])) t
+-- | Create a table which can then be used as so in a query.
+table
+    :: Coerce a (Table b)
+    => a -- ^ The table itself or its name as a string.
+    -> (Table b)
+table a = coerce a
 
--- | Create a table reference which can then be used in a query.
-class TableConstructor a where
-   table :: a -> Table
+-- | Create a table from its name.
+instance Coerce String (Table a) where
+    coerce name = Table name Nothing
 
-instance TableConstructor String where
-   table name = Table name Nothing
+-- | Create a table from itself.
+instance Coerce (Table a) (Table a) where
+    coerce = id
 
-instance TableConstructor Table where
-   table a = a
-   
--- | Create table references.
-class TableRefConstruct a where
-    toTableRef :: a -> TableReference
-    toTableRefs :: a -> [TableReference]
+-- | Convert a type to another type. 
+class Coerce a b where
+    coerce :: a -> b
 
-instance TableRefConstruct String where
-    toTableRef = toTableRef.table
-    toTableRefs = toTableRefs.table
+instance Coerce String (TableRef a) where
+    coerce name = TableTableRef $ coerce name
 
-instance TableRefConstruct [String] where
-    toTableRef = toTableRef.table.head
-    toTableRefs = toTableRefs.map table
+instance Coerce (Table a) (TableRef a) where
+    coerce = TableTableRef
 
-instance TableRefConstruct Table where
-    toTableRef a = TableTableReference a
-    toTableRefs a = [toTableRef a]
+instance Coerce (TableRef a) (TableRef a) where
+    coerce = id
 
-instance TableRefConstruct [Table] where
-    toTableRef = toTableRef.head
-    toTableRefs = map toTableRef
-    
-instance TableRefConstruct TableReference where
-    toTableRef a = a
-    toTableRefs a = [a]
+instance Coerce [TableRef a] (TableRef a) where
+    coerce = head
 
-instance TableRefConstruct [TableReference] where
-    toTableRef = head
-    toTableRefs a = a
+instance Coerce (TableRef a) [TableRef a] where
+    coerce a = [a]
+
+instance Coerce [String] [TableRef a] where
+    coerce =  map coerce
+
+instance Coerce [Table a] [TableRef a] where
+    coerce = map coerce
+
+instance Coerce [TableRef a] [TableRef a] where
+    coerce = id

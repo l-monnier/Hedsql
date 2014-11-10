@@ -13,12 +13,12 @@ module Hedsql.Drivers.PostgreSQL.Constructor
     (
       dropTable
     , lateral
-    , valueDefault
+    , default_
     )
     where
 
 import Hedsql.Common.DataStructure.Base
-import Hedsql.Drivers.PostgreSQL.Driver
+import Hedsql.Drivers.PostgreSQL.Parser
 
 import qualified Hedsql.Common.Constructor as Constructor
 
@@ -28,15 +28,15 @@ dropTable ::
     -> DropTable PostgreSQL
 dropTable = Constructor.dropTable
 
--- | Create a sub-query preceeded by LATERAL.
+-- | Create a sub-query preceded by LATERAL.
 lateral :: SelectQuery -> String -> TableReference
 lateral select alias =
     LateralTableReference select $ TableReferenceAlias alias []
 
-{- |
-    DEFAULT instruction when used to insert a DEFAULT value.
-    For example:
-    > INSERT INTO films Values (DEFAULT, 'Bananas', 88, '1971-07-13', 'Comedy');
+{-|
+DEFAULT instruction when used to insert a DEFAULT value.
+For example:
+> INSERT INTO films Values (DEFAULT, 'Bananas', 88, '1971-07-13', 'Comedy');
 -}
-valueDefault :: SqlValue
-valueDefault = SqlValueDefault
+default_ :: SqlValue
+default_ = SqlValueDefault
