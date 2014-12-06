@@ -13,7 +13,7 @@ DELETE statement data type definitions.
 -}
 module Hedsql.Common.DataStructure.Delete
     (
-      Delete
+      Delete (Delete)
     , deleteTable
     , deleteWhere
     ) where

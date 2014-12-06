@@ -18,6 +18,7 @@ module Hedsql.Common.DataStructure.Base (
     , module Hedsql.Common.DataStructure.Delete
     , module Hedsql.Common.DataStructure.Drop
     , module Hedsql.Common.DataStructure.Insert
+    , module Hedsql.Common.DataStructure.Inspect
     , module Hedsql.Common.DataStructure.Select
     , module Hedsql.Common.DataStructure.Update
     , Statement
@@ -27,6 +28,7 @@ import Hedsql.Common.DataStructure.Create
 import Hedsql.Common.DataStructure.Delete
 import Hedsql.Common.DataStructure.Drop
 import Hedsql.Common.DataStructure.Insert
+import Hedsql.Common.DataStructure.Inspect
 import Hedsql.Common.DataStructure.Select
 import Hedsql.Common.DataStructure.Update
 

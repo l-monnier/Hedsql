@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
 Module      : Hedsql/Common/Constructor/Columns.hs
@@ -14,155 +15,119 @@ Constructor functions for columns references which can then be used in queries.
 -}
 module Hedsql.Common.Constructor.Columns
     (
-      ColumnConstructor
-    , ColRefConstruct
-    , (/.)
+      (/.)
+    , as_
     , column
     , columns
-    , out
-    , toColRef
-    , toColRefs
-    , toExpr
-    , toExprs
+    , colRef
+    , colRefs
+    , expr
+    , exprs
     ) where
 
 import Hedsql.Common.Constructor.Tables
 import Hedsql.Common.Constructor.Values
 import Hedsql.Common.DataStructure.Base
+import Hedsql.Helpers.Coerce
 
-import Control.Lens
+import Control.Lens ((^.), set)
 
 -- private functions.
 
+instance Coerce (Column a) [Column a] where
+    coerce col = [col]
+    
+instance Coerce String [Column a] where
+    coerce name = [Column name Nothing Nothing Nothing]
+    
+instance Coerce [Column a] [Column a] where
+    coerce = map (head.coerce)
+    
+instance Coerce [String] [Column a] where
+    coerce = map (head.coerce)
+    
+instance Coerce (ColRef a) [ColRef a] where
+    coerce ref = [ref]
+
+instance Coerce (Column a) [ColRef a] where
+    coerce a = [ColRef (ColExpr a) Nothing]
+
+instance Coerce (Function a) [ColRef a] where
+    coerce func = [ColRef (FuncExpr func) Nothing]
+
+instance Coerce Int [ColRef a] where
+    coerce int = [ColRef (ValueExpr $ SqlValueInt int) Nothing]
+    
+instance Coerce (Select a) [ColRef a] where
+    coerce query = [ColRef (SelectExpr query) Nothing]
+
+instance Coerce String [ColRef a] where
+    coerce name = [ColRef (ColExpr (column name)) Nothing]
+
+instance Coerce (SqlValue a) [ColRef a] where
+    coerce val = [ColRef (ValueExpr val) Nothing]
+
+instance Coerce [ColRef a] [ColRef a] where
+    coerce = id
+    
+instance Coerce [Column a] [ColRef a] where
+    coerce = map (head.coerce)
+
+instance Coerce [Function a] [ColRef a] where
+    coerce = map (head.coerce)
+
+instance Coerce [Int] [ColRef a] where
+    coerce = map (head.coerce)
+
+instance Coerce [Select a] [ColRef a] where
+    coerce = map (head.coerce)
+
+instance Coerce [String] [ColRef a] where
+    coerce = map (head.coerce)
+    
+instance Coerce [SqlValue a] [ColRef a] where
+    coerce = map (head.coerce)
+
 -- public functions.
-   
--- | Create a column which can then be used in a query.
-class ColumnConstructor a where
-    
-    -- | Create one column based on a value.
-    column :: a -> Column
-    
-    -- | Create a list of columns based on a list of values.
-    columns :: a -> [Column]
 
-instance ColumnConstructor Char where
-    column name = column [name]
-    columns a = [column a]
+-- | Create a column reference with a qualified name.
+(/.) :: (Coerce a (Table c), Coerce b [Column c]) => a -> b -> ColRef c
+(/.) tName cName = 
+    ColRef (ColExpr col) Nothing
+    where
+        col = set colTable (Just (table tName)) $ column cName
 
-instance ColumnConstructor Column where
-    column a = a
-    columns a = [a]
+-- | Create column reference label using AS.
+as_ :: ColRef a -> Label -> ColRef a
+as_ colRef name = set colRefLabel (Just name) colRef
+
+-- | Create one column based on a value which can then be used in a query.
+column :: Coerce a [Column b] => a -> Column b
+column = head.coerce
     
-instance ColumnConstructor [Column] where
-    column = head
-    columns a = a
-    
-instance ColumnConstructor String where
-    column name = Column name Nothing Nothing Nothing
-    columns = map column
-    
-instance ColumnConstructor [String] where
-    column = column.head
-    columns = map column
+{-|
+Create a list of columns based on a list of values which can then be used in
+a query.
+-}
+columns :: Coerce a [Column b] => a -> [Column b]
+columns = coerce
 
 -- | Create a column reference which can be used in SELECT clause.
-class ColRefConstruct a where
-    toColRef :: a -> ColRef
-    toColRefs :: a -> [ColRef]
+colRef :: Coerce a [ColRef b] => a -> ColRef b
+colRef = head.coerce
 
-instance ColRefConstruct ColRef where
-    toColRef a = a
-    toColRefs a = [a]
-
-instance ColRefConstruct [ColRef] where
-    toColRef = head
-    toColRefs a = a
-
-instance ColRefConstruct Column where
-    toColRef a = ColRef (ColExpr a) Nothing
-    toColRefs a = map toColRef [a]
-
-instance ColRefConstruct [Column] where
-    toColRef = toColRef.head
-    toColRefs = map toColRef
-
-instance ColRefConstruct CurrentDate where
-    toColRef a = ColRef (FuncExpr (Function a)) Nothing
-    toColRefs a = map toColRef [a]
-
-instance ColRefConstruct Function where
-    toColRef a = ColRef (FuncExpr a) Nothing
-    toColRefs a = map toColRef [a]
-
-instance ColRefConstruct Int where
-    toColRef a = ColRef (ValueExpr (toValue a)) Nothing
-    toColRefs a = map toColRef [a]
-
-instance ColRefConstruct [Int] where
-    toColRef = toColRef.head
-    toColRefs = map toColRef
-
-instance ColRefConstruct Joker where
-    toColRef a = ColRef (FuncExpr (Function a)) Nothing
-    toColRefs a = map toColRef [a]
-
-instance ColRefConstruct Operator where
-    toColRef a = ColRef (OperatorExpr a) Nothing
-    toColRefs a = map toColRef [a]
-
-instance ColRefConstruct [Operator] where
-    toColRef = toColRef.head
-    toColRefs = map toColRef
-
-instance ColRefConstruct Random where
-    toColRef a = ColRef (FuncExpr (Function a)) Nothing
-    toColRefs a = map toColRef [a]    
-    
-instance ColRefConstruct SelectQuery where
-    toColRef a = ColRef (SelectExpr a) Nothing
-    toColRefs a = map toColRef [a]
-
-instance ColRefConstruct [SelectQuery] where
-    toColRef = toColRef.head
-    toColRefs = map toColRef
-
-instance ColRefConstruct String where
-    toColRef a = ColRef (ColExpr (column a)) Nothing
-    toColRefs a = map toColRef [a]
-
-instance ColRefConstruct [String] where
-    toColRef = toColRef.head
-    toColRefs = map toColRef
-
-instance ColRefConstruct SqlValue where
-    toColRef a = ColRef (ValueExpr a) Nothing
-    toColRefs a = map toColRef [a]
-
-instance ColRefConstruct [SqlValue] where
-    toColRef = toColRef.head
-    toColRefs = map toColRef
-
-instance ColRefConstruct Sum where
-    toColRef a = ColRef (FuncExpr (Function a)) Nothing
-    toColRefs a = map toColRef [a]
-    
--- | Create a column with a qualified name.
-(/.) :: (TableConstructor a, ColumnConstructor b) => a -> b -> Column
-(/.) tName cName = set colTable (Just (table tName)) $ column cName
+-- | Creates many column references which can then be used in SELECT clause.
+colRefs :: Coerce a [ColRef b] => a -> [ColRef b]
+colRefs = coerce
 
 {-|
 Create a SQL expression which can then be used in condition or column reference.
-Use the ColRef class to avoid rewritting each instance.
 -}
-toExpr :: ColRefConstruct a => a -> Expression
-toExpr a = toColRef a ^. colRefExpr
+expr :: Coerce a [ColRef a] => a -> Expression a
+expr a = head (coerce a) ^. colRefExpr
 
 {-|
 Create SQL expressions which can then be used in condition or column references.
 -}
-toExprs :: ColRefConstruct a => [a] -> [Expression]
-toExprs = map toExpr
-
--- | Create column reference label using AS.
-out :: ColRef -> Label -> ColRef
-out colRef name = set colRefLabel (Just name) colRef
+exprs :: Coerce a [ColRef a] => [a] -> [Expression a]
+exprs = map expr

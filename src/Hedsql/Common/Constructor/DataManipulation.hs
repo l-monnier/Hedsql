@@ -1,6 +1,6 @@
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE OverlappingInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
 Module      : Hedsql/Common/Constructor/DataManipulation.hs
@@ -26,54 +26,69 @@ import Hedsql.Common.Constructor.Columns
 import Hedsql.Common.Constructor.Tables
 import Hedsql.Common.Constructor.Values
 import Hedsql.Common.DataStructure.Base
+import Hedsql.Helpers.Coerce
 
 -- private functions.
-
--- | Convert a value so it can be assigned in an UPDATE statement.
-class AssignedValueConstruct a where
-    toAssignedVal :: a -> Expression
-    toAssignedVals :: a -> [Expression]
-    
-instance ColRefConstruct a => AssignedValueConstruct a where
-    toAssignedVal = toExpr
-    toAssignedVals a = [toExpr a]
-
-instance ColRefConstruct a => AssignedValueConstruct [a] where
-    toAssignedVal = toAssignedVal.head
-    toAssignedVals = map toAssignedVal
-
-instance AssignedValueConstruct String where
-    toAssignedVal a = ValueExpr (toValue a)
-    toAssignedVals a = [toAssignedVal a]
-
-instance AssignedValueConstruct [String] where
-    toAssignedVal = toAssignedVal.head
-    toAssignedVals = map toAssignedVal
 
 -- public functions.
 
 -- | Create a column/value pair to be used in an UPDATE statement.
 assign ::
-    (ColumnConstructor a, AssignedValueConstruct b) => a -> b -> Assignment
-assign c value = Assignment (column c) (toAssignedVal value)
+    (
+       Coerce b [Column a]
+    ,  Coerce a (SqlValue a)
+    )
+    => b -- ^ Column or name of the column.
+    -> a -- ^ Value for this column.
+    -> Assignment a
+assign c val = Assignment (column c) (ValueExpr $ value val)
 
 -- | Create a DELETE FROM statement.
-deleteFrom :: TableConstructor a => a -> Delete a
+deleteFrom ::
+       Coerce a (Table a)
+    => a -- ^ Table or name of the table to delete from.
+    -> Delete a
 deleteFrom t = Delete (table t) Nothing
 
--- | Create an INSERT INTO statement.
-insertInto ::
-      (TableConstructor a, SqlValueConstructor b)
-    => a -> [b] -> Insert
-insertInto t values = Insert (table t) Nothing $ map toValues values
+{-|
+Create an INSERT INTO statement.
 
--- | Create an INSERT INTO statement where the columns are specified.
+The values to insert are a list of list of values because you may insert more
+than one row in the database.
+-}
+insertInto ::
+    (
+       Coerce b (Table a)
+    ,  Coerce [a] [SqlValue a]
+    )
+    => b      -- ^ Table or name of the table to insert the data into.
+    -> [[a]]  -- ^ Values to insert.
+    -> Insert a
+insertInto t vals = Insert (table t) Nothing $ map values vals
+
+{-|
+Create an INSERT INTO statement where the columns are specified.
+
+The values to insert are a list of list of values because you may insert more
+than one row in the database.
+-}
 insertIntoCols ::
-      (TableConstructor a, ColumnConstructor b, SqlValueConstructor c)
-    => a -> [b] -> [c] -> Insert
-insertIntoCols t cols values =
-    Insert (table t) (Just $ map column cols) $ map toValues values
+    (
+       Coerce [a] [SqlValue a]
+    ,  Coerce c [Column a]
+    ,  Coerce b (Table a)
+    )
+    => b     -- ^ Table or name of the table to insert the data into.
+    -> [c]   -- ^ Columns or names of the columns.
+    -> [[a]] -- ^ Values to insert.
+    -> Insert a
+insertIntoCols t cols vals =
+    Insert (table t) (Just $ map column cols) $ map values vals
 
 -- | Create an UPDATE statement.
-update :: TableConstructor a => a -> [Assignment] -> Update
+update ::
+       Coerce a (Table a)
+    => a              -- ^ Table to update.
+    -> [Assignment a] -- ^ Column/value assignements.
+    -> Update a
 update t assignments = Update (table t) assignments Nothing

@@ -28,6 +28,7 @@ module Hedsql.Common.Parser.Queries
     , parseFrom
     , parseJoin
     , parseGroupBy
+    , parseHaving
     , parseOrderBy
     , parseSortNull
     , parseSortRef
@@ -51,6 +52,7 @@ module Hedsql.Common.Parser.Queries
     , parseFromFunc
     , parseJoinFunc
     , parseGroupByFunc
+    , parseHavingFunc
     , parseOrderByFunc
     , parseSelectFunc -- The SELECT function implementation is located here.
     , parseSortNullFunc
@@ -97,6 +99,7 @@ data QueryParser a = QueryParser
     , _parseFrom       :: From a          -> String
     , _parseJoin       :: Join a          -> String
     , _parseGroupBy    :: GroupBy a       -> String
+    , _parseHaving     :: Having a        -> String
     , _parseOrderBy    :: OrderBy a       -> String
     , _parseSortNull   :: SortNulls a     -> String
     , _parseSortRef    :: SortRef a       -> String
@@ -104,7 +107,7 @@ data QueryParser a = QueryParser
     , _parseTableName  :: Table a         -> String
     , _parseTableRef   :: TableRef a      -> String
     , _parseTableRefAs :: TableRefAs a    -> String
-    , _parseValue      :: SqlValue        -> String
+    , _parseValue      :: SqlValue a      -> String
     , _parseWhere      :: Where a         -> String
     
     -- Helper functions.
@@ -221,43 +224,44 @@ parseFromFunc parser (From tableReferences) =
 
 -- | Parse a GROUP BY clause.
 parseGroupByFunc :: QueryParser a -> GroupBy a -> String
-parseGroupByFunc parser (GroupBy colRefs condition) =
+parseGroupByFunc parser (GroupBy colRefs having) =
        getPatternFromList "GROUP BY " "" ", " parsedColRefs
-    ++ parseMaybe parseHaving condition
+    ++ parseMaybe (parser^.parseHaving) having
     where
         parsedColRefs = map (parser^.parseColRef) colRefs
-        parseHaving c = "HAVING " ++ (parser^.parseCondition) c
+
+-- | Parse a HAVING clause.
+parseHavingFunc :: QueryParser a -> Having a -> String
+parseHavingFunc parser (Having c) = "HAVING " ++ (parser^.parseCondition) c
 
 -- | Parse joins.
 parseJoinFunc :: QueryParser a -> JoinParser a -> Join a -> String
 parseJoinFunc queryParser parser join =
     case join of
-        JoinColumn joinType table1 table2 clause alias ->
-            pJoin (joinCol joinType) table1 table2 (Just clause) alias
+        JoinColumn joinType tableRef1 tableRef2 clause ->
+            pJoin (joinCol joinType) tableRef1 tableRef2 (Just clause)
             
         
-        JoinTable joinType table1 table2 alias ->
-            pJoin (joinTable joinType) table1 table2 Nothing alias
+        JoinTable joinType tableRef1 tableRef2 ->
+            pJoin (joinTable joinType) tableRef1 tableRef2 Nothing
     where
         joinCol   = parser^.parseJoinTCol
         joinTable = parser^.parseJoinTTable
         
         -- Common part between column and table joins.
-        pJoin joinType table1 table2 clause alias = concat
+        pJoin joinType tableRef1 tableRef2 clause = concat
             [
-              stringIf (isJust alias) "("
-            , queryParser^.quoteElem $ table1^.tableName
-            , getAlias table1
+              queryParser^.parseTableRef $ tableRef1
+            , getAlias tableRef1
             , " " ++ joinType ++ " "
-            , queryParser^.quoteElem $ table2^.tableName
-            , getAlias table2
+            , queryParser^.parseTableRef $ tableRef2
+            , getAlias tableRef2
             , parseMaybe (parser^.parseJoinClause) clause
-            , parseMaybe id alias
             ]
         
-        -- Generate the parenthesis closure and the alias clause for the join.
-        getAlias table =
-            parseMaybe (queryParser^.parseTableRefAs) (table^.tableAlias) 
+        -- Alias clause for the table references inside the join.
+        getAlias ref =
+            parseMaybe (queryParser^.parseTableRefAs) (getTableRefAlias ref)
     
 -- Joins parser functions.
 
@@ -334,29 +338,39 @@ parseSelectFunc parser select =
             getPatternFromList "DISTINCT ON (" ") " ", " $ pExprs exprs
         
 {-|
-Parse the name of a table using its alias if it exists.
-Otherwise, use the table name.
+Parse the name of a table.
 -}
 parseTableNameFunc :: QueryParser a -> Table a -> String
-parseTableNameFunc parser table =
-    parser^.quoteElem $ getTableName table
-    where
-        getTableName (Table _ (Just alias)) = parser^.parseTableRefAs $ alias
-        getTableName (Table name Nothing)   = name
+parseTableNameFunc parser table = parser^.quoteElem $ table^.tableName
 
 -- | Parse a table reference for the use in a FROM clause.
 parseTableRefFunc :: Parser a -> QueryParser a -> TableRef a -> String
 parseTableRefFunc p parser join =
     case join of
-        TableJoinRef ref             -> parser^.parseJoin $ ref
-        TableTableRef table          -> parser^.parseTableName $ table
-        SelectTableRef select alias  -> pSelect select ++ pTableAlias alias
-        LateralTableRef select alias -> concat ["LATERAL ("
-                                               , pSelect select, ")"
-                                               , pTableAlias alias]
+        TableJoinRef    ref    alias -> concat [
+                                                 "("
+                                               , parser^.parseJoin $ ref
+                                               , ")"
+                                               , parseMaybe pAlias alias
+                                               ]
+        TableTableRef   table  alias -> concat [
+                                                 parser^.parseTableName $ table
+                                               , parseMaybe pAlias alias
+                                               ]
+        SelectTableRef  select alias -> concat [
+                                                 "("
+                                               , p^.parseSelect $ select
+                                               , ")"
+                                               , pAlias alias
+                                               ]
+        LateralTableRef select alias -> concat [
+                                                 "LATERAL ("
+                                               , p^.parseSelect $ select
+                                               , ")"
+                                               , pAlias alias
+                                               ]
     where
-        pSelect select = concat ["(", p^.parseSelect $ select, ")"]
-        pTableAlias = parser^.parseTableRefAs
+        pAlias alias = " " ++ (parser^.parseTableRefAs) alias
 
 -- | Parse a table alias.
 -- TODO: create a dedicated one for PostgreSQL for the columns aliaises
@@ -365,7 +379,7 @@ parseTableRefAsFunc parser alias =
     "AS " ++ (parser^.quoteElem) (alias^.tableRefAliasName)
 
 -- | Parse an input values.
-parseValueFunc :: QueryParser a -> SqlValue -> String
+parseValueFunc :: QueryParser a -> SqlValue a -> String
 parseValueFunc _       SqlValueDefault         = "DEFAULT"
 parseValueFunc _      (SqlValueInt int)        = show int
 parseValueFunc _       SqlValueNull            = "NULL"

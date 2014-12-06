@@ -93,7 +93,7 @@ Limit and offset have to be added to the 'OrderBy' and are not part of a
 query on their own.
 This way, we ensure to have an ORDER BY clause defined when using OFFSET
 and LIMT, which is a good practice, because SQL does not guarantee any
-order of the result unless explicitely specified.
+order of the result unless explicitly specified.
 This means that without an ORDER BY clause, using limit or offset would
 result in random results.
 -}
@@ -103,7 +103,7 @@ module Hedsql.Common.Constructor
     , module Hedsql.Common.Constructor.Composition
     , module Hedsql.Common.Constructor.Conditions
     , module Hedsql.Common.Constructor.DataManipulation
-    , module Hedsql.Common.Constructor.Operators
+    , module Hedsql.Common.Constructor.Functions
     , module Hedsql.Common.Constructor.Select
     , module Hedsql.Common.Constructor.Tables
     , module Hedsql.Common.Constructor.TablesManipulation
@@ -115,7 +115,7 @@ import Hedsql.Common.Constructor.Columns
 import Hedsql.Common.Constructor.Composition
 import Hedsql.Common.Constructor.Conditions
 import Hedsql.Common.Constructor.DataManipulation
-import Hedsql.Common.Constructor.Operators
+import Hedsql.Common.Constructor.Functions
 import Hedsql.Common.Constructor.Select
 import Hedsql.Common.Constructor.Tables
 import Hedsql.Common.Constructor.TablesManipulation

@@ -1,4 +1,6 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
 Module      : Hedsql/Common/Constructor/TablesManipulation.hs
@@ -40,8 +42,11 @@ import Hedsql.Common.Constructor.Columns
 import Hedsql.Common.Constructor.Conditions
 import Hedsql.Common.Constructor.Tables
 import Hedsql.Common.DataStructure.Base
+import Hedsql.Helpers.Coerce
 
 import Prelude hiding (null)
+
+import qualified Data.Coerce as C
 
 -- TODO: implement ALTER statements.
 
@@ -49,42 +54,42 @@ import Prelude hiding (null)
 
 -- | Return nothing if the provided string is empty.
 maybeString :: String -> Maybe String
-maybeString "" = Nothing
+maybeString ""   = Nothing
 maybeString name = Just name
 
 -- public functions.
 
 -- | Create a CHECK constraint.
-check :: ConditionConstruct a => a -> ColConstraintType
-check condition = Check $ toCondition condition
+check :: Coerce a (Condition a) => a -> ColConstraintType a
+check cond = Check $ condition cond
 
 -- | Create a CHECK constraint to be used in a table constraint.
-checkT :: ConditionConstruct a => a -> TableConstraintType
-checkT = TableConstraintCheck . toCondition
+checkT :: Coerce a (Condition a) => a -> TableConstraintType a
+checkT = TableConstraintCheck . condition
 
 -- | Create a constraint which shall then be applied on a column.
-colConstraint :: String -> ColConstraintType -> ColConstraint
+colConstraint :: String -> ColConstraintType a -> ColConstraint a
 colConstraint name constraintType =
     ColConstraint (maybeString name) constraintType
 
 -- | Create a CREATE TABLE statement.
-createTable :: TableConstructor a => a -> [Column] -> CreateTable
+createTable :: Coerce a (Table b) => a -> [Column b] -> CreateTable b
 createTable t cols = CreateTable False (table t) cols Nothing
 
 -- | Create a CREATE TABLE IF NOT EXIST statement.
-createTableIfNotExist :: TableConstructor a => a -> [Column] -> CreateTable
+createTableIfNotExist :: Coerce a (Table b) => a -> [Column b] -> CreateTable b
 createTableIfNotExist t cols = CreateTable True (table t) cols Nothing
 
 -- | Create a CREATE VIEW query.
 createView ::
-       String      -- ^ Name of the view.
-    -> SelectQuery -- ^ Select query from which the view is created.
-    -> CreateView
+       String       -- ^ Name of the view.
+    -> Select a     -- ^ Select query from which the view is created.
+    -> CreateView a
 createView name select = CreateView name select
 
 -- | Create a DEFAULT value constraint.
-defaultValue :: ColRefConstruct a => a -> ColConstraintType
-defaultValue = Default . toExpr
+defaultValue :: Coerce a [ColRef a] => a -> ColConstraintType a
+defaultValue e = Default $ expr e
 
 -- | Create a DROP TABLE statement.
 dropTable ::
@@ -93,9 +98,9 @@ dropTable ::
 dropTable = DropTable False . table
 
 dropTableIfExists ::
-       TableConstructor a
+       Coerce a (Table b)
     => a -- ^ Table or name of the table.
-    -> DropTable a
+    -> DropTable b
 dropTableIfExists name = DropTable True $ table name
 
 -- | Create a DROP VIEW query.
@@ -105,43 +110,43 @@ dropView ::
 dropView = DropView
 
 -- | Create a FOREIGN KEY constraint.
-foreignKey :: (TableConstructor a, ColumnConstructor b)
+foreignKey :: (Coerce a (Table c), Coerce b [Column c])
            => a -- ^ Table.
            -> b -- ^ Column.
-           -> ColConstraintType
+           -> ColConstraintType c
 foreignKey t c = Reference (table t) (column c) Nothing
 
 -- | Create a NOT NULL constraint.
-notNull :: ColConstraintType
+notNull :: ColConstraintType a
 notNull = NotNull
 
 -- | Create a NULL constraint.
-null :: ColConstraintType
+null :: ColConstraintType a
 null = Null
 
 -- | Create a NULL value.
-nullVal :: SqlValue
+nullVal :: SqlValue a
 nullVal = SqlValueNull
 
 -- | Create a PRIMARY KEY constraint.
 primary ::
        Bool -- ^ If True, the primary key will be an AUTOINCREMENT.
-    -> ColConstraintType
+    -> ColConstraintType a
 primary = Primary
 
 -- | Create a PRIMARY KEY constraint to be used in a table constraint.
-primaryT :: ColumnConstructor a => a -> TableConstraintType
+primaryT :: Coerce a [Column b] => a -> TableConstraintType b
 primaryT = TableConstraintPrimaryKey . columns
 
 -- | Create a table constraint.
-tableConstraint :: String -> TableConstraintType -> TableConstraint
+tableConstraint :: String -> TableConstraintType a -> TableConstraint a
 tableConstraint name constraintType =
     TableConstraint (maybeString name) constraintType Nothing
 
 -- | Create an UNIQUE column constraint.
-unique :: ColConstraintType
+unique :: ColConstraintType a
 unique = Unique
 
 -- | Create an UNIQUE table constraint
-uniqueT :: ColumnConstructor a => [a] -> TableConstraintType
-uniqueT cols = TableConstraintUnique (map column cols)
+uniqueT :: Coerce a [Column b] => a -> TableConstraintType b
+uniqueT = TableConstraintUnique . columns

@@ -26,7 +26,7 @@ data Insert a = Insert
     {
       _insertTable   :: Table a
     , _insertColumns :: Maybe [Column a]
-    , _insertValues  :: [[SqlValue]]
+    , _insertValues  :: [[SqlValue a]]
     } deriving (Show)
 
 -- Make the lenses.

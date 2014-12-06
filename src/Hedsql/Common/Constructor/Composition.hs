@@ -16,16 +16,21 @@ individual elements.
 -}
 module Hedsql.Common.Constructor.Composition
     (
-      Add
-    , (/++)
+    (/++)
     ) where
 
 import Hedsql.Common.Constructor.TablesManipulation
-import Hedsql.Common.DataStructure.Base
+import Hedsql.Common.DataStructure.Base hiding (Add)
+
+import qualified Data.Coerce as C
 
 import Control.Lens
 
 -- private functions.
+
+-- | Set a Maybe value to the target using the provide element and coercing it.
+setMaybe :: C.Coercible b c => ASetter s t a (Maybe c) -> s -> b -> t
+setMaybe lens target el = set lens (Just $ C.coerce el) target
 
 -- public functions.
 {-|
@@ -45,73 +50,76 @@ class Add a b where
         -> b -- ^ Element to add.
         -> a -- ^ Target returned with the added element.
 
+instance Add (GroupBy a) (Having b) where
+    (/++) = setMaybe groupByHaving
+
 -- | Add a LIMIT to an ORDER BY part.
-instance Add OrderBy Limit where
-    (/++) target el = set partOrderByLimit (Just el) target
+instance Add (OrderBy a) (Limit b) where
+    (/++) = setMaybe partOrderByLimit
 
 -- | Add an OFFSET to an ORDER BY part.
-instance Add OrderBy Offset where
-    (/++) target el = set partOrderByOffset (Just el) target
+instance Add (OrderBy a) (Offset b) where
+    (/++) = setMaybe partOrderByOffset
 
 -- | Add a table constraint to a CREATE TABLE statement.
-instance Add CreateTable TableConstraint where
+instance Add (CreateTable a) (TableConstraint b) where
     (/++) target el = target /++ [el]
 
-instance Add CreateTable [TableConstraint] where
-    (/++) target el = set createTableConstraints (Just el) target
+instance Add (CreateTable a) [TableConstraint b] where
+    (/++) = setMaybe createTableConstraints
 
 -- | Add a WHERE part to a DELETE query.
-instance Add Delete Where where
-    (/++) target el = set deleteWherePart (Just el) target
+instance Add (Delete a) (Where b) where
+    (/++) = setMaybe deleteWhere
 
 -- | Add a FROM part to a SELECT query.
-instance Add SelectQuery From where
-    (/++) target el = set fromClause (Just el) target
+instance Add (Select a) (From b) where
+    (/++) = setMaybe fromClause
 
 -- | Add a GROUP BY part to a SELECT query.
-instance Add SelectQuery GroupBy where
-    (/++) target el = set groupByClause (Just el) target
+instance Add (Select a) (GroupBy b) where
+    (/++) = setMaybe groupByClause
 
 -- | Add an ORDER BY part to a SELECT query.
-instance Add SelectQuery OrderBy where
-    (/++) target el = set orderByClause (Just el) target
+instance Add (Select a) (OrderBy b) where
+    (/++) = setMaybe orderByClause
 
 -- | Add a WHERE part to a SELECT query.
-instance Add SelectQuery Where where
-    (/++) target el = set whereClause (Just el) target
+instance Add (Select a) (Where b) where
+    (/++) = setMaybe whereClause
 
 -- | Add a WHERE part to an UPDATE query.
-instance Add Update Where where
-    (/++) target el = set updateWherePart (Just el) target
+instance Add (Update a) (Where b) where
+    (/++) = setMaybe updateWherePart
 
 -- | Add a Maybe value to a column.
-instance Add Column a => Add Column (Maybe a) where
+instance Add (Column a) b => Add (Column a) (Maybe b) where
     (/++) target (Just el) = target /++ el
     (/++) target Nothing = target
 
 -- | Add one constraint to a column.
-instance Add Column ColConstraint where
+instance Add (Column a) (ColConstraint b) where
     (/++) target el = target /++ [el]
 
 -- | Add constraints to a column.
-instance Add Column [ColConstraint] where
-    (/++) target el = set colConstraints (Just el) target
+instance Add (Column a) [ColConstraint b] where
+    (/++) = setMaybe colConstraints
 
 -- | Add a column constraint type to a column.
-instance Add Column ColConstraintType where
+instance Add (Column a) (ColConstraintType b) where
     (/++) target el = target /++ colConstraint "" el
 
 -- | Add many column constraints types to a column.
-instance Add Column [ColConstraintType] where
+instance Add (Column a) [ColConstraintType b] where
     (/++) target els = target /++ map (colConstraint "") els
-
+    
 -- | Specify the SQL data type of a column.
-instance Add Column SqlDataType where
+instance Add (Column a) SqlDataType where
     (/++) target el = set colDataType (Just el) target
 
 {-|
 Add a table to a column
 (to indicate that this column belongs to a specific table).
 -}
-instance Add Column Table where
-    (/++) target el = set colTable (Just el) target
+instance Add (Column a) (Table b) where
+    (/++) = setMaybe colTable

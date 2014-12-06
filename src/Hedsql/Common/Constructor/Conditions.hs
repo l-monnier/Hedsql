@@ -1,4 +1,6 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-} 
 
 {-|
 Module      : Hedsql/Common/Constructor/Conditions.hs
@@ -14,34 +16,24 @@ or for tables creation.
 -}
 module Hedsql.Common.Constructor.Conditions
     (
-      ConditionConstruct
-    , toCondition
+    condition
     ) where
 
 import Hedsql.Common.DataStructure.Base
+import Hedsql.Helpers.Coerce
 
-import Unsafe.Coerce
+import qualified Data.Coerce as C
 
 -- private functions.
 
--- | Cast a FuncBool so it becomes generic again.
--- TODO: replace it with the safe coerce of coercible.  
-castFuncBool :: FuncBool a -> FuncBool b
-castFuncBool = unsafeCoerce
+instance Coerce (Condition a) (Condition b) where
+    coerce = C.coerce
 
--- | Cast a Condition so it becomes generic again.
--- TODO: replace it with the safe coerce of coercible. 
-castCondition :: Condition a -> Condition b
-castCondition = unsafeCoerce
+instance Coerce (FuncBool a) (Condition b) where
+    coerce func = FuncCond (C.coerce func)
 
 -- public functions.
 
--- | Convert a value to a condition.
-class ConditionConstruct a where
-    toCondition :: a -> Condition b
-
-instance ConditionConstruct (Condition a) where
-    toCondition a = castCondition a
-    
-instance ConditionConstruct (FuncBool a) where
-    toCondition f = FuncCond $ castFuncBool f
+-- | Create a condition.
+condition :: Coerce a (Condition b) => a -> Condition b
+condition = coerce

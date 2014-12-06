@@ -1,4 +1,6 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
 Module      : Hedsql/Common/Constructor/Values.hs
@@ -13,58 +15,52 @@ Constructor functions for values which can then be used in queries.
 -}
 module Hedsql.Common.Constructor.Values
     (
-      SqlValueConstructor
-    , toValue
-    , toValues
+      value
+    , values
     ) where
 
 import Hedsql.Common.DataStructure.Base
+import Hedsql.Helpers.Coerce
 
 -- private functions.
+
+instance Coerce Int (SqlValue a) where
+    coerce = SqlValueInt
+
+instance Coerce [Int] [SqlValue a] where
+    coerce = map coerce
+
+{-|
+If the value is "Just a", then "coerce" will be applied on "a".
+Else, the value is "Nothing" and it will be considered as a NULL value.
+-}
+instance Coerce a (SqlValue a) => Coerce (Maybe a) (SqlValue a) where
+    coerce (Just a) = coerce a
+    coerce Nothing = SqlValueNull
+
+instance Coerce (SqlValue a) (SqlValue a) where
+    coerce = id
+
+instance Coerce [SqlValue a] [SqlValue a] where
+    coerce = id
+    
+instance Coerce String (SqlValue a) where
+    coerce = SqlValueString
+
+instance Coerce [String] [SqlValue a] where
+    coerce = map coerce
 
 -- public functions.
 
 {-|
-Convert primitive values so they can be used in SQL queries as "raw" values.
+Convert a primitive value so it can be used in SQL queries as "raw" values.
 -}
-class SqlValueConstructor a where
+value :: Coerce a (SqlValue a) => a -> SqlValue a
+value = coerce
     
-    -- | Convert one value.
-    toValue :: a -> SqlValue
-    
-    -- | Convert a list of values.
-    toValues :: a -> [SqlValue]
-    
-instance SqlValueConstructor Int where
-    toValue = SqlValueInt
-    toValues a = [toValue a]
-
-instance SqlValueConstructor [Int] where
-    toValue = toValue.head
-    toValues = map toValue
-
 {-|
-If the value is "Just a", then "toValue" will be applied on "a".
-Else, the value is "Nothing" and it will be considered as a NULL value.
+Convert a list of primitive values so they can be used in SQL queries
+as "raw" values.
 -}
-instance SqlValueConstructor a => SqlValueConstructor (Maybe a) where
-    toValue (Just a) = toValue a
-    toValue Nothing = SqlValueNull
-    toValues (Just a) = toValues a
-    toValues Nothing = [SqlValueNull]
-
-instance SqlValueConstructor SqlValue where
-    toValue a = a
-    toValues a = [a]
-
-instance SqlValueConstructor [SqlValue] where
-    toValue = head
-    toValues a = a
-    
-instance SqlValueConstructor String where
-    toValue = SqlValueString
-    toValues a = [toValue a]
-
-instance SqlValueConstructor [String] where
-    toValue = toValue.head
-    toValues = map toValue
+values :: Coerce [a] [SqlValue a] => [a] -> [SqlValue a]
+values = coerce

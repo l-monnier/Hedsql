@@ -50,6 +50,7 @@ genQueryParser = QueryParser
     (parseFromFunc genQueryParser)
     (parseJoinFunc genQueryParser genJoinParser)
     (parseGroupByFunc genQueryParser)
+    (parseHavingFunc genQueryParser)
     (parseOrderByFunc genQueryParser)
      parseSortNullFunc
     (parseSortRefFunc genQueryParser)

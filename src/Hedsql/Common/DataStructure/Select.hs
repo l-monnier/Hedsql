@@ -41,7 +41,7 @@ data SqlDataType =
      deriving (Show)
 
 -- | SQL values.
-data SqlValue =
+data SqlValue a =
       SqlValueDefault
     | SqlValueInt Int
     | SqlValueNull
@@ -53,18 +53,18 @@ data SqlValue =
 -- | Table definition.
 data Table a = Table {
       _tableName  :: String
-    , _tableAlias :: Maybe (TableRefAs a)
     } deriving (Show)
 
 {-|
-    A table reference might be a table, a table join or a sub-query used
-    in a FROM clause.
+A table reference can be a real table, or a derived table such as
+a table join or a sub-query.
+Table references are usually used in FROM clauses or joins.
 -}
 data TableRef a =
-      LateralTableRef (Select a) (TableRefAs a)
-    | SelectTableRef  (Select a) (TableRefAs a)
-    | TableJoinRef    (Join a)
-    | TableTableRef   (Table a)
+      LateralTableRef (Select a)        (TableRefAs a)
+    | SelectTableRef  (Select a)        (TableRefAs a)
+    | TableJoinRef    (Join a)   (Maybe (TableRefAs a))
+    | TableTableRef   (Table a)  (Maybe (TableRefAs a))
     deriving (Show)
 
 -- | Table reference (table or join) alias. 
@@ -144,8 +144,8 @@ data Expression a =
       ColExpr (Column a)
     | FuncExpr (Function a)
     | SelectExpr (Select a)
-    | ValueExpr SqlValue
-    | ValueExprs [SqlValue]
+    | ValueExpr (SqlValue a)
+    | ValueExprs [SqlValue a]
       deriving (Show)
 
 -- SELECT components.
@@ -177,27 +177,23 @@ data From a =
 {-|
 A JOIN between two tables.
 
-The JoinTable are joins which take only tables as parameter - CROSS and NATURAL
-joins -.
+The JoinTable are joins which take only tables references as parameter
+- CROSS and NATURAL joins -.
 The JoinColumn are the joins having a ON or USING clause.
-
-An alias can be defined in the Maybe String type.
 -}
 data Join a =
     JoinTable
     {
       _joinTableType   :: JoinTypeTable a
-    , _joinTableTable1 :: (Table a)
-    , _joinTableTable2 :: (Table a)
-    , _joinTableAlias  :: Maybe String
+    , _joinTableTable1 :: (TableRef a)
+    , _joinTableTable2 :: (TableRef a)
     }
     | JoinColumn
     {
       _joinColumnType   :: JoinTypeCol a
-    , _joinColumnTable1 :: (Table a)
-    , _joinColumnTable2 :: (Table a)
+    , _joinColumnTable1 :: (TableRef a)
+    , _joinColumnTable2 :: (TableRef a)
     , _joinColumnClause :: (JoinClause a)
-    , _joinColumnAlias  :: Maybe String
     } deriving (Show)
 
 -- | JOIN clause: ON or USING.
@@ -223,6 +219,9 @@ data JoinTypeTable a =
     | NaturalFullJoin
     deriving (Show)
 
+-- | LIMIT clause.
+data Limit a = Limit Int deriving (Show)
+
 {- |
 WHERE part of the query consisting of a condition. A can be single predicate or
 an AND or OR list of conditions.
@@ -237,11 +236,17 @@ data Condition a =
     | Or [Condition a]
       deriving (Show)
 
--- | GROUP BY query part.
+-- | GROUP BY clause.
 data GroupBy a = GroupBy {
       _groupByCols   :: [ColRef a]
-    , _groupByHaving :: Maybe (Condition a)
+    , _groupByHaving :: Maybe (Having a)
    } deriving (Show)
+
+-- | HAVING clause.
+data Having a = Having (Condition a) deriving (Show)
+
+-- | OFFSET clause.
+data Offset a = Offset Int deriving (Show)
 
 {- |
 ORDER BY query part.
@@ -253,8 +258,8 @@ SQL does not guarantee any specific return order unless explicitely specified.
 -}
 data OrderBy a = OrderBy {
       _partOrderByColumns :: [SortRef a]
-    , _partOrderByLimit   :: Maybe Int
-    , _partOrderByOffset  :: Maybe Int
+    , _partOrderByLimit   :: Maybe (Limit a)
+    , _partOrderByOffset  :: Maybe (Offset a)
 } deriving (Show)
 
 -- | NULLS FIRST and NULLS LAST parameters for sorting.
@@ -327,7 +332,7 @@ data Multiply a = Multiply (ColRef a) (ColRef a) deriving (Show)
 data Substract a = Substract (ColRef a) (ColRef a) deriving (Show)
 
 data Count a = Count (Expression a) deriving (Show)
-data CurrentDate a = CurrentDate a deriving (Show)
+data CurrentDate a = CurrentDate deriving (Show)
 data Max a = Max (Expression a) deriving (Show)
 data Min a = Min (Expression a) deriving (Show)
 data Joker a= Joker deriving (Show) 

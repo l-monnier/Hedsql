@@ -2,7 +2,7 @@
 
 {-|
 Module      : Hedsql/Common/DataStructure/Drop.hs
-Description : Constructor functions for columns.
+Description : DROP statements.
 Copyright   : (c) Leonard Monnier, 2014
 License     : GPL-3
 Maintainer  : leonard.monnier@gmail.com
