@@ -311,6 +311,9 @@ data Function a =
     | SubstractF (Substract a)         -- ^ Subtraction "-" operator.
 
     -- Functions.
+    
+    -- Basic functions.
+    
     | CountF       (Count a)
     | CurrentDateF (CurrentDate a)
     | MaxF         (Max a)
@@ -319,25 +322,33 @@ data Function a =
                              --         since it is a colref!
     | RandomF      (Random a)
     | SumF         (Sum a)
+    
+    -- MariaDB specific functions.
+    
+    | CalcFoundRowsF (CalcFoundRows a)
+    | FoundRowsF     (FoundRows a)
       deriving (Show)
 
-data Add a = Add (ColRef a) (ColRef a) deriving (Show)
-data BitAnd a= BitAnd (ColRef a) (ColRef a) deriving (Show)
-data BitOr a = BitOr (ColRef a) (ColRef a) deriving (Show)
-data BitShiftLeft a = BitShiftLeft (ColRef a) (ColRef a) deriving (Show)
+data Add           a = Add           (ColRef a) (ColRef a) deriving (Show)
+data BitAnd        a = BitAnd        (ColRef a) (ColRef a) deriving (Show)
+data BitOr         a = BitOr         (ColRef a) (ColRef a) deriving (Show)
+data BitShiftLeft  a = BitShiftLeft  (ColRef a) (ColRef a) deriving (Show)
 data BitShiftRight a = BitShiftRight (ColRef a) (ColRef a) deriving (Show)
-data Divide a = Divide (ColRef a) (ColRef a) deriving (Show) 
-data Modulo a = Modulo (ColRef a) (ColRef a) deriving (Show)
-data Multiply a = Multiply (ColRef a) (ColRef a) deriving (Show)
-data Substract a = Substract (ColRef a) (ColRef a) deriving (Show)
+data Divide        a = Divide        (ColRef a) (ColRef a) deriving (Show) 
+data Modulo        a = Modulo        (ColRef a) (ColRef a) deriving (Show)
+data Multiply      a = Multiply      (ColRef a) (ColRef a) deriving (Show)
+data Substract     a = Substract     (ColRef a) (ColRef a) deriving (Show)
 
-data Count a = Count (Expression a) deriving (Show)
-data CurrentDate a = CurrentDate deriving (Show)
-data Max a = Max (Expression a) deriving (Show)
-data Min a = Min (Expression a) deriving (Show)
-data Joker a= Joker deriving (Show) 
-data Random a = Random deriving (Show)
-data Sum a = Sum (Expression a) deriving (Show)
+data Count       a = Count (Expression a) deriving (Show)
+data CurrentDate a = CurrentDate          deriving (Show)
+data Max         a = Max (Expression a)   deriving (Show)
+data Min         a = Min (Expression a)   deriving (Show)
+data Joker       a = Joker                deriving (Show) 
+data Random      a = Random               deriving (Show)
+data Sum         a = Sum (Expression a)   deriving (Show)
+
+data CalcFoundRows a = CalcFoundRows deriving (Show)
+data FoundRows     a = FoundRows     deriving (Show)
 
 -- | Functions returning TRUE or FALSE.
 data FuncBool a =

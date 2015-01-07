@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 {-|
 Module      : Hedsql/Drivers/PostgreSQL/Parser.hs
 Description : PostgreSQL parser implementation.
@@ -11,18 +13,35 @@ PostgreSQL parser implementation.
 -}
 module Hedsql.Drivers.PostgreSQL.Parser
     (
-      PostgreSQL(PostgreSQL)
-    , postgreSQLParser
+      parse
     ) where
 
+import Hedsql.Common.Constructor.Statements
+import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser
+import Hedsql.Drivers.PostgreSQL.Driver
 
--- | PostgreSQL driver.
-data PostgreSQL = PostgreSQL
+import Control.Lens
 
--- | PostgreSQL parser.
+-- Private.
+
+-- | Create the PostgreSQL parser.
 postgreSQLParser :: Parser PostgreSQL
-postgreSQLParser = getGenParser genQueryParser
+postgreSQLParser = getParser $ getStmtParser postgreSQLQueryParser
+
+-- | Create the PostgreSQL query parser.
+postgreSQLQueryParser :: QueryParser PostgreSQL
+postgreSQLQueryParser = 
+    getQueryParser postgreSQLQueryParser (getGenFuncParser postgreSQLQueryParser)
+
+-- Public.
+
+{-|
+Convert a SQL statement (or something which can be coerced to a statement)
+to a SQL string.
+-}
+parse :: CoerceToStmt a Statement => (a PostgreSQL) -> String
+parse = (postgreSQLParser^.parseStmt).statement
 
 -- TODO: to be reworked.
 

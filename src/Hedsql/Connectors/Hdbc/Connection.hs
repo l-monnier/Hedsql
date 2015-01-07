@@ -42,7 +42,7 @@ module Hedsql.Connectors.Hdbc.Connection (
 import Data.Map
 import Database.HDBC.Sqlite3
 import Hedsql.Common.Constructor
-import Hedsql.Common.DataStructure.Base
+import Hedsql.Common.DataStructure
 import Hedsql.Common.DefaultParser
 import Hedsql.Connectors.Connection
 import Hedsql.Drivers.PostgreSQL.Driver

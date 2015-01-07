@@ -41,12 +41,9 @@ module Hedsql.Common.Constructor.TablesManipulation
 import Hedsql.Common.Constructor.Columns
 import Hedsql.Common.Constructor.Conditions
 import Hedsql.Common.Constructor.Tables
-import Hedsql.Common.DataStructure.Base
-import Hedsql.Helpers.Coerce
+import Hedsql.Common.DataStructure
 
 import Prelude hiding (null)
-
-import qualified Data.Coerce as C
 
 -- TODO: implement ALTER statements.
 
@@ -60,11 +57,11 @@ maybeString name = Just name
 -- public functions.
 
 -- | Create a CHECK constraint.
-check :: Coerce a (Condition a) => a -> ColConstraintType a
+check :: CoerceToCondition (a b) (Condition b) => a b -> ColConstraintType b
 check cond = Check $ condition cond
 
 -- | Create a CHECK constraint to be used in a table constraint.
-checkT :: Coerce a (Condition a) => a -> TableConstraintType a
+checkT :: CoerceToCondition (a b) (Condition b) => a b -> TableConstraintType b
 checkT = TableConstraintCheck . condition
 
 -- | Create a constraint which shall then be applied on a column.
@@ -73,11 +70,12 @@ colConstraint name constraintType =
     ColConstraint (maybeString name) constraintType
 
 -- | Create a CREATE TABLE statement.
-createTable :: Coerce a (Table b) => a -> [Column b] -> CreateTable b
+createTable :: CoerceToTable a (Table b) => a -> [Column b] -> CreateTable b
 createTable t cols = CreateTable False (table t) cols Nothing
 
 -- | Create a CREATE TABLE IF NOT EXIST statement.
-createTableIfNotExist :: Coerce a (Table b) => a -> [Column b] -> CreateTable b
+createTableIfNotExist ::
+    CoerceToTable a (Table b) => a -> [Column b] -> CreateTable b
 createTableIfNotExist t cols = CreateTable True (table t) cols Nothing
 
 -- | Create a CREATE VIEW query.
@@ -88,17 +86,18 @@ createView ::
 createView name select = CreateView name select
 
 -- | Create a DEFAULT value constraint.
-defaultValue :: Coerce a [ColRef a] => a -> ColConstraintType a
+defaultValue :: CoerceToColRef a [ColRef b] => a -> ColConstraintType b
 defaultValue e = Default $ expr e
 
 -- | Create a DROP TABLE statement.
 dropTable ::
-       String -- ^ Name of the table. 
-    -> DropTable a
+    (CoerceToTable a (Table b))
+    => a -- ^ Table to drop. 
+    -> DropTable b
 dropTable = DropTable False . table
 
 dropTableIfExists ::
-       Coerce a (Table b)
+       CoerceToTable a (Table b)
     => a -- ^ Table or name of the table.
     -> DropTable b
 dropTableIfExists name = DropTable True $ table name
@@ -110,7 +109,7 @@ dropView ::
 dropView = DropView
 
 -- | Create a FOREIGN KEY constraint.
-foreignKey :: (Coerce a (Table c), Coerce b [Column c])
+foreignKey :: (CoerceToTable a (Table c), CoerceToCol b [Column c])
            => a -- ^ Table.
            -> b -- ^ Column.
            -> ColConstraintType c
@@ -135,7 +134,7 @@ primary ::
 primary = Primary
 
 -- | Create a PRIMARY KEY constraint to be used in a table constraint.
-primaryT :: Coerce a [Column b] => a -> TableConstraintType b
+primaryT :: CoerceToCol a [Column b] => a -> TableConstraintType b
 primaryT = TableConstraintPrimaryKey . columns
 
 -- | Create a table constraint.
@@ -148,5 +147,5 @@ unique :: ColConstraintType a
 unique = Unique
 
 -- | Create an UNIQUE table constraint
-uniqueT :: Coerce a [Column b] => a -> TableConstraintType b
+uniqueT :: CoerceToCol a [Column b] => a -> TableConstraintType b
 uniqueT = TableConstraintUnique . columns

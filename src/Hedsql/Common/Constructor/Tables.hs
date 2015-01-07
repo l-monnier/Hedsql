@@ -1,7 +1,7 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-} 
-{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
 
 {-|
 Module      : Hedsql/Common/Constructor/Tables.hs
@@ -16,49 +16,60 @@ Constructor functions for table references which can then be used in queries.
 -}
 module Hedsql.Common.Constructor.Tables
     (
-      alias
+      CoerceToTable
+    , CoerceToTableRef
+    , alias
+    , coerceToTable
     , table
     , tableRef
     , tableRefs
     ) where
 
-import Hedsql.Common.DataStructure.Base
-import Hedsql.Helpers.Coerce
+import Hedsql.Common.Constructor.Types
+import Hedsql.Common.DataStructure
 
-import Control.Lens hiding (coerce)
+import Control.Lens
 
 -- private functions.
 
+-- | Coerce a given type to a Table.
+class CoerceToTable a b | a -> b where
+    coerceToTable :: a -> b
+
 -- | Create a table from its name.
-instance Coerce String (Table a) where
-    coerce = Table
+instance CoerceToTable (SqlString a) (Table a) where
+    coerceToTable = Table
 
 -- | Create a table from itself.
-instance Coerce (Table a) (Table a) where
-    coerce = id
+instance CoerceToTable (Table a) (Table a) where
+    coerceToTable = id
 
-instance Coerce String [TableRef a] where
-    coerce name = [TableTableRef (coerce name) Nothing]
+-- | Coerce a given type to a list of TableRef.
+class CoerceToTableRef a b | a -> b where
+    coerceToTableRef :: a -> b
 
-instance Coerce (Table a) [TableRef a] where
-    coerce name = [TableTableRef name Nothing]
+instance CoerceToTableRef (SqlString a) [TableRef a] where
+    coerceToTableRef name = [TableTableRef (coerceToTable name) Nothing]
 
-instance Coerce (TableRef a) [TableRef a] where
-    coerce ref = [ref]
+instance CoerceToTableRef (Table a) [TableRef a] where
+    coerceToTableRef name = [TableTableRef name Nothing]
 
-instance Coerce [String] [TableRef a] where
-    coerce = map (head.coerce)
+instance CoerceToTableRef (TableRef a) [TableRef a] where
+    coerceToTableRef ref = [ref]
+
+instance CoerceToTableRef [SqlString a] [TableRef a] where
+    coerceToTableRef = map (head.coerceToTableRef)
     
-instance Coerce [Table a] [TableRef a] where
-    coerce = map (head.coerce)
+instance CoerceToTableRef [Table a] [TableRef a] where
+    coerceToTableRef = map (head.coerceToTableRef)
     
-instance Coerce [TableRef a] [TableRef a] where
-    coerce = id
+instance CoerceToTableRef [TableRef a] [TableRef a] where
+    coerceToTableRef = id
 
 -- public functions.
 
 -- | Create a table alias using AS.
-alias :: Coerce a [TableRef a] => a -> String -> TableRef a
+alias :: CoerceToTableRef a [TableRef b] => a -> String -> TableRef b
 alias t name =
     setAlias ref
     where
@@ -71,22 +82,22 @@ alias t name =
 
 -- | Create a table which can then be used as so in a query.
 table
-    :: Coerce a (Table b)
+    :: CoerceToTable a (Table b)
     => a -- ^ The table itself or its name as a string.
     -> Table b
-table = coerce
+table = coerceToTable
 
 -- | Create a table reference which can then be used in a query.
-tableRef :: Coerce a [TableRef a] => a -> TableRef a
-tableRef = head.coerce
+tableRef :: CoerceToTableRef a [TableRef b] => a -> TableRef b
+tableRef = head.coerceToTableRef
 
 -- | Create many table reference which can then be used in a query.
-tableRefs :: Coerce a [TableRef a] => a -> [TableRef a]
-tableRefs = coerce
+tableRefs :: CoerceToTableRef a [TableRef b] => a -> [TableRef b]
+tableRefs = coerceToTableRef
 
 -- | Create many tables which can then be used as so in a query.
 tables
-    :: Coerce a (Table b)
+    :: CoerceToTable a (Table b)
     => [a] -- ^ The tables themselves or their name as a string.
     -> [Table b]
 tables = map table

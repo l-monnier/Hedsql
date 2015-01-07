@@ -11,7 +11,9 @@ Constructor functions for SQL types which can then be used in queries.
 -}
 module Hedsql.Common.Constructor.Types
     (
-      bigInt
+      SqlInt
+    , SqlString
+    , bigInt
     , char
     , date
     , integer
@@ -19,11 +21,22 @@ module Hedsql.Common.Constructor.Types
     , varchar
     ) where
 
-import Hedsql.Common.DataStructure.Base
+import Hedsql.Common.DataStructure
 
 -- private functions.
 
 -- public functions.
+
+{- |
+Those types allow us to implement instances complying with the coverage
+condition when using instances using functional dependencies.
+
+More concretely we can define an instance such as:
+> instance CoerceToType (SqlString a) (DataType a) where
+>     coerceToType = [...]
+-}
+type SqlInt a = Int
+type SqlString a = String
 
 -- | Create a BIGINT
 bigInt :: SqlDataType

@@ -26,7 +26,9 @@ module Hedsql.Common.Parser
     , getGenBoolFuncParser
     , getGenFuncParser
     , getGenJoinParser
-    , getGenParser
+    , getParser
+    , getQueryParser
+    , getStmtParser
     ) where
 
 import Hedsql.Common.Parser.BoolFunctions
@@ -37,36 +39,46 @@ import qualified Hedsql.Common.Parser.Quoter as Q
 
 import Control.Lens
 
+-- Private.
+
+-- Public.
+
 -- | Generic query parser.
 genQueryParser :: QueryParser a
-genQueryParser = QueryParser
-    (parseColFunc genQueryParser)
-    (parseColRefFunc genQueryParser)
-    (parseColRefDefFunc genQueryParser)
-    (parseConditionFunc genQueryParser)
-    (parseFuncFunc genFuncParser)
+genQueryParser = getQueryParser genQueryParser (getGenFuncParser genQueryParser)
+
+{-|
+Return a query parser using the provided query parser.
+-}
+getQueryParser :: QueryParser a -> FuncParser a -> QueryParser a
+getQueryParser queryParser funcParser = QueryParser
+    (parseAssgnmtFunc queryParser)
+    (parseColFunc queryParser)
+    (parseColRefFunc queryParser)
+    (parseColRefDefFunc queryParser)
+    (parseConditionFunc queryParser)
+    (parseFuncFunc funcParser)
     (parseFuncBoolFunc genBoolFuncParser)
-    (parseExprFunc genQueryParser genParser)
-    (parseFromFunc genQueryParser)
-    (parseJoinFunc genQueryParser genJoinParser)
-    (parseGroupByFunc genQueryParser)
-    (parseHavingFunc genQueryParser)
-    (parseOrderByFunc genQueryParser)
+    (parseExprFunc queryParser stmtParser)
+    (parseFromFunc queryParser)
+    (parseJoinFunc queryParser genJoinParser)
+    (parseGroupByFunc queryParser)
+    (parseHavingFunc queryParser)
+    (parseOrderByFunc queryParser)
      parseSortNullFunc
-    (parseSortRefFunc genQueryParser)
+    (parseSortRefFunc queryParser)
      parseSortOrderFunc
-    (parseTableNameFunc genQueryParser)
-    (parseTableRefFunc genParser genQueryParser)
-    (parseTableRefAsFunc genQueryParser)
-    (parseValueFunc genQueryParser)
-    (parseWhereFunc genQueryParser)
+    (parseTableNameFunc queryParser)
+    (parseTableRefFunc stmtParser queryParser)
+    (parseTableRefAsFunc queryParser)
+    (parseValueFunc queryParser)
+    (parseWhereFunc queryParser)
     (Q.genQuoter ^. Q.quoteElem)
     (Q.genQuoter ^. Q.quoteVal)
     where
-        genBoolFuncParser = getGenBoolFuncParser genQueryParser
-        genFuncParser = getGenFuncParser genQueryParser
-        genJoinParser = getGenJoinParser genQueryParser
-        genParser = getGenParser genQueryParser
+        genBoolFuncParser = getGenBoolFuncParser queryParser
+        genJoinParser     = getGenJoinParser queryParser
+        stmtParser        = getStmtParser queryParser
 
 {-|
 Get a generic boolean functions parser by providing its internal query
@@ -121,6 +133,8 @@ getGenFuncParser queryParser = FuncParser
      parseJokerFunc
      parseRandomFunc
     (parseSumFunc queryParser)
+     parseCalcFoundRowsFunc
+     parseFoundRowsFunc
     (parseInfixFunc queryParser)
     where
         genFuncParser = getGenFuncParser queryParser
@@ -131,11 +145,17 @@ getGenJoinParser queryParser = JoinParser
     (parseJoinClauseFunc queryParser)
      parseJoinTColFunc
      parseJoinTTableFunc
+    
+-- | Get a parser using the provided statement parser.
+getParser :: StmtParser a -> Parser a
+getParser = Parser . parseStmtFunc
 
--- | Get a generic parser by providing its internal parsers.
-getGenParser :: QueryParser a -> Parser a
-getGenParser queryParser = Parser
+-- | Get a statement parser, using a given query parser.
+getStmtParser :: QueryParser a -> StmtParser a
+getStmtParser queryParser = StmtParser
     (parseDeleteFunc queryParser)
     (parseDropTableFunc queryParser)
     (parseDropViewFunc queryParser)
+    (parseInsertFunc queryParser)
     (parseSelectFunc queryParser)
+    (parseUpdateFunc queryParser)

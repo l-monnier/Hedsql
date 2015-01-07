@@ -73,7 +73,7 @@ module Hedsql.Common.Parser.BoolFunctions
     , parseBetweensFunc
     ) where
 
-import Hedsql.Common.DataStructure.Base
+import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser.Queries
 
 import Control.Lens

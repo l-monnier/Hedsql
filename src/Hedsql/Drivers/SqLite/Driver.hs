@@ -1,15 +1,18 @@
--- file : Hedsql/Drivers/SqLite/Driver.hs
-
 {-|
-    SQLite driver.
+Module      : Hedsql/Drivers/SqLite/Driver.hs
+Description : SqLite driver.
+Copyright   : (c) Leonard Monnier, 2014
+License     : GPL-3
+Maintainer  : leonard.monnier@gmail.com
+Stability   : experimental
+Portability : portable
+
+SqLite driver.
 -}
-
-module Hedsql.Drivers.SqLite.Driver where
-
-import Hedsql.Common.Driver
+module Hedsql.Drivers.SqLite.Driver
+    (
+    SqLite
+    ) where
 
 -- | SQLite driver
 data SqLite = SqLite
-    
-instance Driver SqLite where
-    getName driver = "SQLite"

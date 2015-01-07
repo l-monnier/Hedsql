@@ -1,6 +1,7 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-} 
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-} 
 
 {-|
 Module      : Hedsql/Common/Constructor/Conditions.hs
@@ -16,24 +17,26 @@ or for tables creation.
 -}
 module Hedsql.Common.Constructor.Conditions
     (
-    condition
+      CoerceToCondition
+    , condition
     ) where
 
-import Hedsql.Common.DataStructure.Base
-import Hedsql.Helpers.Coerce
-
-import qualified Data.Coerce as C
+import Hedsql.Common.DataStructure
 
 -- private functions.
 
-instance Coerce (Condition a) (Condition b) where
-    coerce = C.coerce
+-- | Coerce a given type to a Condition.
+class CoerceToCondition a b | a -> b where
+    coerceToCondition :: a -> b
 
-instance Coerce (FuncBool a) (Condition b) where
-    coerce func = FuncCond (C.coerce func)
+instance CoerceToCondition (Condition a) (Condition a) where
+    coerceToCondition = id
+
+instance CoerceToCondition (FuncBool a) (Condition a) where
+    coerceToCondition = FuncCond
 
 -- public functions.
 
 -- | Create a condition.
-condition :: Coerce a (Condition b) => a -> Condition b
-condition = coerce
+condition :: CoerceToCondition a (Condition b) => a -> Condition b
+condition = coerceToCondition

@@ -1,46 +1,56 @@
--- file : Hedsql/Drivers/SqLite/Parser.hs
-
-
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverlappingInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 {-|
-    SQLite parser implementation.
--}
+Module      : Hedsql/Drivers/SqLite/Parser.hs
+Description : SqLite parser.
+Copyright   : (c) Leonard Monnier, 2014
+License     : GPL-3
+Maintainer  : leonard.monnier@gmail.com
+Stability   : experimental
+Portability : portable
 
-module Hedsql.Drivers.SqLite.Parser (
-      module Hedsql.Common.DefaultParser
-    , toSqlString
+SqLite parser implementation.
+-}
+module Hedsql.Drivers.SqLite.Parser
+    (
+      parse
     ) where
 
-import Hedsql.Common.DataStructure.Base
-import Hedsql.Common.Driver 
-import Hedsql.Common.DefaultParser
+import Hedsql.Common.Constructor.Statements
+import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser
+import Hedsql.Common.Parser.Functions
 import Hedsql.Drivers.SqLite.Driver
 
-{-|
-    Parser instance for the SqLite driver. It is basically a call to the
-    "toSqlLiteString" function of the "SqLiteParser" type class.
--}
-instance (DefaultParser SqLite b, SqLiteParser b) => Parser SqLite b where
-    toSqlString _ b = toSqLiteString b
- 
--- | SQLite parser class.
-class SqLiteParser a where
-    toSqLiteString :: (DefaultParser SqLite a) => a -> String
+import Control.Lens
+
+-- Private.
 
 {-|
-    Generic default instance used if no specific instance exists for the type.
-    This is basically a call to the "toDefaultSqlString" function of the
-    "DefaultParser" type class.
+Parse the Date('now') function (which is "CURRENT_DATE" for some other vendors).
 -}
-instance SqLiteParser a where
-    toSqLiteString = toDefaultSqlString SqLite
+sqLiteCurrentDateFunc :: CurrentDate SqLite -> String
+sqLiteCurrentDateFunc _ = "Date('now')"
 
--- | The CURRENT_DATE function is written "Date('now')" in SqLite.
-instance SqLiteParser CurrentDate where
-    toSqLiteString  _ = "Date('now')"
+-- | Create the SqLite function parser.
+sqLiteFuncParser :: FuncParser SqLite
+sqLiteFuncParser =
+    (getGenFuncParser sqLiteQueryParser)
+        & parseCurrentDate .~ sqLiteCurrentDateFunc
+
+-- | Create the SqLite parser.
+sqLiteParser :: Parser SqLite
+sqLiteParser = getParser $ getStmtParser sqLiteQueryParser
+    
+-- | Create the SqLite query parser.
+sqLiteQueryParser :: QueryParser SqLite
+sqLiteQueryParser = getQueryParser sqLiteQueryParser sqLiteFuncParser
+
+-- Public.
+
+{-|
+Convert a SQL statement (or something which can be coerced to a statement)
+to a SQL string.
+-}
+parse :: CoerceToStmt a Statement => (a SqLite) -> String
+parse = (sqLiteParser^.parseStmt).statement

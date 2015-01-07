@@ -25,8 +25,7 @@ module Hedsql.Common.Constructor.DataManipulation
 import Hedsql.Common.Constructor.Columns
 import Hedsql.Common.Constructor.Tables
 import Hedsql.Common.Constructor.Values
-import Hedsql.Common.DataStructure.Base
-import Hedsql.Helpers.Coerce
+import Hedsql.Common.DataStructure
 
 -- private functions.
 
@@ -35,19 +34,19 @@ import Hedsql.Helpers.Coerce
 -- | Create a column/value pair to be used in an UPDATE statement.
 assign ::
     (
-       Coerce b [Column a]
-    ,  Coerce a (SqlValue a)
+       CoerceToCol      a [Column c]
+    ,  CoerceToSqlValue b [SqlValue c]
     )
-    => b -- ^ Column or name of the column.
-    -> a -- ^ Value for this column.
-    -> Assignment a
-assign c val = Assignment (column c) (ValueExpr $ value val)
+    => a -- ^ Column or name of the column.
+    -> b -- ^ Value for this column.
+    -> Assignment c
+assign a val = Assignment (column a) (ValueExpr $ value val)
 
 -- | Create a DELETE FROM statement.
 deleteFrom ::
-       Coerce a (Table a)
+       CoerceToTable a (Table b)
     => a -- ^ Table or name of the table to delete from.
-    -> Delete a
+    -> Delete b
 deleteFrom t = Delete (table t) Nothing
 
 {-|
@@ -58,12 +57,12 @@ than one row in the database.
 -}
 insertInto ::
     (
-       Coerce b (Table a)
-    ,  Coerce [a] [SqlValue a]
+       CoerceToTable     a  (Table c)
+    ,  CoerceToSqlValue [b] [SqlValue c]
     )
-    => b      -- ^ Table or name of the table to insert the data into.
-    -> [[a]]  -- ^ Values to insert.
-    -> Insert a
+    =>   a    -- ^ Table or name of the table to insert the data into.
+    -> [[b]]  -- ^ Values to insert.
+    -> Insert c
 insertInto t vals = Insert (table t) Nothing $ map values vals
 
 {-|
@@ -74,21 +73,21 @@ than one row in the database.
 -}
 insertIntoCols ::
     (
-       Coerce [a] [SqlValue a]
-    ,  Coerce c [Column a]
-    ,  Coerce b (Table a)
+      CoerceToTable     a  (Table d)
+    , CoerceToCol       b  [Column d]
+    , CoerceToSqlValue [c] [SqlValue d]
     )
-    => b     -- ^ Table or name of the table to insert the data into.
-    -> [c]   -- ^ Columns or names of the columns.
-    -> [[a]] -- ^ Values to insert.
-    -> Insert a
+    =>   a     -- ^ Table or name of the table to insert the data into.
+    ->  [b]    -- ^ Columns or names of the columns.
+    -> [[c]]   -- ^ Values to insert.
+    -> Insert d
 insertIntoCols t cols vals =
     Insert (table t) (Just $ map column cols) $ map values vals
 
 -- | Create an UPDATE statement.
 update ::
-       Coerce a (Table a)
+       CoerceToTable a (Table b)
     => a              -- ^ Table to update.
-    -> [Assignment a] -- ^ Column/value assignements.
-    -> Update a
+    -> [Assignment b] -- ^ Column/value assignements.
+    -> Update b
 update t assignments = Update (table t) assignments Nothing

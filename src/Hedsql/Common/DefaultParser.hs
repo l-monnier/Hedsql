@@ -32,7 +32,7 @@ query for only this backend and keep the same for the others.
 module Hedsql.Common.DefaultParser where
 
 import Hedsql.Common.Driver
-import Hedsql.Common.DataStructure.Base
+import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser
 import Hedsql.Common.Quoter
 import Hedsql.Helpers.Patterns
@@ -133,19 +133,6 @@ class Parseable a where
 
 -- Old code.
 
-instance (DefaultParser Sql b) => Parser Sql b where
-    toSqlString = toDefaultSqlString   
-
--- Definition and instances of the query part.
-
-class DefaultParser a b where
-    toDefaultSqlString :: (Driver a) => a -> b -> String
-
--- instance (Parser a Column, Parser a Expression) => DefaultParser  a Assignment where
---    toDefaultSqlString driver assignment =
---           toSqlString driver (assignment^.assignmentCol)
---        ++ " = "
---        ++ toSqlString driver (assignment^.assignmentVal)
 
 -- Build a timing constraint.
 instance (
@@ -282,32 +269,7 @@ instance Parser a SqlAction => DefaultParser a OnAction where
 --             "CREATE VIEW "
 --        ++ quoteSql driver (statement^.viewName)
 --        ++ " AS "
---        ++ toSqlString driver (statement^.viewSelect)
-
--- | Create an INSERT query.
---instance (Parser a Column, Parser a SqlValue) => DefaultParser a Insert where
---   toDefaultSqlString driver query =
---             "INSERT INTO " ++ query^.insertTable.tableName
---        ++ makeCols (query^.insertColumns)
---        ++ " VALUES " ++  params
---        where
---            makeCols (Just columns) = getPatternFromList " (" ")" ", " $ map (toSqlString driver) columns
---            makeCols Nothing = ""
---            params =
---                getPatternFromList "" "" ", " $ map (\xs -> getPatternFromList "(" ")" ", " $ map (toSqlString driver) $ xs) (query^.insertValues) 
-
--- | Build an UPDATE query.
---instance (
---      Parser a Assignment
---    , Parser a Where
---    , Parser a SqlValue
---    ) => DefaultParser a Update where
---    toDefaultSqlString driver query =
---              "UPDATE " ++ (query^.updateTable.tableName)
---         ++ " SET" ++ assignments
---         ++ (makeWhere driver $ query^.updateWherePart)
---         where
---             assignments = getPatternFromList " " "" ", " $ map (toSqlString driver) $ query^.updateAssignments
+--        ++ toSqlString driver (statement^.viewSelect) 
 
 -- | Build a SQL action such as CASCADE and RESTRICT.
 instance DefaultParser a SqlAction where

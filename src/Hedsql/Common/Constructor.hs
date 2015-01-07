@@ -9,7 +9,7 @@ Portability : portable
 
 Constructors function.
 
-They provide an easier, more flexible and shorter way to create
+They provide a flexible and natural way to create
 the various SQL data types.
 
 *Pre-requisites
@@ -28,27 +28,26 @@ This will allow to write queries like this:
 
 instead of:
 
-> select $ "col1"::String
-> from $ "table1"::String
+>     select ("col1"::String)
+> /++ from ("table1"::String)
 
 For more explanations related to the why and how, please refer to the
 following discussion:
 http://haskell.1045720.n5.nabble.com/Proposal-Improving-the-IsString-String
 -instance-td5734824.html
 
-** Hiding prelude "and" function
+** Hiding prelude functions
 
-Since this constructor class also use a function named "and" as the Prelude
-package, it is recommended to hide the "and" function of the Prelude in the
-import.
+To stay close to SQL, some functions are using the same name as in the prelude.
+If this happens, you can or use a qualitifed name or hide them during the 
+import of the Prelude or Hedsql.
 
-> import Prelude hiding (and)
+> import Prelude hiding (and, or, null)
 
 *Building a query
 
 The idea is to provide a limited set of functions with similar or close
 naming from SQL.
-Those functions have only a requested minimal set of arguments.
 The results of those functions can then be composed to form complete
 queries.
 For example, when using the 'select' function, you will not provide a FROM
@@ -80,10 +79,10 @@ the 'column' function - or of type String.
 *Naming
 
 Most functions have the same name as their SQL functions counterpart.
-However, since some words are reserved in Haskell, the following functions
-have been renamed:
-- WHERE becomes 'w'
-- ALIAS becomes 'as' for table aliaising and 'out' for output aliaising.
+However, since some words are reserved in Haskell, an underscore is added at
+the end in some cases (as does Esqueletto):
+- WHERE becomes 'where_'
+- AS becomes 'as_'
 
 *Special cases
 
@@ -94,7 +93,7 @@ query on their own.
 This way, we ensure to have an ORDER BY clause defined when using OFFSET
 and LIMT, which is a good practice, because SQL does not guarantee any
 order of the result unless explicitly specified.
-This means that without an ORDER BY clause, using limit or offset would
+This means that without an ORDER BY clause, using LIMIT or OFFSET would
 result in random results.
 -}
 module Hedsql.Common.Constructor
@@ -105,6 +104,7 @@ module Hedsql.Common.Constructor
     , module Hedsql.Common.Constructor.DataManipulation
     , module Hedsql.Common.Constructor.Functions
     , module Hedsql.Common.Constructor.Select
+    , module Hedsql.Common.Constructor.Statements
     , module Hedsql.Common.Constructor.Tables
     , module Hedsql.Common.Constructor.TablesManipulation
     , module Hedsql.Common.Constructor.Types
@@ -117,6 +117,7 @@ import Hedsql.Common.Constructor.Conditions
 import Hedsql.Common.Constructor.DataManipulation
 import Hedsql.Common.Constructor.Functions
 import Hedsql.Common.Constructor.Select
+import Hedsql.Common.Constructor.Statements
 import Hedsql.Common.Constructor.Tables
 import Hedsql.Common.Constructor.TablesManipulation
 import Hedsql.Common.Constructor.Values

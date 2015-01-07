@@ -1,5 +1,5 @@
 {-|
-Module      : Hedsql/Common/DataStructure/Base.hs
+Module      : Hedsql/Common/DataStructure.hs
 Description : Constructor functions for columns.
 Copyright   : (c) Leonard Monnier, 2014
 License     : GPL-3
@@ -13,7 +13,7 @@ It is an "internal machinery" on which are then builds classes allowing the
 easy generation of such SQL data which can then be later convert them to
 SQL strings.
 -}
-module Hedsql.Common.DataStructure.Base (
+module Hedsql.Common.DataStructure (
       module Hedsql.Common.DataStructure.Create
     , module Hedsql.Common.DataStructure.Delete
     , module Hedsql.Common.DataStructure.Drop
@@ -22,6 +22,17 @@ module Hedsql.Common.DataStructure.Base (
     , module Hedsql.Common.DataStructure.Select
     , module Hedsql.Common.DataStructure.Update
     , Statement
+        (
+          CreateTableStmt
+        , CreateViewStmt
+        , DeleteStmt
+        , DropTableStmt
+        , DropViewStmt
+        , InsertStmt
+        , SelectStmt
+        , UpdateStmt
+        , Statements
+        )
     ) where
 
 import Hedsql.Common.DataStructure.Create
@@ -32,19 +43,19 @@ import Hedsql.Common.DataStructure.Inspect
 import Hedsql.Common.DataStructure.Select
 import Hedsql.Common.DataStructure.Update
 
--- private functions.
+-- Private.
 
--- public functions.
+-- Public.
 
 -- | All possible SQL statements which can be constructed using Hedsql.
 data Statement a =
       CreateTableStmt (CreateTable a)
-    | CreateViewStmt (CreateView a)
-    | DeleteStmt (Delete a)
-    | DropTableStmt (DropTable a)
-    | DropViewStmt (DropView a)
-    | InsertStmt (Insert a)
-    | SelectQueryStmt (Select a)
-    | UpdateStmt (Update a)
-    | Statements [Statement a] -- ^ Combination of many statements.
+    | CreateViewStmt  (CreateView a)
+    | DeleteStmt      (Delete a)
+    | DropTableStmt   (DropTable a)
+    | DropViewStmt    (DropView a)
+    | InsertStmt      (Insert a)
+    | SelectStmt      (Select a)
+    | UpdateStmt      (Update a)
+    | Statements      [Statement a] -- ^ Combination of many statements.
       deriving (Show)

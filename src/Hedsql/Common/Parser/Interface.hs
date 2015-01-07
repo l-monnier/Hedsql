@@ -34,24 +34,18 @@ for each element of a SELECT statement such as:
 module Hedsql.Common.Parser.Interface
     (
        Parser(Parser)
-    ,  parseDelete
-    ,  parseDropTable
-    ,  parseDropView
-    ,  parseSelect
+    ,  parseStmt
     ) where
 
 import Control.Lens
-import Hedsql.Common.DataStructure.Base
+import Hedsql.Common.DataStructure
 
 {-|
 Interface which defines the top level functions of a SQL Parser.
 -}
 data Parser a = Parser
     {
-      _parseDelete    :: Delete a    -> String
-    , _parseDropTable :: DropTable a -> String
-    , _parseDropView  :: DropView a  -> String
-    , _parseSelect    :: Select a    -> String
+      _parseStmt :: Statement a -> String
     }
     
 makeLenses ''Parser

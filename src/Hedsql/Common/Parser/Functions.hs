@@ -20,7 +20,9 @@ module Hedsql.Common.Parser.Functions
     , parseBitOr
     , parseBitShiftLeft
     , parseBitShiftRight
+    , parseCalcFoundRows
     , parseDivide
+    , parseFoundRows
     , parseModulo
     , parseMultiply
     , parseSubstract
@@ -45,8 +47,10 @@ module Hedsql.Common.Parser.Functions
     , parseModuloFunc
     , parseMultiplyFunc
     , parseSubstractFunc
+    , parseCalcFoundRowsFunc
     , parseCountFunc
     , parseCurrentDateFunc
+    , parseFoundRowsFunc
     , parseMaxFunc
     , parseMinFunc
     , parseJokerFunc
@@ -54,7 +58,7 @@ module Hedsql.Common.Parser.Functions
     , parseSumFunc
     ) where
 
-import Hedsql.Common.DataStructure.Base
+import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser.Queries
 
 import Control.Lens
@@ -88,6 +92,10 @@ data FuncParser a = FuncParser
     , _parseJoker       :: Joker a       -> String
     , _parseRandom      :: Random a      -> String
     , _parseSum         :: Sum a         -> String
+    
+    -- MariaDB specific functions.
+    , _parseCalcFoundRows :: CalcFoundRows a -> String
+    , _parseFoundRows     :: FoundRows     a -> String
     
     -- Helper functions
     , _parseInfix :: String -> ColRef a -> ColRef a -> String
@@ -127,6 +135,10 @@ parseFuncFunc parser func =
         MinF f         -> parser^.parseMin $ f
         RandomF f      -> parser^.parseRandom $ f
         SumF f         -> parser^.parseSum $ f
+        
+        -- MariaDB functions.
+        CalcFoundRowsF f -> parser^.parseCalcFoundRows $ f
+        FoundRowsF     f -> parser^.parseFoundRows     $ f
         
 -- | Parse "+".
 parseAddFunc :: FuncParser a -> Add a -> String
@@ -195,3 +207,15 @@ parseRandomFunc _ = "RANDOM"
 -- | Build a SUM function.
 parseSumFunc :: QueryParser a -> Sum a -> String
 parseSumFunc parser (Sum expr) = makeExpr parser "SUM" expr
+
+-- MariaDB functions.
+
+-- | Dummy implementation which just return an error.
+parseCalcFoundRowsFunc :: CalcFoundRows a -> String
+parseCalcFoundRowsFunc =
+    error "SQL_CALC_FOUND_ROWS is specific to MariaDB. Use the MariaDB parser."
+
+-- | Dummy implementation which just return an error.
+parseFoundRowsFunc :: FoundRows a -> String
+parseFoundRowsFunc =
+    error "FOUND_ROWS is specific to MariaDB. Use the MariaDB parser."

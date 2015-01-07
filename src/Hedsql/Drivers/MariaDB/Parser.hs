@@ -1,62 +1,56 @@
--- file : Hedsql/Drivers/MariaDBParser.hs
-
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverlappingInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 {-|
-    MariaDB parser implementation.
--}
+Module      : Hedsql/Drivers/MariaDB/Parser.hs
+Description : MariaDB parser.
+Copyright   : (c) Leonard Monnier, 2014
+License     : GPL-3
+Maintainer  : leonard.monnier@gmail.com
+Stability   : experimental
+Portability : portable
 
+MariaDB parser implementation.
+-}
 module Hedsql.Drivers.MariaDB.Parser where
 
-import Hedsql.Commun.DataStructure
-import Hedsql.Commun.Driver 
-import Hedsql.Commun.DefaultParser
-import Hedsql.Commun.Parser
+import Hedsql.Common.Constructor.Statements
+import Hedsql.Common.DataStructure
+import Hedsql.Common.Parser
+import Hedsql.Common.Parser.Functions
 import Hedsql.Drivers.MariaDB.Driver
 
-data CalcFoundRows = CalcFoundRows deriving Show
-data FoundRows= FoundRows deriving Show
+import Control.Lens
 
-instance DefaultParser MariaDB CalcFoundRows => Functionable CalcFoundRows where
-    -- TODO: find a way to have it work for MariaDB only.
-    toSqlFunctionString a b = toDefaultSqlString MariaDB b
-
-instance DefaultParser MariaDB FoundRows => Functionable FoundRows where
-    toSqlFunctionString a b = toDefaultSqlString MariaDB b
-
-instance DefaultParser MariaDB CalcFoundRows where
-    toDefaultSqlString MariaDB b = toMariaDBString b
-
-{-|
-    Parser instance for the MariaDB driver.
-    It is basically a call to the "toMariaDBString" function of the
-    "MariaDBParser" type class.
--}
-instance (DefaultParser MariaDB b, MariaDBParser b) => Parser MariaDB b where
-    toSqlString _ b = toMariaDBString b
- 
--- | MariaDB parser class.
-class MariaDBParser a where
-    toMariaDBString :: (DefaultParser MariaDB a) => a -> String
-
-{-|
-    Generic default instance used if no specific instance exists for the type.
-    This is basically a call to the "toDefaultSqlString" function of the
-    "DefaultParser" type class.
--}
-instance MariaDBParser a where
-    toMariaDBString = toDefaultSqlString MariaDB
-
--- Instances specific to MariaDB
+-- Private.
 
 -- | SQL_CALC_FOUND_ROWS function.
-instance MariaDBParser CalcFoundRows where
-    toMariaDBString  _ = "SQL_CALC_FOUND_ROWS"
+mariaDBCalcFoundRowsFunc :: CalcFoundRows MariaDB -> String
+mariaDBCalcFoundRowsFunc _ = "SQL_CALC_FOUND_ROWS"
     
 -- | FOUND_ROWS function.
-instance MariaDBParser FoundRows where
-    toMariaDBString  _ = "FOUND_ROWS()"
+mariaDBFoundRowsFunc :: FoundRows MariaDB -> String
+mariaDBFoundRowsFunc _ = "FOUND_ROWS()"
+
+-- | Create the MariaDB function parser.
+mariaDBFuncParser :: FuncParser MariaDB
+mariaDBFuncParser =
+    (getGenFuncParser mariaDBQueryParser)
+        & parseCalcFoundRows .~ mariaDBCalcFoundRowsFunc
+        & parseFoundRows     .~ mariaDBFoundRowsFunc
+
+-- | Create the MariaDB parser.
+mariaDBParser :: Parser MariaDB
+mariaDBParser = getParser $ getStmtParser mariaDBQueryParser
+    
+-- | Create the MariaDB query parser.
+mariaDBQueryParser :: QueryParser MariaDB
+mariaDBQueryParser = getQueryParser mariaDBQueryParser mariaDBFuncParser
+
+-- Public.
+
+{-|
+Convert a SQL statement (or something which can be coerced to a statement)
+to a SQL string.
+-}
+parse :: CoerceToStmt a Statement => (a MariaDB) -> String
+parse = (mariaDBParser^.parseStmt).statement
