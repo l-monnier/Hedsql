@@ -33,8 +33,8 @@ for each element of a SELECT statement such as:
 -}
 module Hedsql.Common.Parser.Interface
     (
-       Parser(Parser)
-    ,  parseStmt
+      Parser(Parser)
+    , parseStmt
     ) where
 
 import Control.Lens
@@ -45,7 +45,7 @@ Interface which defines the top level functions of a SQL Parser.
 -}
 data Parser a = Parser
     {
-      _parseStmt :: Statement a -> String
+      _parseStmt  :: Statement a -> String
     }
     
 makeLenses ''Parser

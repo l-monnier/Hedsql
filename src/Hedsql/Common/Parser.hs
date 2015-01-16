@@ -23,18 +23,21 @@ module Hedsql.Common.Parser
     , module Hedsql.Common.Parser.Interface
     , module Hedsql.Common.Parser.Queries
     , genQueryParser
+    , genTableParser
     , getGenBoolFuncParser
     , getGenFuncParser
     , getGenJoinParser
     , getParser
     , getQueryParser
     , getStmtParser
+    , getTableParser
     ) where
 
 import Hedsql.Common.Parser.BoolFunctions
 import Hedsql.Common.Parser.Functions
 import Hedsql.Common.Parser.Interface
 import Hedsql.Common.Parser.Queries
+import Hedsql.Common.Parser.TableManipulations
 import qualified Hedsql.Common.Parser.Quoter as Q
 
 import Control.Lens
@@ -45,13 +48,25 @@ import Control.Lens
 
 -- | Generic query parser.
 genQueryParser :: QueryParser a
-genQueryParser = getQueryParser genQueryParser (getGenFuncParser genQueryParser)
+genQueryParser =
+    getQueryParser
+        genQueryParser
+        genTableParser
+        (getGenFuncParser genQueryParser)
+
+-- | Generic table parser.
+genTableParser :: TableParser a
+genTableParser = getTableParser genQueryParser genTableParser
 
 {-|
 Return a query parser using the provided query parser.
 -}
-getQueryParser :: QueryParser a -> FuncParser a -> QueryParser a
-getQueryParser queryParser funcParser = QueryParser
+getQueryParser ::
+       QueryParser a
+    -> TableParser a
+    -> FuncParser a
+    -> QueryParser a
+getQueryParser queryParser tableParser funcParser = QueryParser
     (parseAssgnmtFunc queryParser)
     (parseColFunc queryParser)
     (parseColRefFunc queryParser)
@@ -78,7 +93,7 @@ getQueryParser queryParser funcParser = QueryParser
     where
         genBoolFuncParser = getGenBoolFuncParser queryParser
         genJoinParser     = getGenJoinParser queryParser
-        stmtParser        = getStmtParser queryParser
+        stmtParser        = getStmtParser queryParser tableParser
 
 {-|
 Get a generic boolean functions parser by providing its internal query
@@ -151,11 +166,43 @@ getParser :: StmtParser a -> Parser a
 getParser = Parser . parseStmtFunc
 
 -- | Get a statement parser, using a given query parser.
-getStmtParser :: QueryParser a -> StmtParser a
-getStmtParser queryParser = StmtParser
+getStmtParser :: QueryParser a -> TableParser a -> StmtParser a
+getStmtParser queryParser tableParser = StmtParser
+    (parseCombinedFunc $ getStmtParser queryParser tableParser)
+    (parseCreateTableFunc tableParser)
     (parseDeleteFunc queryParser)
     (parseDropTableFunc queryParser)
     (parseDropViewFunc queryParser)
     (parseInsertFunc queryParser)
     (parseSelectFunc queryParser)
     (parseUpdateFunc queryParser)
+    
+-- | Return a table parser using the provided query and table parsers.
+getTableParser ::
+       QueryParser a
+    -> TableParser a
+    -> TableParser a
+getTableParser queryParser tableParser = TableParser
+     parseActionFunc
+    (parseColFunc queryParser)
+    (parseColCreateFunc tableParser)
+    (parseColConstFunc tableParser)
+    (parseColConstTypeFunc tableParser)
+    (parseConditionFunc queryParser)
+    (parseConstTimingFunc tableParser)
+     parseConstTimingCheckFunc
+     parseConstTimingTypeFunc
+    (parseCreateTableFunc tableParser)
+    (parseCreateViewFunc tableParser)
+    parseDataTypeFunc
+    (parseExprFunc queryParser stmtParser)
+    (parseFkClauseFunc tableParser)
+    parseMatchClauseFunc
+    (parseOnActionFunc tableParser)
+    (parseTableConstFunc tableParser)
+    (parseTableConstTypeFunc tableParser)
+    (parseSelectFunc queryParser)
+    (parseTableNameFunc queryParser)
+    (Q.genQuoter ^. Q.quoteElem)
+    where
+        stmtParser = getStmtParser queryParser tableParser

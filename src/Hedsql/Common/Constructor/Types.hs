@@ -39,25 +39,25 @@ type SqlInt a = Int
 type SqlString a = String
 
 -- | Create a BIGINT
-bigInt :: SqlDataType
+bigInt :: SqlDataType a
 bigInt = BigInt
 
 -- | Create a CHAR.
-char :: Int -> SqlDataType
+char :: Int -> SqlDataType a
 char = SqlChar
 
 -- | Create a DATE.
-date :: SqlDataType
+date :: SqlDataType a
 date = Date
 
 -- | Create an INTEGER.
-integer :: SqlDataType
+integer :: SqlDataType a
 integer = Integer
 
 -- | Create a SMALLINT.
-smallInt :: SqlDataType
+smallInt :: SqlDataType a
 smallInt = SmallInt
 
 -- | Create a VARCHAR.
-varchar :: Int -> SqlDataType
+varchar :: Int -> SqlDataType a
 varchar = Varchar

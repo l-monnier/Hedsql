@@ -15,23 +15,24 @@ CREATE statement data type definitions.
 module Hedsql.Common.DataStructure.Create where
 
 import Hedsql.Common.DataStructure.Select
+
 import Control.Lens
 
 -- | Timing of a constraint.
-data ConstraintTiming = ConstraintTiming
+data ConstraintTiming a = ConstraintTiming
     {
-       _constraintTimingType  :: ConstraintTimingType
-     , _constraintTimingCheck :: ConstraintTimingCheck
+       _constraintTimingType  :: ConstraintTimingType a
+     , _constraintTimingCheck :: ConstraintTimingCheck a
     } deriving (Show)
 
 -- | Type of a timing constraint.
-data ConstraintTimingType =
+data ConstraintTimingType a =
       Deferable
     | NotDeferable
       deriving (Show)
 
 -- | Timing of a timing constraint.
-data ConstraintTimingCheck =
+data ConstraintTimingCheck a =
       InitiallyImmediate
     | InitiallyDeferred
       deriving (Show)
@@ -57,12 +58,12 @@ data ForeignKeyClause a = ForeignKeyClause
     {
       _foreignKeyClauseTable  :: Table a
     , _foreignKeyClauseCols   :: [Column a]
-    , _foreignKeyMatch        :: Maybe Match
-    , _foreignKeyClauseAction :: Maybe OnAction
+    , _foreignKeyMatch        :: Maybe (Match a)
+    , _foreignKeyClauseAction :: Maybe (OnAction a)
     } deriving (Show)
 
 -- | Foreign key match type.
-data Match =
+data Match a =
       Full
     | Partial
     | Simple
@@ -73,7 +74,7 @@ data TableConstraint a = TableConstraint
     {
       _tableConstraintName       :: Maybe String
     , _tableConstraintConstraint :: TableConstraintType a
-    , _tableConstraintTiming     :: Maybe ConstraintTiming
+    , _tableConstraintTiming     :: Maybe (ConstraintTiming a)
     } deriving (Show)
 
 -- | Table constraints types used in CREATE statement.

@@ -2,20 +2,20 @@ name:           Hedsql
 version:        0.1
 cabal-version:  >=1.2
 build-type:     Configure
-author:         Leonard Monnier
+author:         LŽonard Monnier
 stability:      alpha
-maintainer:     Lenard Monnier
+maintainer:     LŽonard Monnier <leonard.monnier@gmail.com>
 synopsis:       EDSL for SQL
 description:    Provide an easy way to write SQL in Haskell.
 category:       Database
 license:        GPL-3
-copyright:      Leonard Monnier
+copyright:      (c) 2014-2015 Leonard Monnier
 data-files:     
-                src/Hedsql/Common/DataStructure/Base.hs,
                 src/Hedsql/Common/DataStructure/Create.hs,
                 src/Hedsql/Common/DataStructure/Delete.hs,
                 src/Hedsql/Common/DataStructure/Drop.hs,
                 src/Hedsql/Common/DataStructure/Insert.hs,
+                src/Hedsql/Common/DataStructure/Inspect.hs
                 src/Hedsql/Common/DataStructure/Select.hs,
                 src/Hedsql/Common/DataStructure/Update.hs,
                 src/Hedsql/Common/Constructor.hs,
@@ -46,20 +46,52 @@ library
   build-depends:    
                    base >= 4,
                    lens >=4.0.1,
-                   aeson >=0.7.0,
-                   HDBC >=2.3,
-                   HDBC-postgresql >=2.3,
-                   HDBC-sqlite3 >=2.3,
-                   template-haskell >=2.8.0,
-                   unordered-containers >=0.2,
-                   containers >=0.5.0,
-                   hashable >=1.1.2,
-                   time >=1.4.0,
-                   bytestring >=0.10.0,
-                   text >=0.11.3
+                   template-haskell >=2.8.0
   ghc-options:      -Wall
+  other-modules:    
+                    Hedsql.Common.Constructor,
+                    Hedsql.Common.Constructor.Columns,
+                    Hedsql.Common.Constructor.Composition,
+                    Hedsql.Common.Constructor.Conditions,
+                    Hedsql.Common.Constructor.DataManipulation,
+                    Hedsql.Common.Constructor.Functions,
+                    Hedsql.Common.Constructor.Select,
+                    Hedsql.Common.Constructor.Statements,
+                    Hedsql.Common.Constructor.Tables,
+                    Hedsql.Common.Constructor.TablesManipulation,
+                    Hedsql.Common.Constructor.Types,
+                    Hedsql.Common.Constructor.Values,
+                    Hedsql.Common.DataStructure,
+                    Hedsql.Common.DataStructure.Create,
+                    Hedsql.Common.DataStructure.Delete,
+                    Hedsql.Common.DataStructure.Drop,
+                    Hedsql.Common.DataStructure.Insert,
+                    Hedsql.Common.DataStructure.Inspect,
+                    Hedsql.Common.DataStructure.Select,
+                    Hedsql.Common.DataStructure.Update,
+                    Hedsql.Common.Parser,
+                    Hedsql.Common.Parser.BoolFunctions,
+                    Hedsql.Common.Parser.Functions,
+                    Hedsql.Common.Parser.Interface,
+                    Hedsql.Common.Parser.Queries,
+                    Hedsql.Common.Parser.Quoter,
+                    Hedsql.Common.Parser.TableManipulations,
+                    Hedsql.Drivers.MariaDB.Constructor,
+                    Hedsql.Drivers.MariaDB.Driver,
+                    Hedsql.Drivers.MariaDB.Parser,
+                    Hedsql.Drivers.PostgreSQL.Constructor,
+                    Hedsql.Drivers.PostgreSQL.Driver,
+                    Hedsql.Drivers.PostgreSQL.Parser,
+                    Hedsql.Drivers.SqLite.Driver,
+                    Hedsql.Drivers.SqLite.Parser,
+                    Hedsql.Helpers.Json,
+                    Hedsql.Helpers.Map,
+                    Hedsql.Helpers.Patterns,
+                    Paths_Hedsql
   exposed-modules:  
-                   Hedsql.Default
+                    Hedsql.MariaDB,
+                    Hedsql.PostgreSQL,
+                    Hedsql.SqLite
 
 test-suite tests
   type:            exitcode-stdio-1.0
@@ -81,21 +113,3 @@ test-suite tests
                    tests
   main-is:         Test.hs
 
-test-suite integration
-  type:            exitcode-stdio-1.0
-  x-uses-tf:       true
-  ghc-options:     -Wall -rtsopts
-  build-depends:   
-                   base >= 4,
-                   HUnit >= 1.2,
-                   QuickCheck >= 2.4,
-                   test-framework >= 0.4.1,
-                   test-framework-quickcheck2,
-                   test-framework-hunit,
-                   random >=1.0.1
-  other-modules:   
-                          Hedsql.Default
-  hs-source-dirs:  
-                   src,
-                   tests/IntegrationTests
-  main-is:         Test.hs

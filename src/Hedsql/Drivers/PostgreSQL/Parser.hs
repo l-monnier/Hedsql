@@ -21,18 +21,47 @@ import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser
 import Hedsql.Drivers.PostgreSQL.Driver
 
+import qualified Hedsql.Common.Parser.TableManipulations as T
+
 import Control.Lens
+import Data.List (intercalate)
+import Data.Maybe (catMaybes)
 
 -- Private.
 
+{-|
+Return True if one of the provided constraint is a PRIMARY KEY.
+with auto increment.
+-}
+hasAutoIncrement :: [ColConstraint a] -> Bool
+hasAutoIncrement constraints =
+    all (\x -> isAIPK $ x^.colConstraintType) constraints
+    where
+        isAIPK (Primary isAI) = isAI
+        isAIPK _              = False  
+
 -- | Create the PostgreSQL parser.
 postgreSQLParser :: Parser PostgreSQL
-postgreSQLParser = getParser $ getStmtParser postgreSQLQueryParser
+postgreSQLParser =
+    getParser $ getStmtParser postgreSQLQueryParser postgreSQLTableParser
 
 -- | Create the PostgreSQL query parser.
 postgreSQLQueryParser :: QueryParser PostgreSQL
 postgreSQLQueryParser = 
-    getQueryParser postgreSQLQueryParser (getGenFuncParser postgreSQLQueryParser)
+    getQueryParser
+        postgreSQLQueryParser
+        postgreSQLTableParser
+        (getGenFuncParser postgreSQLQueryParser)
+
+-- | Create the PostgreSQL table manipulations parser.
+postgreSQLTableParser :: T.TableParser PostgreSQL
+postgreSQLTableParser =
+    (getTableParser postgreSQLQueryParser postgreSQLTableParser)
+        & T.parseColConstType .~ colConstFunc
+        & T.parseColCreate    .~ colCreateFunc
+    where
+        colConstFunc  = parsePostgreSQLColConstTypeFunc postgreSQLTableParser
+        colCreateFunc = parsePostgreSqlColCreateFunc    postgreSQLTableParser
 
 -- Public.
 
@@ -43,50 +72,39 @@ to a SQL string.
 parse :: CoerceToStmt a Statement => (a PostgreSQL) -> String
 parse = (postgreSQLParser^.parseStmt).statement
 
--- TODO: to be reworked.
+{-|
+The AUTOINCREMENT constraint is not a constraint in PostgreSQL.
+Instead, the "serial" data type is used.
 
---{-|
---    The AUTOINCREMENT constraint is not a constraint in PostgreSQL.
---    Instead, the "serial" data type is used.
---    
---    We must therefore remove the AUTOINCREMENT constraint when building
---    a PRIMARY column constraint.
----}
---instance PostgreSQLParser ColConstraintType where
---    toPostgreSQLString (Primary isAutoIncrement) = "PRIMARY KEY"
---    toPostgreSQLString constraint = toDefaultSqlString PostgreSQL constraint
---    
---{- |
---    Custom instance for PostgreSQL regarding the creation of a table.
---    The difference with the default implementation is that a PRIMARY KEY of
---    type Integer with an AUTOINCREMENT constraints get translated as a "Serial".
----}
---instance PostgreSQLParser CreateTable where
---    
---    toPostgreSQLString stmt =
---        makeCreateStatement PostgreSQL stmt makePostgreSQLColumn
---
--- | Build a column to be used in a CREATE statement for PostgreSQL.
---makePostgreSQLColumn driver column =
---       quoteSql PostgreSQL (column^.colName)
---    ++ makePostgreSQLDataType (column^.colDataType) (column^.colConstraints)
---    ++ makeColumnConstraints PostgreSQL (column^.colConstraints)
---
--- | Build a SQL data type to be used in CREATE statement for PostgreSQL.    
---makePostgreSQLDataType (Just Integer) (Just constraints) =
---    if hasAutoIncrementPrimaryKey constraints
---    then " serial"
---    else " integer"
---makePostgreSQLDataType dataType contraints = makeDataType PostgreSQL dataType
---
---{-|
---    Return True if one of the provided constraint is a PRIMARY KEY.
---    with auto increment.
----}
---hasAutoIncrementPrimaryKey :: [ColConstraint] -> Bool
---hasAutoIncrementPrimaryKey constraints =
---    all check constraints
---    where
---        check constraint = isAutoIncrementPK $ constraint^.colConstraintType
---        isAutoIncrementPK (Primary isAutoIncrement) = isAutoIncrement
---        isAutoIncrementPK _                         = False       
+We must therefore remove the AUTOINCREMENT constraint when parsing
+a PRIMARY KEY column constraint.
+-}
+parsePostgreSQLColConstTypeFunc ::
+    T.TableParser a -> ColConstraintType a -> String
+parsePostgreSQLColConstTypeFunc parser const =
+    case const of
+        (Primary isAuto) -> "PRIMARY KEY"
+        otherwise        -> T.parseColConstTypeFunc parser const
+    
+{- |
+    Custom function for PostgreSQL for the creation of a table.
+    The difference with the default implementation is that a PRIMARY KEY of
+    type Integer with an AUTOINCREMENT constraints get translated as a "Serial".
+-}
+parsePostgreSqlColCreateFunc :: T.TableParser a -> Column a -> String
+parsePostgreSqlColCreateFunc parser col =
+        parseCols parser (col^.colDataType) (col^.colConstraints)        
+    where
+        parseCols p (Just Integer) (Just colConsts) =
+            if hasAutoIncrement colConsts
+            then cName ++ " serial"  ++ consts colConsts
+            else cName ++ " integer" ++ consts colConsts 
+        parseCols p colType colConsts = concat $ catMaybes
+            [
+              Just cName
+            , fmap (\x -> " " ++ (parser^.T.parseDataType) x) colType
+            , fmap consts                                     colConsts
+            ]
+        cName = parser^.T.quoteElem $ col^.colName
+        consts cs =
+            " " ++ (intercalate ", " $ map (parser^.T.parseColConst) cs)   

@@ -14,6 +14,8 @@ Implementation of the SQL statement parsers as well as the queries parser.
 module Hedsql.Common.Parser.Queries
     (
       StmtParser(StmtParser)
+    , parseCombined
+    , parseCreate
     , parseDelete
     , parseDropTable
     , parseDropView
@@ -21,6 +23,7 @@ module Hedsql.Common.Parser.Queries
     , parseSelect
     , parseUpdate
     
+    , parseCombinedFunc
     , parseDeleteFunc
     , parseDropTableFunc
     , parseDropViewFunc
@@ -98,12 +101,14 @@ import Data.Maybe
 -- | Interface of the statements parser.
 data StmtParser a = StmtParser
     {
-      _parseDelete    :: Delete    a -> String
-    , _parseDropTable :: DropTable a -> String
-    , _parseDropView  :: DropView  a -> String
-    , _parseInsert    :: Insert    a -> String
-    , _parseSelect    :: Select    a -> String
-    , _parseUpdate    :: Update    a -> String
+      _parseCombined  :: CombinedQuery a -> String
+    , _parseCreate    :: CreateTable   a -> String
+    , _parseDelete    :: Delete        a -> String
+    , _parseDropTable :: DropTable     a -> String
+    , _parseDropView  :: DropView      a -> String
+    , _parseInsert    :: Insert        a -> String
+    , _parseSelect    :: Select        a -> String
+    , _parseUpdate    :: Update        a -> String
     }
 
 makeLenses ''StmtParser
@@ -214,6 +219,22 @@ parseColRefDefFunc :: QueryParser a -> ColRef a -> String
 parseColRefDefFunc parser colRef =
        (parser^.parseExpr) (colRef^.colRefExpr)
     ++  parseMaybe ((++) " AS") (fmap (parser^.quoteElem) (colRef^.colRefLabel))
+
+-- | Parse a combined query such as "UNION", "EXCEPT", etc.
+parseCombinedFunc :: StmtParser a -> CombinedQuery a -> String 
+parseCombinedFunc parser query =
+    case query of
+        (CombinedQuerySingle select)      -> (parser^.parseSelect) select
+        (CombinedQueryExcept combs)       -> combine combs "EXCEPT"
+        (CombinedQueryExceptAll combs)    -> combine combs "EXCEPT ALL"
+        (CombinedQueryIntersect combs)    -> combine combs "INTERSECT"
+        (CombinedQueryIntersectAll combs) -> combine combs "INTERSECT ALL"
+        (CombinedQueryUnion combs)        -> combine combs "UNION"
+        (CombinedQueryUnionAll combs)     -> combine combs "UNION ALL"
+    where
+        combine cs typ =
+            concat ["(", intercalate (" " ++ typ ++ " ") $ combineds cs, ")"]
+        combineds = map (parser^.parseCombined)
         
 -- | Parse a condition.
 parseConditionFunc :: QueryParser a -> Condition a -> String
@@ -358,23 +379,6 @@ parseOrderByFunc parser clause =
     ++ parseMaybe show (clause^.partOrderByOffset)
     where
         sortRefsParsed = map (parser^.parseSortRef) (clause^.partOrderByColumns)
-        
--- | Parse the NULLS FIRST or NULLS LAST of a the sorting clause.
-parseSortNullFunc :: SortNulls a -> String
-parseSortNullFunc NullsFirst = "NULLS FIRST"
-parseSortNullFunc NullsLast  = "NULLS LAST"
-
--- | Parse the ASC or DESC clauses.
-parseSortOrderFunc :: SortOrder a -> String
-parseSortOrderFunc Asc  = "ASC"
-parseSortOrderFunc Desc = "DESC"
-
--- | Parse a sort reference.
-parseSortRefFunc :: QueryParser a -> SortRef a -> String
-parseSortRefFunc parser sortRef =
-                      (parser^.parseColRef)       (sortRef^.sortRefCol)
-        ++ parseMaybe (parser^.parseSortOrder)    (sortRef^.sortRefOrder)
-        ++ parseMaybe (parser^.parseSortNull)     (sortRef^.sortRefNulls)
 
 -- | Parse a SELECT query.
 parseSelectFunc :: QueryParser a -> Select a -> String
@@ -405,16 +409,34 @@ parseSelectFunc parser select =
         
         parseMaybe f = fmap (\x -> " " ++ f x)
 
+-- | Parse the NULLS FIRST or NULLS LAST of a the sorting clause.
+parseSortNullFunc :: SortNulls a -> String
+parseSortNullFunc NullsFirst = "NULLS FIRST"
+parseSortNullFunc NullsLast  = "NULLS LAST"
+
+-- | Parse the ASC or DESC clauses.
+parseSortOrderFunc :: SortOrder a -> String
+parseSortOrderFunc Asc  = "ASC"
+parseSortOrderFunc Desc = "DESC"
+
+-- | Parse a sort reference.
+parseSortRefFunc :: QueryParser a -> SortRef a -> String
+parseSortRefFunc parser sortRef =
+                      (parser^.parseColRef)       (sortRef^.sortRefCol)
+        ++ parseMaybe (parser^.parseSortOrder)    (sortRef^.sortRefOrder)
+        ++ parseMaybe (parser^.parseSortNull)     (sortRef^.sortRefNulls)
+
 -- | Parse a SQL statement.
 parseStmtFunc :: StmtParser a -> Statement a -> String
 parseStmtFunc parser stmt =
     case stmt of
-        DeleteStmt    s -> (parser^.parseDelete)    s
-        DropTableStmt s -> (parser^.parseDropTable) s
-        DropViewStmt  s -> (parser^.parseDropView)  s
-        InsertStmt    s -> (parser^.parseInsert)    s
-        SelectStmt    s -> (parser^.parseSelect)    s
-        UpdateStmt    s -> (parser^.parseUpdate)    s
+        CreateTableStmt s -> parser^.parseCreate    $ s
+        DeleteStmt      s -> parser^.parseDelete    $ s
+        DropTableStmt   s -> parser^.parseDropTable $ s
+        DropViewStmt    s -> parser^.parseDropView  $ s
+        InsertStmt      s -> parser^.parseInsert    $ s
+        SelectStmt      s -> parser^.parseSelect    $ s
+        UpdateStmt      s -> parser^.parseUpdate    $ s
         
 {-|
 Parse the name of a table.

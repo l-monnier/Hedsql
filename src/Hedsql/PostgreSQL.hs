@@ -15,7 +15,7 @@ PostgreSQL such as:
 > select currentDate /++ from "table1"
 > SELECT CURRENT_DATE FROM "table1"
 
-If you want to load functionnalities specific to PostgreSQL, load the following
+If you want to load functionalities specific to PostgreSQL, load the following
 module on top:
 > import Hedsql.Drivers.PostgreSQL.Constructor
 

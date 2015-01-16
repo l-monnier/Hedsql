@@ -109,8 +109,8 @@ instance Add Column ColConstraintType where
 --    (/++) target els = target /++ map (colConstraint "") els
     
 -- | Specify the SQL data type of a column.
---instance Add (Column a) SqlDataType where
---    (/++) target el = set colDataType (Just el) target
+instance Add Column SqlDataType where
+    (/++) = setMaybe colDataType
 
 {-|
 Add a table to a column

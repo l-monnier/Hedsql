@@ -28,16 +28,16 @@ type Label = String
 -- Values.
 
 -- | SQL data types.
-data SqlDataType =
+data SqlDataType a =
      Date
    | Char Int
    | Varchar Int
    | SqlChar Int
    -- Numeric types
    | SmallInt -- ^ 2 bytes integer - range from -32768 to +32767.
-   | Integer -- ^ 4 bytes integer - range from -2147483648 to +2147483647.
-   | BigInt -- ^ 8 bytes integer -
-            --   range from -9223372036854775808 to +9223372036854775807.
+   | Integer  -- ^ 4 bytes integer - range from -2147483648 to +2147483647.
+   | BigInt   -- ^ 8 bytes integer -
+              --   range from -9223372036854775808 to +9223372036854775807.
      deriving (Show)
 
 -- | SQL values.
@@ -80,7 +80,7 @@ data TableRefAs a = TableRefAs
 data Column a = Column
     {
       _colName        :: String
-    , _colDataType    :: Maybe SqlDataType
+    , _colDataType    :: Maybe (SqlDataType a)
     , _colConstraints :: Maybe [ColConstraint a]
     , _colTable       :: Maybe (Table a) -- ^ If provided, the qualified column
                                          --   name will be used.
@@ -102,7 +102,7 @@ data ColConstraintType a =
     | Null
     | Primary Bool  -- ^ Primary key.
                     --   If true, the primary key will have an AUTOINCREMENT.
-    | Reference (Table a) (Column a) (Maybe OnAction) -- ^ Foreign key.
+    | Reference (Table a) (Column a) (Maybe (OnAction a)) -- ^ Foreign key.
     | Unique
       deriving (Show)
 
@@ -116,13 +116,13 @@ data ColRef a = ColRef
     } deriving (Show)
 
 -- | Actions to be performed on foreign keys.
-data OnAction =
-      OnDelete SqlAction
-    | OnUpdate SqlAction
+data OnAction a =
+      OnDelete (SqlAction a)
+    | OnUpdate (SqlAction a)
       deriving (Show)
 
 -- | Action to perform when an entry in a table is updated or deleted.
-data SqlAction =
+data SqlAction a =
       Cascade
     | NoAction
     | Restrict

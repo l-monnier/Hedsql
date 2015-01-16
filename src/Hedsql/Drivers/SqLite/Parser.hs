@@ -40,11 +40,12 @@ sqLiteFuncParser =
 
 -- | Create the SqLite parser.
 sqLiteParser :: Parser SqLite
-sqLiteParser = getParser $ getStmtParser sqLiteQueryParser
+sqLiteParser = getParser $ getStmtParser sqLiteQueryParser genTableParser
     
 -- | Create the SqLite query parser.
 sqLiteQueryParser :: QueryParser SqLite
-sqLiteQueryParser = getQueryParser sqLiteQueryParser sqLiteFuncParser
+sqLiteQueryParser =
+    getQueryParser sqLiteQueryParser genTableParser sqLiteFuncParser
 
 -- Public.
 
