@@ -16,8 +16,7 @@ Portability : portable
 Constructor functions for SQL SELCT queries.
 -}
 module Hedsql.Common.Constructor.Select
-    (
-      (//*)
+    ( (//*)
     , alias
     , asc
     , combinedQuery
@@ -206,8 +205,7 @@ from = From . tableRefs
 
 -- | Create a FULL JOIN.
 fullJoin ::
-    (
-      CoerceToTableRef   a [TableRef d]
+    ( CoerceToTableRef   a [TableRef d]
     , CoerceToTableRef   b [TableRef d]
     , CoerceToJoinClause c (JoinClause d)
     )
@@ -241,8 +239,7 @@ isNotDistinctFrom colRef1 colRef2 =
 
 -- | Create a INNER JOIN.
 innerJoin ::
-    (
-      CoerceToTableRef   a [TableRef d]
+    ( CoerceToTableRef   a [TableRef d]
     , CoerceToTableRef   b [TableRef d]
     , CoerceToJoinClause c (JoinClause d)
     )
@@ -266,8 +263,7 @@ intersectAll c1 c2 =
 
 -- | Create a LEFT JOIN.
 leftJoin ::
-    (
-      CoerceToTableRef   a [TableRef d]
+    ( CoerceToTableRef   a [TableRef d]
     , CoerceToTableRef   b [TableRef d]
     , CoerceToJoinClause c (JoinClause d)
     )
@@ -321,8 +317,7 @@ orderBy cols = OrderBy (sortRefs cols) Nothing Nothing
 
 -- | Create a RIGHT JOIN.
 rightJoin ::
-    (
-      CoerceToTableRef   a [TableRef d]
+    ( CoerceToTableRef   a [TableRef d]
     , CoerceToTableRef   b [TableRef d]
     , CoerceToJoinClause c (JoinClause d)
     )

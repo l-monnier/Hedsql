@@ -12,8 +12,7 @@ Portability : portable
 PostgreSQL parser implementation.
 -}
 module Hedsql.Drivers.PostgreSQL.Parser
-    (
-      parse
+    ( parse
     ) where
 
 import Hedsql.Common.Constructor.Statements
@@ -63,15 +62,6 @@ postgreSQLTableParser =
         colConstFunc  = parsePostgreSQLColConstTypeFunc postgreSQLTableParser
         colCreateFunc = parsePostgreSqlColCreateFunc    postgreSQLTableParser
 
--- Public.
-
-{-|
-Convert a SQL statement (or something which can be coerced to a statement)
-to a SQL string.
--}
-parse :: CoerceToStmt a Statement => (a PostgreSQL) -> String
-parse = (postgreSQLParser^.parseStmt).statement
-
 {-|
 The AUTOINCREMENT constraint is not a constraint in PostgreSQL.
 Instead, the "serial" data type is used.
@@ -85,7 +75,7 @@ parsePostgreSQLColConstTypeFunc parser const =
     case const of
         (Primary isAuto) -> "PRIMARY KEY"
         otherwise        -> T.parseColConstTypeFunc parser const
-    
+
 {- |
     Custom function for PostgreSQL for the creation of a table.
     The difference with the default implementation is that a PRIMARY KEY of
@@ -107,4 +97,13 @@ parsePostgreSqlColCreateFunc parser col =
             ]
         cName = parser^.T.quoteElem $ col^.colName
         consts cs =
-            " " ++ (intercalate ", " $ map (parser^.T.parseColConst) cs)   
+            " " ++ (intercalate ", " $ map (parser^.T.parseColConst) cs) 
+
+-- Public.
+
+{-|
+Convert a SQL statement (or something which can be coerced to a statement)
+to a SQL string.
+-}
+parse :: CoerceToStmt a Statement => (a PostgreSQL) -> String
+parse = (postgreSQLParser^.parseStmt).statement  

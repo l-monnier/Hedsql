@@ -12,8 +12,7 @@ Portability : portable
 Implementation of the SQL statement parsers as well as the queries parser.
 -}
 module Hedsql.Common.Parser.Queries
-    (
-      StmtParser(StmtParser)
+    ( StmtParser(StmtParser)
     , parseCombined
     , parseCreate
     , parseDelete
@@ -100,8 +99,7 @@ import Data.Maybe
 
 -- | Interface of the statements parser.
 data StmtParser a = StmtParser
-    {
-      _parseCombined  :: CombinedQuery a -> String
+    { _parseCombined  :: CombinedQuery a -> String
     , _parseCreate    :: CreateTable   a -> String
     , _parseDelete    :: Delete        a -> String
     , _parseDropTable :: DropTable     a -> String
@@ -117,8 +115,7 @@ makeLenses ''StmtParser
 Interface of the query parser.
 -}
 data QueryParser a = QueryParser
-    {
-      _parseAssgnmt    :: Assignment a    -> String
+    { _parseAssgnmt    :: Assignment a    -> String
     , _parseCol        :: Column a        -> String
     , _parseColRef     :: ColRef a        -> String
     , _parseColRefDef  :: ColRef a        -> String
@@ -149,8 +146,7 @@ makeLenses ''QueryParser
 
 -- | Parse the joins of a SELECT query in a FROM clause.
 data JoinParser a = JoinParser
-    {
-      _parseJoinClause :: JoinClause a    -> String
+    { _parseJoinClause :: JoinClause a    -> String
     , _parseJoinTCol   :: JoinTypeCol a   -> String
     , _parseJoinTTable :: JoinTypeTable a -> String
     }
@@ -188,8 +184,7 @@ for this only purpose wouldn't make a lot of sense.
 parseAssgnmtFunc :: QueryParser a -> Assignment a -> String
 parseAssgnmtFunc parser assignment =
     concat
-        [
-          (parser^.parseCol)  (assignment^.assignmentCol)
+        [ (parser^.parseCol)  (assignment^.assignmentCol)
         , " = "
         , (parser^.parseExpr) (assignment^.assignmentVal)
         ]
@@ -299,8 +294,7 @@ parseHavingFunc parser (Having c) = "HAVING " ++ (parser^.parseCondition) c
 parseInsertFunc :: QueryParser a -> Insert a -> String
 parseInsertFunc parser insert =
     concat $ catMaybes
-        [
-          Just "INSERT INTO "
+        [ Just "INSERT INTO "
         , Just $ parser^.quoteElem $ insert^.insertTable.tableName
         , fmap parseCols (insert^.insertColumns)
         , Just " VALUES "
@@ -311,7 +305,6 @@ parseInsertFunc parser insert =
             concat [" (", intercalate ", " $ map (parser^.parseCol) cols, ")"]
         parseParam ps =
             concat ["(", intercalate ", " $ map (parser^.parseValue) ps, ")"]
-            
 
 -- | Parse joins.
 parseJoinFunc :: QueryParser a -> JoinParser a -> Join a -> String
@@ -384,8 +377,7 @@ parseOrderByFunc parser clause =
 parseSelectFunc :: QueryParser a -> Select a -> String
 parseSelectFunc parser select =
       concat $ catMaybes
-        [
-          Just       "SELECT "
+        [ Just       "SELECT "
         , fmap        parseDistinct         (select^.selectType)
         , Just $      parseColRefs          (select^.selectColRef)
         , parseMaybe (parser^.parseFrom)    (select^.fromClause)
@@ -448,24 +440,20 @@ parseTableNameFunc parser table = parser^.quoteElem $ table^.tableName
 parseTableRefFunc :: StmtParser a -> QueryParser a -> TableRef a -> String
 parseTableRefFunc stmtP parser join =
     case join of
-        TableJoinRef    ref    alias -> concat [
-                                                 "("
+        TableJoinRef    ref    alias -> concat [ "("
                                                , parser^.parseJoin $ ref
                                                , ")"
                                                , parseMaybe pAlias alias
                                                ]
-        TableTableRef   table  alias -> concat [
-                                                 parser^.parseTableName $ table
+        TableTableRef   table  alias -> concat [ parser^.parseTableName $ table
                                                , parseMaybe pAlias alias
                                                ]
-        SelectTableRef  select alias -> concat [
-                                                 "("
+        SelectTableRef  select alias -> concat [ "("
                                                , stmtP^.parseSelect $ select
                                                , ")"
                                                , pAlias alias
                                                ]
-        LateralTableRef select alias -> concat [
-                                                 "LATERAL ("
+        LateralTableRef select alias -> concat [ "LATERAL ("
                                                , stmtP^.parseSelect $ select
                                                , ")"
                                                , pAlias alias
@@ -495,8 +483,7 @@ parseWhereFunc parser (Where condition) =
 parseUpdateFunc :: QueryParser a -> Update a -> String    
 parseUpdateFunc parser update = 
     concat $ catMaybes
-        [
-          Just $ "UPDATE "
+        [ Just $ "UPDATE "
         , Just $ parser^.quoteElem $ update^.updateTable.tableName
         , Just $ " SET "
         , Just $ intercalate ", " $ map (parser^.parseAssgnmt) assignments

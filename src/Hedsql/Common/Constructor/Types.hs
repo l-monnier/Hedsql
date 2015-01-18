@@ -10,8 +10,7 @@ Portability : portable
 Constructor functions for SQL types which can then be used in queries.
 -}
 module Hedsql.Common.Constructor.Types
-    (
-      SqlInt
+    ( SqlInt
     , SqlString
     , bigInt
     , char

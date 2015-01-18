@@ -17,8 +17,7 @@ It defines:
 - a generic quoting function which can be reused for other cases.
 -}
 module Hedsql.Common.Parser.Quoter
-    (
-      Quoter(Quoter)
+    ( Quoter(Quoter)
     , genQuoter
     , quoteElem
     , genQuote
@@ -32,8 +31,7 @@ import Data.Text (pack, replace, unpack)
 Interface defining the different quoting functions.
 -}
 data Quoter a = Quoter
-    {
-      _quoteElem :: String -> String -- ^ Quote a SQL element, such as a table
+    { _quoteElem :: String -> String -- ^ Quote a SQL element, such as a table
                                      --   or columns names.
     , _quoteVal  :: String -> String -- ^ Quote a raw value such as an integer.
     }

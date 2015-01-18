@@ -2,9 +2,9 @@ name:           Hedsql
 version:        0.1
 cabal-version:  >=1.2
 build-type:     Configure
-author:         LŽonard Monnier
+author:         Leonard Monnier
 stability:      alpha
-maintainer:     LŽonard Monnier <leonard.monnier@gmail.com>
+maintainer:     Leonard Monnier <leonard.monnier@gmail.com>
 synopsis:       EDSL for SQL
 description:    Provide an easy way to write SQL in Haskell.
 category:       Database

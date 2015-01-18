@@ -11,8 +11,7 @@ MariaDB driver. MariaDB being a fork of MySQL, this driver may also be used
 with a MySQL database.
 -}
 module Hedsql.Drivers.MariaDB.Driver
-    (
-      MariaDB
+    ( MariaDB
     ) where
     
 -- Public.

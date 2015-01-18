@@ -16,8 +16,8 @@ build and parse queries which are specific to SqLite such as:
 > SELECT Date('now') FROM "table1"
 -}
 
-module Hedsql.SqLite (
-      module Hedsql.Drivers.SqLite.Driver
+module Hedsql.SqLite
+    ( module Hedsql.Drivers.SqLite.Driver
     , module Hedsql.Drivers.SqLite.Parser
     , module Hedsql.Common.Constructor
     , module Hedsql.Common.DataStructure

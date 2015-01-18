@@ -15,8 +15,7 @@ Portability : portable
 Constructor functions for table references which can then be used in queries.
 -}
 module Hedsql.Common.Constructor.Tables
-    (
-      CoerceToTable
+    ( CoerceToTable
     , CoerceToTableRef
     , alias
     , coerceToTable
@@ -81,8 +80,8 @@ alias t name =
         setAlias (TableTableRef   a _) = TableTableRef   a (Just al)
 
 -- | Create a table which can then be used as so in a query.
-table
-    :: CoerceToTable a (Table b)
+table ::
+       CoerceToTable a (Table b)
     => a -- ^ The table itself or its name as a string.
     -> Table b
 table = coerceToTable
@@ -96,8 +95,8 @@ tableRefs :: CoerceToTableRef a [TableRef b] => a -> [TableRef b]
 tableRefs = coerceToTableRef
 
 -- | Create many tables which can then be used as so in a query.
-tables
-    :: CoerceToTable a (Table b)
+tables ::
+       CoerceToTable a (Table b)
     => [a] -- ^ The tables themselves or their name as a string.
     -> [Table b]
 tables = map table

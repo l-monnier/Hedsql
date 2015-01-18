@@ -12,8 +12,7 @@ Portability : portable
 DELETE statement data type definitions.
 -}
 module Hedsql.Common.DataStructure.Delete
-    (
-      Delete (Delete)
+    ( Delete (Delete)
     , deleteTable
     , deleteWhere
     ) where
@@ -27,8 +26,7 @@ import Control.Lens
 
 -- | DELETE statement.
 data Delete a = Delete
-    {
-      _deleteTable :: Table a
+    { _deleteTable :: Table a
     , _deleteWhere :: Maybe (Where a)
     } deriving (Show)
 

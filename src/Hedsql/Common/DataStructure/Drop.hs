@@ -23,15 +23,13 @@ import Control.Lens
 
 -- | DROP TABLE statement.
 data DropTable a = DropTable
-    {
-      _dropTableIfExistsParam :: Bool
+    { _dropTableIfExistsParam :: Bool
     , _dropTableTable         :: Table a
     } deriving (Show)
 
 -- | DROP VIEW statement.
 data DropView a = DropView
-    {
-      _dropViewName :: [Char]
+    { _dropViewName :: [Char]
     } deriving (Show)
 
 -- Make the lenses.

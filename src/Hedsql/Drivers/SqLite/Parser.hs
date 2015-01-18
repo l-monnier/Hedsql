@@ -12,8 +12,7 @@ Portability : portable
 SqLite parser implementation.
 -}
 module Hedsql.Drivers.SqLite.Parser
-    (
-      parse
+    ( parse
     ) where
 
 import Hedsql.Common.Constructor.Statements

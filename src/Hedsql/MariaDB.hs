@@ -21,9 +21,8 @@ You can then write queries as for example:
 > select [colRef calcFoundRows, colRef (//*)] /++ from "table1"
 > SELECT * CALC_FOUND_ROWS FROM `table1`
 -}
-
-module Hedsql.MariaDB (
-      module Hedsql.Drivers.MariaDB.Driver
+module Hedsql.MariaDB
+    ( module Hedsql.Drivers.MariaDB.Driver
     , module Hedsql.Drivers.MariaDB.Parser
     , module Hedsql.Common.Constructor
     , module Hedsql.Common.DataStructure

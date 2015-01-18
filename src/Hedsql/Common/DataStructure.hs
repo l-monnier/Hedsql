@@ -13,8 +13,8 @@ It is an "internal machinery" on which are then builds classes allowing the
 easy generation of such SQL data which can then be later convert them to
 SQL strings.
 -}
-module Hedsql.Common.DataStructure (
-      module Hedsql.Common.DataStructure.Create
+module Hedsql.Common.DataStructure
+    ( module Hedsql.Common.DataStructure.Create
     , module Hedsql.Common.DataStructure.Delete
     , module Hedsql.Common.DataStructure.Drop
     , module Hedsql.Common.DataStructure.Insert
@@ -22,8 +22,7 @@ module Hedsql.Common.DataStructure (
     , module Hedsql.Common.DataStructure.Select
     , module Hedsql.Common.DataStructure.Update
     , Statement
-        (
-          CreateTableStmt
+        ( CreateTableStmt
         , CreateViewStmt
         , DeleteStmt
         , DropTableStmt

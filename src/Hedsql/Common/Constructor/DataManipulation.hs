@@ -14,8 +14,7 @@ Portability : portable
 SQL data manipulation queries constructors for DELETE, INSERT and UPDATE.
 -}
 module Hedsql.Common.Constructor.DataManipulation
-    (
-      assign
+    ( assign
     , deleteFrom
     , insertInto
     , insertIntoCols

@@ -10,8 +10,7 @@ Portability : portable
 SqLite driver.
 -}
 module Hedsql.Drivers.SqLite.Driver
-    (
-    SqLite
+    ( SqLite
     ) where
 
 -- | SQLite driver

@@ -25,15 +25,13 @@ a dedicated QueryParser. This parser can then have specialized functions
 for each element of a SELECT statement such as:
 
 > data QueryParser a = QueryParser
->    {
->      _parseFrom  :: From a  -> String
+>    { _parseFrom  :: From a  -> String
 >    , _parseWhere :: Where a -> String
 >    , etc.
 >    }
 -}
 module Hedsql.Common.Parser.Interface
-    (
-      Parser(Parser)
+    ( Parser(Parser)
     , parseStmt
     ) where
 
@@ -44,8 +42,7 @@ import Hedsql.Common.DataStructure
 Interface which defines the top level functions of a SQL Parser.
 -}
 data Parser a = Parser
-    {
-      _parseStmt  :: Statement a -> String
+    { _parseStmt  :: Statement a -> String
     }
     
 makeLenses ''Parser

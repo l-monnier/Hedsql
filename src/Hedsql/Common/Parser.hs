@@ -17,8 +17,7 @@ Typically, to get your own parser you will:
     2) provide this modified version to the getGenParser function.
 -}
 module Hedsql.Common.Parser
-    (
-      module Hedsql.Common.Parser.BoolFunctions
+    ( module Hedsql.Common.Parser.BoolFunctions
     , module Hedsql.Common.Parser.Functions
     , module Hedsql.Common.Parser.Interface
     , module Hedsql.Common.Parser.Queries

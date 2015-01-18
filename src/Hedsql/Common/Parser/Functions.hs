@@ -12,8 +12,7 @@ Portability : portable
 Implementation of the SQL function parsers.
 -}
 module Hedsql.Common.Parser.Functions
-    (
-    -- Interface.
+    ( -- Interface.
       FuncParser(FuncParser)
     , parseAdd
     , parseBitAnd
@@ -34,10 +33,10 @@ module Hedsql.Common.Parser.Functions
     , parseRandom
     , parseSum
     
-    -- Dispatch function implementation.
+      -- Dispatch function implementation.
     , parseFuncFunc
     
-    -- Generic functions implementation.
+      -- Generic functions implementation.
     , parseAddFunc
     , parseBitAndFunc
     , parseBitOrFunc
@@ -72,8 +71,7 @@ Parse all functions which are not returning a boolean value.
 Those functions have their own parser.
 -}
 data FuncParser a = FuncParser
-    {
-    -- Operators.
+    { -- Operators.
       _parseAdd           :: Add a           -> String
     , _parseBitAnd        :: BitAnd a        -> String
     , _parseBitOr         :: BitOr a         -> String
@@ -84,7 +82,7 @@ data FuncParser a = FuncParser
     , _parseMultiply      :: Multiply a      -> String
     , _parseSubstract     :: Substract a     -> String
     
-    -- Functions.
+      -- Functions.
     , _parseCount       :: Count a       -> String
     , _parseCurrentDate :: CurrentDate a -> String
     , _parseMax         :: Max a         -> String
@@ -93,11 +91,11 @@ data FuncParser a = FuncParser
     , _parseRandom      :: Random a      -> String
     , _parseSum         :: Sum a         -> String
     
-    -- MariaDB specific functions.
+      -- MariaDB specific functions.
     , _parseCalcFoundRows :: CalcFoundRows a -> String
     , _parseFoundRows     :: FoundRows     a -> String
     
-    -- Helper functions
+      -- Helper functions
     , _parseInfix :: String -> ColRef a -> ColRef a -> String
     }
     

@@ -20,9 +20,8 @@ import Control.Lens
 
 -- | Timing of a constraint.
 data ConstraintTiming a = ConstraintTiming
-    {
-       _constraintTimingType  :: ConstraintTimingType a
-     , _constraintTimingCheck :: ConstraintTimingCheck a
+    { _constraintTimingType  :: ConstraintTimingType a
+    , _constraintTimingCheck :: ConstraintTimingCheck a
     } deriving (Show)
 
 -- | Type of a timing constraint.
@@ -39,8 +38,7 @@ data ConstraintTimingCheck a =
 
 -- | CREATE TABLE statement.
 data CreateTable a = CreateTable
-    {
-      _createTableIfNotExistParam :: Bool
+    { _createTableIfNotExistParam :: Bool
     , _createTableTable           :: Table a
     , _createTableCols            :: [Column a]
     , _createTableConstraints     :: Maybe [TableConstraint a]
@@ -48,15 +46,13 @@ data CreateTable a = CreateTable
 
 -- | CREATE VIEW query.
 data CreateView a = CreateView
-    {
-      _viewName   :: [Char]
+    { _viewName   :: [Char]
     , _viewSelect :: Select a
     } deriving (Show)
 
 -- | Foreign key clause to be used in a table constraint of a CREATE statement.
 data ForeignKeyClause a = ForeignKeyClause
-    {
-      _foreignKeyClauseTable  :: Table a
+    { _foreignKeyClauseTable  :: Table a
     , _foreignKeyClauseCols   :: [Column a]
     , _foreignKeyMatch        :: Maybe (Match a)
     , _foreignKeyClauseAction :: Maybe (OnAction a)
@@ -71,8 +67,7 @@ data Match a =
 
 -- | Table constraints to be used in CREATE statement.
 data TableConstraint a = TableConstraint
-    {
-      _tableConstraintName       :: Maybe String
+    { _tableConstraintName       :: Maybe String
     , _tableConstraintConstraint :: TableConstraintType a
     , _tableConstraintTiming     :: Maybe (ConstraintTiming a)
     } deriving (Show)

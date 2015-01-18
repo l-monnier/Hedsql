@@ -11,7 +11,9 @@ Portability : portable
 
 MariaDB parser implementation.
 -}
-module Hedsql.Drivers.MariaDB.Parser where
+module Hedsql.Drivers.MariaDB.Parser
+    ( parse
+    ) where
 
 import Hedsql.Common.Constructor.Statements
 import Hedsql.Common.DataStructure

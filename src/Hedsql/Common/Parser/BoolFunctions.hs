@@ -13,8 +13,7 @@ Implementation of the SQL boolean functions parsers - functions returning
 boolean value.
 -}
 module Hedsql.Common.Parser.BoolFunctions
-    (
-    -- Interface.
+    ( -- Interface.
       FuncBoolParser(FuncBoolParser)
     , parseBetween
     , parseEqual
@@ -42,10 +41,10 @@ module Hedsql.Common.Parser.BoolFunctions
     , parseIs
     , parseBetweens
     
-    -- Dispatch function implementation.
+      -- Dispatch function implementation.
     , parseFuncBoolFunc
     
-    -- Generic functions implementation.
+      -- Generic functions implementation.
     , parseBetweenFunc
     , parseEqualFunc
     , parseExistsFunc
@@ -81,8 +80,7 @@ import Control.Lens
 -- Definition of the parsers interfaces.
 
 data FuncBoolParser a = FuncBoolParser
-    {
-      _parseBetween           :: Between a           -> String
+    { _parseBetween           :: Between a           -> String
     , _parseEqual             :: Equal a             -> String
     , _parseExists            :: Exists a            -> String
     , _parseGreaterThan       :: GreaterThan a       -> String
@@ -125,8 +123,7 @@ parseBetweensFunc ::
     -> ColRef a
     -> String
 parseBetweensFunc parser func colRef lower higher = concat
-    [
-      "("
+    [ "("
     , parser^.parseColRef $ colRef
     , " "
     , if func then "" else "NOT"
@@ -145,8 +142,7 @@ parseInfixFunc ::
     -> ColRef a -- ^ Right parameter.
     -> String
 parseInfixFunc parser name colRef1 colRef2 = concat
-    [
-      "("
+    [ "("
     , parser^.parseColRef $ colRef1
     , " "
     , name

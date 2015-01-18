@@ -10,11 +10,9 @@ Portability : portable
 PostgreSQL specific constructors for functions/clauses specific to this vendor.
 -}
 module Hedsql.Drivers.PostgreSQL.Constructor
-    (
-      lateral
+    ( lateral
     , default_
-    )
-    where
+    ) where
 
 import Hedsql.Common.Constructor
 import Hedsql.Common.DataStructure

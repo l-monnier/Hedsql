@@ -15,8 +15,7 @@ Portability : portable
 Constructor functions for values which can then be used in queries.
 -}
 module Hedsql.Common.Constructor.Values
-    (
-      CoerceToSqlValue
+    ( CoerceToSqlValue
     , value
     , values
     ) where

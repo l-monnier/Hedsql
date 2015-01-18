@@ -23,8 +23,7 @@ import Control.Lens
 
 -- | INSERT query.
 data Insert a = Insert
-    {
-      _insertTable   :: Table a
+    { _insertTable   :: Table a
     , _insertColumns :: Maybe [Column a]
     , _insertValues  :: [[SqlValue a]]
     } deriving (Show)

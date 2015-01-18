@@ -16,8 +16,7 @@ Constructor functions for columns references which can then be used in queries.
 -}
 
 module Hedsql.Common.Constructor.Columns
-    (
-      CoerceToCol
+    ( CoerceToCol
     , CoerceToColRef
     , (/.)
     , as_

@@ -13,8 +13,7 @@ Implementation of the SQL parser for table manipulation statements such as
 CREATE TABLE and CREATE VIEW.
 -}
 module Hedsql.Common.Parser.TableManipulations
-    (
-    -- Interface.
+    ( -- Interface.
       TableParser(TableParser)
     , parseAction
     , parseCol
@@ -38,7 +37,7 @@ module Hedsql.Common.Parser.TableManipulations
     , parseTable
     , quoteElem
     
-    -- Generic functions implementation.
+      -- Generic functions implementation.
     , parseActionFunc
     , parseColCreateFunc
     , parseColConstFunc
@@ -111,8 +110,7 @@ parseActionFunc Restrict = "RESTRICT"
 -- | Parse a column which can be used for a CREATE statement.
 parseColCreateFunc :: TableParser a -> Column a -> String
 parseColCreateFunc parser col = concat $ catMaybes
-    [
-      Just $ parser^.quoteElem                        $ col^.colName
+    [ Just $ parser^.quoteElem                        $ col^.colName
     , fmap   (\x -> " " ++ (parser^.parseDataType) x) $ col^.colDataType
     , fmap   consts                                   $ col^.colConstraints
     ]
@@ -138,8 +136,7 @@ parseColConstTypeFunc parser const =
                     auto False = ""
         
         (Reference table col action) -> concat
-            [
-              "REFERENCES "
+            [ "REFERENCES "
             , (parser^.parseTable) table
             , "("
             , (parser^.quoteElem) (col^.colName)
@@ -185,8 +182,7 @@ parseConstTimingCheckFunc InitiallyDeferred  = "INITIALLY DEFERRED"
 -- | Parse a CREATE TABLE statement.   
 parseCreateTableFunc :: TableParser a -> CreateTable a -> String
 parseCreateTableFunc parser stmt = concat
-    [
-      "CREATE TABLE "
+    [ "CREATE TABLE "
     , parser^.parseTable $ stmt^.createTableTable
     , " ("
     , intercalate ", " $ map (parser^.parseColCreate) (stmt^.createTableCols)
@@ -201,8 +197,7 @@ parseCreateTableFunc parser stmt = concat
 -- | Create a CREATE VIEW statement.
 parseCreateViewFunc :: TableParser a -> CreateView a -> String
 parseCreateViewFunc parser stmt = concat
-    [
-      "CREATE VIEW "
+    [ "CREATE VIEW "
     , parser^.quoteElem $ stmt^.viewName
     , " AS "
     , parser^.parseSelect $ stmt^.viewSelect
@@ -221,8 +216,7 @@ parseDataTypeFunc (Varchar max)    = "varchar(" ++ show max ++ ")"
 parseFkClauseFunc :: TableParser a -> ForeignKeyClause a -> String
 parseFkClauseFunc parser fk =
     concat
-        [
-          (parser^.parseTable) (fk^.foreignKeyClauseTable)
+        [ (parser^.parseTable) (fk^.foreignKeyClauseTable)
         , " ("
         , intercalate ", " $ map (parser^.parseCol) (fk^.foreignKeyClauseCols)
         , ")"
@@ -251,8 +245,7 @@ parseOnActionFunc parser (OnUpdate action) =    "ON UPDATE "
 -- | Parse a table constraint.
 parseTableConstFunc :: TableParser a -> TableConstraint a -> String
 parseTableConstFunc parser table = concat $ catMaybes
-    [
-      fmap  parseName                    $ table^.tableConstraintName
+    [ fmap  parseName                    $ table^.tableConstraintName
     , Just $ parser^.parseTableConstType $ table^.tableConstraintConstraint
     , fmap  parseTiming                  $ table^.tableConstraintTiming
     ]
@@ -270,25 +263,21 @@ parseTableConstTypeFunc parser cond =
              ++ (parser^.parseCondition) condition
     
         (ForeignKey cols clause) -> concat
-            [
-              "FOREIGN KEY ("
+            [ "FOREIGN KEY ("
             , parseCols cols
             , ")" 
             , parser^.parseFkClause $ clause
             ]
     
         (TableConstraintPrimaryKey cols) -> concat
-            [
-              "PRIMARY KEY ("
+            [ "PRIMARY KEY ("
             , parseCols cols
             , ")"
             ]
         
         (TableConstraintUnique cols) -> concat
-            [
-              "UNIQUE ("
+            [ "UNIQUE ("
             , parseCols cols
             ]
     where
-        parseCols cols = intercalate ", " $ map (parser^.parseCol) cols
-        
+        parseCols cols = intercalate ", " $ map (parser^.parseCol) cols      

@@ -16,8 +16,7 @@ Constructor functions for conditions which can then be used in WHERE clauses
 or for tables creation.
 -}
 module Hedsql.Common.Constructor.Conditions
-    (
-      CoerceToCondition
+    ( CoerceToCondition
     , condition
     ) where
 

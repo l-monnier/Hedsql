@@ -16,8 +16,7 @@ All the composition of SQL queries and statements by adding their different
 individual elements.
 -}
 module Hedsql.Common.Constructor.Composition
-    (
-      (/++)
+    ( (/++)
     ) where
 
 import Hedsql.Common.Constructor.TablesManipulation

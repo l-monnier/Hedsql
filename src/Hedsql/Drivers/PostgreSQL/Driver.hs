@@ -10,8 +10,7 @@ Portability : portable
 PostgreSQL driver.
 -}
 module Hedsql.Drivers.PostgreSQL.Driver
-    (
-      PostgreSQL
+    ( PostgreSQL
     ) where
 
 -- | PostgreSQL driver.

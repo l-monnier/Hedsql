@@ -97,8 +97,7 @@ This means that without an ORDER BY clause, using LIMIT or OFFSET would
 result in random results.
 -}
 module Hedsql.Common.Constructor
-    (
-      module Hedsql.Common.Constructor.Columns
+    ( module Hedsql.Common.Constructor.Columns
     , module Hedsql.Common.Constructor.Composition
     , module Hedsql.Common.Constructor.Conditions
     , module Hedsql.Common.Constructor.DataManipulation

@@ -22,8 +22,7 @@ Note that the functions and, max, min, in and sum exist also in the prelude.
 Their name is therefore followed by an underscore.
 -}
 module Hedsql.Common.Constructor.Functions
-    (
-      (/+)
+    ( (/+)
     , (/-)
     , (/*)
     , (/==)

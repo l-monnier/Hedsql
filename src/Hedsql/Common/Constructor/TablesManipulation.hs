@@ -16,8 +16,7 @@ Currently only CREATE and DROP statements are implemented.
 ALTER statements are in project.
 -}
 module Hedsql.Common.Constructor.TablesManipulation
-    (
-      check
+    ( check
     , checkT
     , colConstraint
     , createTable
@@ -91,7 +90,7 @@ defaultValue e = Default $ expr e
 
 -- | Create a DROP TABLE statement.
 dropTable ::
-    (CoerceToTable a (Table b))
+       (CoerceToTable a (Table b))
     => a -- ^ Table to drop. 
     -> DropTable b
 dropTable = DropTable False . table
@@ -109,10 +108,13 @@ dropView ::
 dropView = DropView
 
 -- | Create a FOREIGN KEY constraint.
-foreignKey :: (CoerceToTable a (Table c), CoerceToCol b [Column c])
-           => a -- ^ Table.
-           -> b -- ^ Column.
-           -> ColConstraintType c
+foreignKey ::
+    ( CoerceToTable a (Table c)
+    , CoerceToCol b [Column c]
+    )
+    => a -- ^ Table.
+    -> b -- ^ Column.
+    -> ColConstraintType c
 foreignKey t c = Reference (table t) (column c) Nothing
 
 -- | Create a NOT NULL constraint.

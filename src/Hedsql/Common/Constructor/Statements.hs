@@ -14,8 +14,7 @@ Portability : portable
 Constructor functions for SQL statements which can then be parsed.
 -}
 module Hedsql.Common.Constructor.Statements
-    (
-      CoerceToStmt
+    ( CoerceToStmt
     , statement
     , statements
     ) where

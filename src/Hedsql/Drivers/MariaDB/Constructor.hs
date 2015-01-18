@@ -10,11 +10,9 @@ Portability : portable
 MariaDB specific constructors for functions/clauses specific to this vendor.
 -}
 module Hedsql.Drivers.MariaDB.Constructor
-    (
-      calcFoundRows
+    ( calcFoundRows
     , foundRows
-    )
-    where
+    ) where
 
 import Hedsql.Common.Constructor
 import Hedsql.Common.DataStructure
