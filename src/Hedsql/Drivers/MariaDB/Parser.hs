@@ -18,35 +18,26 @@ module Hedsql.Drivers.MariaDB.Parser
 import Hedsql.Common.Constructor.Statements
 import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser
-import Hedsql.Common.Parser.Functions
 import Hedsql.Drivers.MariaDB.Driver
 
 import Control.Lens
 
 -- Private.
 
--- | SQL_CALC_FOUND_ROWS function.
-mariaDBCalcFoundRowsFunc :: CalcFoundRows MariaDB -> String
-mariaDBCalcFoundRowsFunc _ = "SQL_CALC_FOUND_ROWS"
-    
--- | FOUND_ROWS function.
-mariaDBFoundRowsFunc :: FoundRows MariaDB -> String
-mariaDBFoundRowsFunc _ = "FOUND_ROWS()"
-
--- | Create the MariaDB function parser.
-mariaDBFuncParser :: FuncParser MariaDB
-mariaDBFuncParser =
-    (getGenFuncParser mariaDBQueryParser)
-        & parseCalcFoundRows .~ mariaDBCalcFoundRowsFunc
-        & parseFoundRows     .~ mariaDBFoundRowsFunc
+mariaDBFuncFunc :: Function MariaDB -> String
+mariaDBFuncFunc CalcFoundRows = "SQL_CALC_FOUND_ROWS"
+mariaDBFuncFunc FoundRows     = "FOUND_ROWS()"
+mariaDBFuncFunc func          = parseFuncFunc mariaDBQueryParser func
 
 -- | Create the MariaDB parser.
 mariaDBParser :: Parser MariaDB
-mariaDBParser = getParser $ getStmtParser mariaDBQueryParser
+mariaDBParser = getParser $ getStmtParser mariaDBQueryParser genTableParser
     
 -- | Create the MariaDB query parser.
 mariaDBQueryParser :: QueryParser MariaDB
-mariaDBQueryParser = getQueryParser mariaDBQueryParser mariaDBFuncParser
+mariaDBQueryParser =
+    (getQueryParser mariaDBQueryParser genTableParser)
+        & parseFunc .~ mariaDBFuncFunc
 
 -- Public.
 

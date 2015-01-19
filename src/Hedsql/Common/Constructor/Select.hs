@@ -168,7 +168,7 @@ sortRefs = coerceToSortRef
 
 -- | Create a joker - "*" - character.
 (//*) :: Function a
-(//*) = JokerF Joker
+(//*) = Joker
 
 {-|
 Add an ascending sorting order (ASC) to a sort reference
@@ -226,14 +226,14 @@ having = Having . condition
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
       (CoerceToColRef a [ColRef c], CoerceToColRef b [ColRef c])
-    => a -> b -> IsDistinctFrom c
+    => a -> b -> FuncBool c
 isDistinctFrom colRef1 colRef2 =
     IsDistinctFrom (colRef colRef1) (colRef colRef2)
 
 -- | Create a IS NOT DISTINCT FROM operator.
 isNotDistinctFrom
   :: (CoerceToColRef a [ColRef c], CoerceToColRef b [ColRef c]) =>
-     a -> b -> IsNotDistinctFrom c
+     a -> b -> FuncBool c
 isNotDistinctFrom colRef1 colRef2 =
     IsNotDistinctFrom (colRef colRef1) (colRef colRef2)
 

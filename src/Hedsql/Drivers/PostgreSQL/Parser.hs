@@ -50,7 +50,6 @@ postgreSQLQueryParser =
     getQueryParser
         postgreSQLQueryParser
         postgreSQLTableParser
-        (getGenFuncParser postgreSQLQueryParser)
 
 -- | Create the PostgreSQL table manipulations parser.
 postgreSQLTableParser :: T.TableParser PostgreSQL

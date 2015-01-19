@@ -70,7 +70,7 @@ import Hedsql.Common.DataStructure
     => a
     -> b
     -> Function c
-(/+) left right = AddF $ Add (colRef left) (colRef right)
+(/+) left right = Add (colRef left) (colRef right)
 
 -- | "-" operator.
 (/-) ::
@@ -81,7 +81,7 @@ import Hedsql.Common.DataStructure
     => a
     -> b
     -> Function c
-(/-) left right = SubstractF $ Substract (colRef left) (colRef right)
+(/-) left right = Substract (colRef left) (colRef right)
 
 -- | "*" operator.
 (/*) ::
@@ -92,7 +92,7 @@ import Hedsql.Common.DataStructure
     => a
     -> b
     -> Function c
-(/*) left right = MultiplyF $ Multiply (colRef left) (colRef right)
+(/*) left right = Multiply (colRef left) (colRef right)
 
 -- | Equality operator ("=" in SQL).
 (/==) ::
@@ -103,7 +103,7 @@ import Hedsql.Common.DataStructure
     => a
     -> b
     -> FuncBool c
-(/==) colRef1 colRef2 = EqualF $ Equal (colRef colRef1) (colRef colRef2)
+(/==) colRef1 colRef2 = Equal (colRef colRef1) (colRef colRef2)
 
 -- | Greater than operator (">").
 (/>) ::
@@ -114,8 +114,7 @@ import Hedsql.Common.DataStructure
     => a
     -> b
     -> FuncBool c
-(/>) colRef1 colRef2 =
-    GreaterThanF $ GreaterThan (colRef colRef1) (colRef colRef2)
+(/>) colRef1 colRef2 = GreaterThan (colRef colRef1) (colRef colRef2)
 
 -- | Greater than or equal to operator (">=").
 (/>=) ::
@@ -126,11 +125,7 @@ import Hedsql.Common.DataStructure
     => a
     -> b
     -> FuncBool c
-(/>=) colRef1 colRef2 =
-    GreaterThanOrEqToF $ GreaterThanOrEqTo c1 c2
-    where
-        c1 = colRef colRef1
-        c2 = colRef colRef2
+(/>=) colRef1 colRef2 = GreaterThanOrEqTo (colRef colRef1) (colRef colRef2)
 
 -- | Smaller than operator ("<").
 (/<) ::
@@ -141,8 +136,7 @@ import Hedsql.Common.DataStructure
     => a
     -> b
     -> FuncBool c
-(/<) colRef1 colRef2 =
-    SmallerThanF $ SmallerThan (colRef colRef1) (colRef colRef2)
+(/<) colRef1 colRef2 = SmallerThan (colRef colRef1) (colRef colRef2)
 
 -- | Smaller than or equal to operator ("<=").
 (/<=) ::
@@ -153,8 +147,7 @@ import Hedsql.Common.DataStructure
     => a
     -> b
     -> FuncBool c
-(/<=) colRef1 colRef2 =
-    SmallerThanOrEqToF $ SmallerThanOrEqTo (colRef colRef1) (colRef colRef2)
+(/<=) colRef1 colRef2 = SmallerThanOrEqTo (colRef colRef1) (colRef colRef2)
 
 -- | Unequality operator ("<>").
 (/<>) ::
@@ -165,7 +158,7 @@ import Hedsql.Common.DataStructure
     => a
     -> b
     -> FuncBool c
-(/<>) colRef1 colRef2 = NotEqualF $ NotEqual (colRef colRef1) (colRef colRef2)
+(/<>) colRef1 colRef2 = NotEqual (colRef colRef1) (colRef colRef2)
 
 -- | Join two predicates with an AND.
 and_ :: CoerceToCondition a (Condition b) => a -> a -> Condition b
@@ -187,7 +180,7 @@ between ::
     -> c -- ^ Higher bound condition.
     -> Condition d -- ^ Between condition.
 between exp lower higher =
-    FuncCond $ BetweenF $ Between exprRef lowerRef higherRef
+    FuncCond $ Between exprRef lowerRef higherRef
     where
         exprRef = colRef exp
         lowerRef = colRef lower
@@ -195,18 +188,18 @@ between exp lower higher =
 
 -- | Create a COUNT function.
 count :: CoerceToColRef a [ColRef b] => a -> Function b
-count = CountF . Count . expr
+count = Count . expr
 
 {- |
     Create a function which will return the current date.
     Its implementation shall vary depending on the vendor.
 -}
 currentDate :: Function a
-currentDate = CurrentDateF CurrentDate
+currentDate = CurrentDate
 
 -- | Create an EXISTS function.
 exists :: CoerceToColRef a [ColRef b] => a -> Condition b
-exists = FuncCond . ExistsF . Exists . colRef
+exists = FuncCond . Exists . colRef
 
 -- | Create an IN operator.
 in_ ::
@@ -217,7 +210,7 @@ in_ ::
     => a
     -> b
     -> FuncBool c
-in_ colRef1 colRef2 = InF $ In (colRef colRef1) (colRef colRef2)
+in_ colRef1 colRef2 = In (colRef colRef1) (colRef colRef2)
 
 -- | Create a NOT IN operator.
 notIn ::
@@ -228,47 +221,47 @@ notIn ::
     => a
     -> b
     -> FuncBool c
-notIn colRef1 colRef2 = NotInF $ NotIn (colRef colRef1) (colRef colRef2)
+notIn colRef1 colRef2 = NotIn (colRef colRef1) (colRef colRef2)
 
 -- | Create a IS FALSE function.
 isFalse :: CoerceToColRef a [ColRef b] => a -> Condition b
-isFalse = FuncCond . IsFalseF . IsFalse . colRef
+isFalse = FuncCond . IsFalse . colRef
 
 -- | Create a IS NOT FALSE function.
 isNotFalse :: CoerceToColRef a [ColRef b] => a -> Condition b
-isNotFalse = FuncCond . IsNotFalseF . IsNotFalse . colRef
+isNotFalse = FuncCond . IsNotFalse . colRef
 
 -- | Create a IS NOT NULL function.
 isNotNull :: CoerceToColRef a [ColRef b] => a -> Condition b
-isNotNull = FuncCond . IsNotNullF . IsNotNull . colRef
+isNotNull = FuncCond . IsNotNull . colRef
 
 -- | Create a IS NOT TRUE function.
 isNotTrue :: CoerceToColRef a [ColRef b] => a -> Condition b
-isNotTrue = FuncCond . IsNotTrueF . IsNotTrue . colRef
+isNotTrue = FuncCond . IsNotTrue . colRef
 
 -- | Create a IS NOT UNKNOWN function.
 isNotUnknown :: CoerceToColRef a [ColRef b] => a -> Condition b
-isNotUnknown = FuncCond . IsNotUnknownF . IsNotUnknown . colRef
+isNotUnknown = FuncCond . IsNotUnknown . colRef
 
 -- | Create a IS NULL function.
 isNull :: CoerceToColRef a [ColRef b] => a -> Condition b
-isNull = FuncCond . IsNullF . IsNull . colRef
+isNull = FuncCond . IsNull . colRef
 
 -- | Create a IS TRUE function.
 isTrue :: CoerceToColRef a [ColRef b] => a -> Condition b
-isTrue = FuncCond . IsTrueF . IsTrue . colRef
+isTrue = FuncCond . IsTrue . colRef
 
 -- | Create a IS UNKNOWN function.
 isUnknown :: CoerceToColRef a [ColRef b] => a -> Condition b
-isUnknown = FuncCond . IsUnknownF . IsUnknown . colRef
+isUnknown = FuncCond . IsUnknown . colRef
 
 -- | Create a MAX function.
 max_ :: CoerceToColRef a [ColRef b] => a -> Function b
-max_ = MaxF . Max . expr
+max_ = Max . expr
 
 -- | Create a MIN function.
 min_ :: CoerceToColRef a [ColRef b] => a -> Function b
-min_ = MinF . Min . expr
+min_ = Min . expr
 
 -- | NOT BETWEEN condition.
 notBetween ::
@@ -282,16 +275,12 @@ notBetween ::
     -> c           -- ^ Higher bound condition.
     -> Condition d -- ^ Not between condition.
 notBetween expr lower higher =
-    FuncCond $ NotBetweenF $ NotBetween exprRef lowerRef higherRef
-    where
-        exprRef = colRef expr
-        lowerRef = colRef lower
-        higherRef = colRef higher
+    FuncCond $ NotBetween (colRef expr) (colRef lower) (colRef higher)
 
 -- | Create a random() function.
 random :: Function a
-random = RandomF Random
+random = Random
    
 -- | Create a SUM function.
 sum_ :: CoerceToColRef a [ColRef b] => a -> Function b
-sum_ = SumF . Sum . expr
+sum_ = Sum . expr

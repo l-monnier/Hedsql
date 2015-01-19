@@ -22,8 +22,8 @@ import Hedsql.Drivers.MariaDB.Driver
 
 -- | SQL_CALC_FOUND_ROWS function.
 calcFoundRows :: Function MariaDB
-calcFoundRows = CalcFoundRowsF CalcFoundRows
+calcFoundRows = CalcFoundRows
 
 -- | FOUND_ROWS function.
 foundRows :: Function MariaDB
-foundRows = FoundRowsF FoundRows
+foundRows = FoundRows

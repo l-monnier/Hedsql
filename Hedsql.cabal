@@ -71,7 +71,6 @@ library
                     Hedsql.Common.DataStructure.Update,
                     Hedsql.Common.Parser,
                     Hedsql.Common.Parser.BoolFunctions,
-                    Hedsql.Common.Parser.Functions,
                     Hedsql.Common.Parser.Interface,
                     Hedsql.Common.Parser.Queries,
                     Hedsql.Common.Parser.Quoter,

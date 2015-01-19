@@ -63,6 +63,8 @@ module Hedsql.Common.Parser.Queries
     , parseConditionFunc
     , parseExprFunc
     , parseFromFunc
+    , parseFuncBoolFunc
+    , parseFuncFunc
     , parseJoinFunc
     , parseGroupByFunc
     , parseHavingFunc
@@ -279,6 +281,113 @@ parseFromFunc parser (From tableReferences) =
        where
            getReferences = map (parser^.parseTableRef)
 
+-- | Parse a function returning a boolean value.
+parseFuncBoolFunc :: QueryParser a -> FuncBool a -> String
+parseFuncBoolFunc parser funcBool =
+    case funcBool of
+        Between    ref lower higher -> parseBetweens True ref lower higher
+        Equal             ref1 ref2 -> parseInfix "=" ref1 ref2
+        Exists            colRef    -> concat
+                                            ["(EXISTS "
+                                            , parser^.parseColRef $ colRef
+                                            , ")"
+                                            ]
+        GreaterThan       ref1 ref2 -> parseInfix ">" ref1 ref2
+        GreaterThanOrEqTo ref1 ref2 -> parseInfix ">=" ref1 ref2
+        In                ref1 ref2 -> parseInfix "IN" ref1 ref2
+        IsDistinctFrom    ref1 ref2 -> parseInfix "IS DISTINCT FROM" ref1 ref2
+        IsFalse           expr      -> parseIs expr "FALSE"
+        IsNotDistinctFrom ref1 ref2 -> parseInfix
+                                            "IS NOT DISTINCT FROM"
+                                            ref1
+                                            ref2
+        IsNotFalse        expr      -> parseIs expr "NOT FALSE"
+        IsNotNull         expr      -> parseIs expr "NOT NULL"
+        IsNotTrue         expr      -> parseIs expr "NOT TRUE"
+        IsNotUnknown      expr      -> parseIs expr "NOT UNKNOWN"
+        IsNull            expr      -> parseIs expr "NULL"
+        IsTrue            expr      -> parseIs expr "TRUE"
+        IsUnknown         expr      -> parseIs expr "UNKNOWN"
+        Like              ref1 ref2 -> parseInfix "LIKE" ref1 ref2
+        NotBetween ref lower higher -> parseBetweens False ref lower higher
+        NotEqual          ref1 ref2 -> parseInfix "<>" ref1 ref2
+        NotIn             ref1 ref2 -> parseInfix "NOT IN" ref1 ref2
+        SmallerThan       ref1 ref2 -> parseInfix "<" ref1 ref2
+        SmallerThanOrEqTo ref1 ref2 -> parseInfix "<=" ref1 ref2
+    where
+        parseBetweens func colRef lower higher =
+            concat
+                [ "("
+                , parser^.parseColRef $ colRef
+                , " "
+                , if func then "" else "NOT"
+                , " BETWEEN "
+                , parser^.parseColRef $ lower
+                , " AND "
+                , parser^.parseColRef $ higher
+                , ")"
+                ]
+        parseInfix name colRef1 colRef2 =
+            concat
+                [ "("
+                , parser^.parseColRef $ colRef1
+                , " "
+                , name
+                , " "
+                , parser^.parseColRef $ colRef2
+                , ")"
+                ]
+        parseIs colRef text =
+            concat
+                [parser^.parseColRef $ colRef
+                , "IS "
+                , text
+                ]
+
+-- | Parse a function.
+parseFuncFunc :: QueryParser a -> Function a -> String
+parseFuncFunc parser func =
+    case func of
+        -- Operators.
+        Add           left right -> parseInfix "+" left right
+        BitAnd        left right -> parseInfix "&" left right
+        BitOr         left right -> parseInfix "|" left right
+        BitShiftLeft  left right -> parseInfix "<<" left right
+        BitShiftRight left right -> parseInfix ">>" left right
+        Divide        left right -> parseInfix "/" left right
+        Modulo        left right -> parseInfix "%" left right
+        Multiply      left right -> parseInfix "*" left right
+        Substract     left right -> parseInfix "-" left right 
+    
+        -- Functions.
+        Count       expr -> makeExpr "COUNT" expr
+        CurrentDate      -> "CURRENT_DATE"
+        Joker            -> "*"
+        Max         expr -> makeExpr "MAX" expr
+        Min         expr -> makeExpr "MIN" expr
+        Random           -> "RANDOM"
+        Sum         expr -> makeExpr "SUM" expr
+        
+        -- MariaDB functions.
+        CalcFoundRows -> error
+               "SQL_CALC_FOUND_ROWS is specific to MariaDB."
+            ++ "Use the MariaDB parser."
+        FoundRows     -> error
+              "FOUND_ROWS is specific to MariaDB. Use the MariaDB parser."
+    where
+        makeExpr string expression =
+            concat [string, "(", parser^.parseExpr $ expression, ")"]
+        parseInfix name ref1 ref2 =
+            concat
+                [ "("
+                , parser^.parseColRef $ ref1
+                , " "
+                , name
+                , " "
+                , parser^.parseColRef $ ref2
+                , ")"
+                ]
+
 -- | Parse a GROUP BY clause.
 parseGroupByFunc :: QueryParser a -> GroupBy a -> String
 parseGroupByFunc parser (GroupBy colRefs having) =
@@ -393,8 +502,7 @@ parseSelectFunc parser select =
         parseDistinct  Distinct          = "DISTINCT "
         parseDistinct (DistinctOn exprs) =
             concat
-                [
-                  "DISTINCT ON ("
+                [ "DISTINCT ON ("
                 , intercalate ", " $ map (parser^.parseExpr) exprs
                 , ") "
                 ]

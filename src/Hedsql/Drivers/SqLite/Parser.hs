@@ -18,24 +18,17 @@ module Hedsql.Drivers.SqLite.Parser
 import Hedsql.Common.Constructor.Statements
 import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser
-import Hedsql.Common.Parser.Functions
 import Hedsql.Drivers.SqLite.Driver
 
 import Control.Lens
 
 -- Private.
 
-{-|
-Parse the Date('now') function (which is "CURRENT_DATE" for some other vendors).
--}
-sqLiteCurrentDateFunc :: CurrentDate SqLite -> String
-sqLiteCurrentDateFunc _ = "Date('now')"
-
 -- | Create the SqLite function parser.
-sqLiteFuncParser :: FuncParser SqLite
-sqLiteFuncParser =
-    (getGenFuncParser sqLiteQueryParser)
-        & parseCurrentDate .~ sqLiteCurrentDateFunc
+sqLiteFuncFunc :: Function SqLite -> String
+sqLiteFuncFunc CurrentDate = "Date('now')"
+sqLiteFuncFunc func        = parseFuncFunc sqLiteQueryParser func
+    
 
 -- | Create the SqLite parser.
 sqLiteParser :: Parser SqLite
@@ -44,7 +37,8 @@ sqLiteParser = getParser $ getStmtParser sqLiteQueryParser genTableParser
 -- | Create the SqLite query parser.
 sqLiteQueryParser :: QueryParser SqLite
 sqLiteQueryParser =
-    getQueryParser sqLiteQueryParser genTableParser sqLiteFuncParser
+    (getQueryParser sqLiteQueryParser genTableParser)
+        & parseFunc .~ sqLiteFuncFunc
 
 -- Public.
 
