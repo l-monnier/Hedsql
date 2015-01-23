@@ -37,7 +37,7 @@ data SqlDataType a =
    | SmallInt -- ^ 2 bytes integer - range from -32768 to +32767.
    | Integer  -- ^ 4 bytes integer - range from -2147483648 to +2147483647.
    | BigInt   -- ^ 8 bytes integer -
-              --   range from -9223372036854775808 to +9223372036854775807.
+              --   range from -9223372036854775808 to +9223372036854775807. 
      deriving (Show)
 
 -- | SQL values.
@@ -46,6 +46,7 @@ data SqlValue a =
     | SqlValueInt Int
     | SqlValueNull
     | SqlValueString String
+    | Placeholder
       deriving (Show)
 
 -- Table components.

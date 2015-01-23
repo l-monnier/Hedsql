@@ -33,7 +33,7 @@ import Hedsql.Common.Constructor.Types
 import Hedsql.Common.Constructor.Values
 import Hedsql.Common.DataStructure
 
-import Control.Lens ((^.), set)
+import Control.Lens ((^.), view, set)
 
 -- private functions.
 
@@ -136,10 +136,10 @@ colRefs = coerceToColRef
 Create a SQL expression which can then be used in condition or column reference.
 -}
 expr :: CoerceToColRef a [ColRef b] => a -> Expression b
-expr a = head (coerceToColRef a) ^. colRefExpr
+expr = head . exprs
 
 {-|
 Create SQL expressions which can then be used in condition or column references.
 -}
-exprs :: CoerceToColRef a [ColRef b] => [a] -> [Expression b]
-exprs = map expr
+exprs :: CoerceToColRef a [ColRef b] => a -> [Expression b]
+exprs = map (view colRefExpr) . colRefs

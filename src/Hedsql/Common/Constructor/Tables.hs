@@ -47,6 +47,9 @@ instance CoerceToTable (Table a) (Table a) where
 class CoerceToTableRef a b | a -> b where
     coerceToTableRef :: a -> b
 
+instance CoerceToTableRef (Join a) [TableRef a] where
+    coerceToTableRef join = [TableJoinRef join Nothing]
+
 instance CoerceToTableRef (SqlString a) [TableRef a] where
     coerceToTableRef name = [TableTableRef (coerceToTable name) Nothing]
 

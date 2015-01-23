@@ -25,6 +25,7 @@ import Control.Lens
 -- Private.
 
 mariaDBFuncFunc :: Function MariaDB -> String
+mariaDBFuncFunc Random        = "RAND()"
 mariaDBFuncFunc CalcFoundRows = "SQL_CALC_FOUND_ROWS"
 mariaDBFuncFunc FoundRows     = "FOUND_ROWS()"
 mariaDBFuncFunc func          = parseFuncFunc mariaDBQueryParser func

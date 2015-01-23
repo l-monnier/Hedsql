@@ -25,7 +25,6 @@ module Hedsql.Common.Parser.Quoter
     ) where
 
 import Control.Lens
-import Data.Text (pack, replace, unpack)
 
 {-|
 Interface defining the different quoting functions.
@@ -58,6 +57,8 @@ genQuote ::
     -> String -- ^ String to quote.
     -> String -- ^ Returned quoted string.
 genQuote quote text =
-       [quote]
-    ++ unpack (replace (pack [quote]) (pack $ [quote] ++ [quote]) $ pack text)
-    ++ [quote]
+    concat
+        [[quote]
+        , concatMap (\x -> if x == quote then [quote, quote] else [x]) text
+        ,[quote]
+        ]

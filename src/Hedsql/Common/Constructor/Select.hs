@@ -47,7 +47,6 @@ module Hedsql.Common.Constructor.Select
     , rightJoin
     , select
     , selectDistinct
-    , selectDistinctOn
     , sortRef
     , sortRefs
     , subQuery
@@ -57,7 +56,6 @@ module Hedsql.Common.Constructor.Select
     ) where
 
 import Hedsql.Common.Constructor.Columns
-import Hedsql.Common.Constructor.Composition
 import Hedsql.Common.Constructor.Conditions
 import Hedsql.Common.Constructor.Tables
 import Hedsql.Common.Constructor.Types
@@ -91,6 +89,7 @@ instance CoerceToJoinClause (Condition a) (JoinClause a) where
 instance CoerceToJoinClause (FuncBool a) (JoinClause a) where
     coerceToJoinClause = JoinClauseOn . FuncCond
 
+-- | Create an USING joint clause from a column.
 instance CoerceToJoinClause (Column a) (JoinClause a) where
     coerceToJoinClause col = JoinClauseUsing [col]
 
@@ -101,7 +100,8 @@ instance CoerceToJoinClause [Column a] (JoinClause a) where
 -- | Create an USING join clause from a string which is a column name.
 instance CoerceToJoinClause (SqlString a) (JoinClause a) where
     coerceToJoinClause col = JoinClauseUsing [column col]
-    
+
+-- | Create an USING join clause from a list of strings which are column names.    
 instance CoerceToJoinClause [SqlString a] (JoinClause a) where
     coerceToJoinClause cols = JoinClauseUsing (columns cols)
 
@@ -237,7 +237,13 @@ isNotDistinctFrom
 isNotDistinctFrom colRef1 colRef2 =
     IsNotDistinctFrom (colRef colRef1) (colRef colRef2)
 
--- | Create a INNER JOIN.
+{-|
+Create an INNER JOIN.
+If the join clause is a condition or a boolean function, it will be an ON
+clause.
+If the join clause is a column, a string or a list of columns or strings, it
+will be an USING clause.
+-} 
 innerJoin ::
     ( CoerceToTableRef   a [TableRef d]
     , CoerceToTableRef   b [TableRef d]
@@ -344,21 +350,6 @@ selectDistinct a =
     Select
         (colRefs a)
         (Just Distinct)
-         Nothing
-         Nothing
-         Nothing
-         Nothing
-
--- | Create a SELECT DISTINCT ON query.
-selectDistinctOn ::
-       (CoerceToColRef a [ColRef c], CoerceToColRef b [ColRef c])
-    => [a]       -- ^ Distinct references.
-    ->  b        -- ^ Select clause.
-    ->  Select c -- ^ Select query.
-selectDistinctOn distinctExpr selectExpr =
-    Select
-        (colRefs selectExpr)
-        (Just $ DistinctOn $ exprs distinctExpr)
          Nothing
          Nothing
          Nothing

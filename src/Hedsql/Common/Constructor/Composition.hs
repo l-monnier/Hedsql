@@ -23,13 +23,16 @@ import Hedsql.Common.Constructor.TablesManipulation
 import Hedsql.Common.DataStructure hiding (Add)
 
 import Control.Lens hiding (coerce)
-import Data.Coerce
 
 -- private functions.
 
 -- | Set a Maybe value to the target using the provide element.
-setMaybe :: ASetter s t a (Maybe b) -> s -> b -> t
-setMaybe lens target el = set lens (Just el) target
+setMaybe ::
+       ASetter s t a (Maybe b) -- ^ Lens.
+    -> s                       -- ^ Target.
+    -> b                       -- ^ Element to set.
+    -> t                       -- ^ Target with the provided element set.
+setMaybe l target el = set l (Just el) target
 
 -- public functions.
 {-|

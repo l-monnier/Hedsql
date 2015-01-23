@@ -14,7 +14,6 @@ module Hedsql.Drivers.MariaDB.Constructor
     , foundRows
     ) where
 
-import Hedsql.Common.Constructor
 import Hedsql.Common.DataStructure
 import Hedsql.Drivers.MariaDB.Driver
 

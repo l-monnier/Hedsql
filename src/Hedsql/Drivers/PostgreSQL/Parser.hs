@@ -70,10 +70,10 @@ a PRIMARY KEY column constraint.
 -}
 parsePostgreSQLColConstTypeFunc ::
     T.TableParser a -> ColConstraintType a -> String
-parsePostgreSQLColConstTypeFunc parser const =
-    case const of
-        (Primary isAuto) -> "PRIMARY KEY"
-        otherwise        -> T.parseColConstTypeFunc parser const
+parsePostgreSQLColConstTypeFunc parser constraint =
+    case constraint of
+        (Primary _) -> "PRIMARY KEY"
+        _           -> T.parseColConstTypeFunc parser constraint
 
 {- |
     Custom function for PostgreSQL for the creation of a table.
@@ -82,13 +82,13 @@ parsePostgreSQLColConstTypeFunc parser const =
 -}
 parsePostgreSqlColCreateFunc :: T.TableParser a -> Column a -> String
 parsePostgreSqlColCreateFunc parser col =
-        parseCols parser (col^.colDataType) (col^.colConstraints)        
+        parseCols (col^.colDataType) (col^.colConstraints)        
     where
-        parseCols p (Just Integer) (Just colConsts) =
+        parseCols (Just Integer) (Just colConsts) =
             if hasAutoIncrement colConsts
             then cName ++ " serial"  ++ consts colConsts
             else cName ++ " integer" ++ consts colConsts 
-        parseCols p colType colConsts = concat $ catMaybes
+        parseCols colType colConsts = concat $ catMaybes
             [
               Just cName
             , fmap (\x -> " " ++ (parser^.T.parseDataType) x) colType

@@ -101,11 +101,13 @@ getStmtParser :: QueryParser a -> TableParser a -> StmtParser a
 getStmtParser queryParser tableParser = StmtParser
     (parseCombinedFunc $ getStmtParser queryParser tableParser)
     (parseCreateTableFunc tableParser)
+    (parseCreateViewFunc tableParser)
     (parseDeleteFunc queryParser)
     (parseDropTableFunc queryParser)
     (parseDropViewFunc queryParser)
     (parseInsertFunc queryParser)
     (parseSelectFunc queryParser)
+    (parseStmtFunc $ getStmtParser queryParser tableParser)
     (parseUpdateFunc queryParser)
     
 -- | Return a table parser using the provided query and table parsers.

@@ -94,7 +94,8 @@ import Hedsql.Common.DataStructure
     -> Function c
 (/*) left right = Multiply (colRef left) (colRef right)
 
--- | Equality operator ("=" in SQL).
+-- | Equality operator ("=" in SQL). Infix 8.
+infix 8 /==
 (/==) ::
     (
       CoerceToColRef a [ColRef c]

@@ -14,12 +14,14 @@ Implementation of the SQL statement parsers as well as the queries parser.
 module Hedsql.Common.Parser.Queries
     ( StmtParser(StmtParser)
     , parseCombined
-    , parseCreate
+    , parseCreateTable
+    , parseCreateView
     , parseDelete
     , parseDropTable
     , parseDropView
     , parseInsert
     , parseSelect
+    , parseStatement
     , parseUpdate
     
     , parseCombinedFunc
@@ -89,8 +91,7 @@ module Hedsql.Common.Parser.Queries
     ) where
 
 import Hedsql.Common.DataStructure
-import Hedsql.Common.Parser.Interface
-import Hedsql.Helpers.Patterns
+import Hedsql.Common.Parser.Interface()
 
 import Control.Lens
 import Data.List (intercalate)
@@ -101,14 +102,16 @@ import Data.Maybe
 
 -- | Interface of the statements parser.
 data StmtParser a = StmtParser
-    { _parseCombined  :: CombinedQuery a -> String
-    , _parseCreate    :: CreateTable   a -> String
-    , _parseDelete    :: Delete        a -> String
-    , _parseDropTable :: DropTable     a -> String
-    , _parseDropView  :: DropView      a -> String
-    , _parseInsert    :: Insert        a -> String
-    , _parseSelect    :: Select        a -> String
-    , _parseUpdate    :: Update        a -> String
+    { _parseCombined    :: CombinedQuery a -> String
+    , _parseCreateTable :: CreateTable   a -> String
+    , _parseCreateView  :: CreateView    a -> String
+    , _parseDelete      :: Delete        a -> String
+    , _parseDropTable   :: DropTable     a -> String
+    , _parseDropView    :: DropView      a -> String
+    , _parseInsert      :: Insert        a -> String
+    , _parseSelect      :: Select        a -> String
+    , _parseStatement   :: Statement     a -> String
+    , _parseUpdate      :: Update        a -> String
     }
 
 makeLenses ''StmtParser
@@ -159,20 +162,21 @@ makeLenses ''JoinParser
 
 -- Private functions.
 
+{-|
+If the provided boolean is true, return the provided string.
+If the provided boolean is false, return an empty string.
+-}
 parseIf :: Bool -> String -> String
-parseIf True a  = a
+parseIf True  x = x
 parseIf False _ = ""
 
 {-|
-Apply parenthesis to a list of strings and use the specified separator to
-delimit its elements.
+Apply a parsing function to a maybe.
+If Just, returns the result of the parse function preceeded by a space.
+If Nothing, returns an empty string.
 -}
-parenthesis :: String -> [String] -> String
-parenthesis separator = getPatternFromList "(" ")" separator
-
 parseMaybe :: (a -> String) -> Maybe a -> String
-parseMaybe pFunc (Just a) = " " ++ pFunc a
-parseMaybe _     Nothing  = ""
+parseMaybe f = maybe "" ((++) " " . f)
   
 -- Implementation of the functions.
 
@@ -243,7 +247,11 @@ parseConditionFunc parser condition =
     where
         cs = map (parser^.parseCondition)
         pCond name conds =
-            getPatternFromList "(" (" " ++ name ++ " ") ")" $ cs conds
+            concat
+                [ "("
+                , intercalate (" " ++ name ++ " ") $ cs conds
+                , ")"
+                ]
             
 -- | Parse a DELETE statement.
 parseDeleteFunc :: QueryParser a -> Delete a -> String
@@ -272,15 +280,17 @@ parseExprFunc parser stmtParser expr =
         SelectExpr select  -> "(" ++ (stmtParser^.parseSelect) select ++ ")"   
         FuncExpr func      -> parser^.parseFunc $ func
         ValueExpr val      -> parser^.parseValue $ val
-        ValueExprs vals    -> parenthesis ", " $ map (parser^.parseValue) vals
+        ValueExprs vals    -> concat
+                              ["("
+                              , intercalate ", " $ map (parser^.parseValue) vals
+                              , ")"
+                              ]
 
 -- | Parse a FROM clause.
 parseFromFunc :: QueryParser a -> From a -> String
 parseFromFunc parser (From tableReferences) =
-       foldl (++) "FROM " $ getReferences tableReferences
-       where
-           getReferences = map (parser^.parseTableRef)
-
+    foldl (++) "FROM " $ map (parser^.parseTableRef) tableReferences
+       
 -- | Parse a function returning a boolean value.
 parseFuncBoolFunc :: QueryParser a -> FuncBool a -> String
 parseFuncBoolFunc parser funcBool =
@@ -365,7 +375,7 @@ parseFuncFunc parser func =
         Joker            -> "*"
         Max         expr -> makeExpr "MAX" expr
         Min         expr -> makeExpr "MIN" expr
-        Random           -> "RANDOM"
+        Random           -> "random()"
         Sum         expr -> makeExpr "SUM" expr
         
         -- MariaDB functions.
@@ -391,10 +401,11 @@ parseFuncFunc parser func =
 -- | Parse a GROUP BY clause.
 parseGroupByFunc :: QueryParser a -> GroupBy a -> String
 parseGroupByFunc parser (GroupBy colRefs having) =
-       getPatternFromList "GROUP BY " "" ", " parsedColRefs
-    ++ parseMaybe (parser^.parseHaving) having
-    where
-        parsedColRefs = map (parser^.parseColRef) colRefs
+    concat
+        [ "GROUP BY "
+        , intercalate ", " $ map (parser^.parseColRef) colRefs
+        , parseMaybe (parser^.parseHaving) having
+        ] 
 
 -- | Parse a HAVING clause.
 parseHavingFunc :: QueryParser a -> Having a -> String
@@ -450,9 +461,12 @@ parseJoinFunc queryParser parser join =
 parseJoinClauseFunc :: QueryParser a -> JoinClause a -> String
 parseJoinClauseFunc parser jClause =
     case jClause of
-        JoinClauseOn predicate -> " ON " ++ (parser^.parseCondition) predicate
-        JoinClauseUsing cols   ->   getPatternFromList " USING(" ")" ", "
-                                  $ map (parser^.parseCol) cols
+        JoinClauseOn predicate -> "ON " ++ (parser^.parseCondition) predicate
+        JoinClauseUsing cols -> concat
+                                [ "USING ("
+                                , intercalate ", " $ map (parser^.parseCol) cols
+                                , ")"
+                                ]
 
 -- | Parser a join on a column.
 parseJoinTColFunc :: JoinTypeCol a -> String
@@ -476,9 +490,12 @@ parseJoinTTableFunc joinType =
 -- | Parse an ORDER BY clause.
 parseOrderByFunc :: QueryParser a -> OrderBy a -> String
 parseOrderByFunc parser clause =
-       getPatternFromList "ORDER BY " "" ", " sortRefsParsed
-    ++ parseMaybe show (clause^.partOrderByLimit)
-    ++ parseMaybe show (clause^.partOrderByOffset)
+    concat
+        [ "ORDER BY "
+        , intercalate ", " sortRefsParsed
+        , parseMaybe show (clause^.partOrderByLimit)
+        , parseMaybe show (clause^.partOrderByOffset)
+        ]
     where
         sortRefsParsed = map (parser^.parseSortRef) (clause^.partOrderByColumns)
 
@@ -489,10 +506,10 @@ parseSelectFunc parser select =
         [ Just       "SELECT "
         , fmap        parseDistinct         (select^.selectType)
         , Just $      parseColRefs          (select^.selectColRef)
-        , parseMaybe (parser^.parseFrom)    (select^.fromClause)
-        , parseMaybe (parser^.parseWhere)   (select^.whereClause)
-        , parseMaybe (parser^.parseGroupBy) (select^.groupByClause)
-        , parseMaybe (parser^.parseOrderBy) (select^.orderByClause)
+        , parseM (parser^.parseFrom)    (select^.fromClause)
+        , parseM (parser^.parseWhere)   (select^.whereClause)
+        , parseM (parser^.parseGroupBy) (select^.groupByClause)
+        , parseM (parser^.parseOrderBy) (select^.orderByClause)
         ]
     where
         parseColRefs colRefs =
@@ -507,7 +524,7 @@ parseSelectFunc parser select =
                 , ") "
                 ]
         
-        parseMaybe f = fmap (\x -> " " ++ f x)
+        parseM f = fmap (\x -> " " ++ f x)
 
 -- | Parse the NULLS FIRST or NULLS LAST of a the sorting clause.
 parseSortNullFunc :: SortNulls a -> String
@@ -530,13 +547,17 @@ parseSortRefFunc parser sortRef =
 parseStmtFunc :: StmtParser a -> Statement a -> String
 parseStmtFunc parser stmt =
     case stmt of
-        CreateTableStmt s -> parser^.parseCreate    $ s
-        DeleteStmt      s -> parser^.parseDelete    $ s
-        DropTableStmt   s -> parser^.parseDropTable $ s
-        DropViewStmt    s -> parser^.parseDropView  $ s
-        InsertStmt      s -> parser^.parseInsert    $ s
-        SelectStmt      s -> parser^.parseSelect    $ s
-        UpdateStmt      s -> parser^.parseUpdate    $ s
+        CreateTableStmt s  -> parser^.parseCreateTable $ s
+        CreateViewStmt  s  -> parser^.parseCreateView  $ s
+        DeleteStmt      s  -> parser^.parseDelete      $ s
+        DropTableStmt   s  -> parser^.parseDropTable   $ s
+        DropViewStmt    s  -> parser^.parseDropView    $ s
+        InsertStmt      s  -> parser^.parseInsert      $ s
+        SelectStmt      s  -> parser^.parseSelect      $ s
+        UpdateStmt      s  -> parser^.parseUpdate      $ s
+        Statements      xs -> concat $ map
+                                  (\x -> (parser^.parseStatement $ x) ++ "; ")
+                                   xs
         
 {-|
 Parse the name of a table.
@@ -548,9 +569,9 @@ parseTableNameFunc parser table = parser^.quoteElem $ table^.tableName
 parseTableRefFunc :: StmtParser a -> QueryParser a -> TableRef a -> String
 parseTableRefFunc stmtP parser join =
     case join of
-        TableJoinRef    ref    alias -> concat [ "("
+        TableJoinRef    ref    alias -> concat [ maybe "" (\_ -> "(") alias
                                                , parser^.parseJoin $ ref
-                                               , ")"
+                                               , maybe "" (\_ -> ")") alias
                                                , parseMaybe pAlias alias
                                                ]
         TableTableRef   table  alias -> concat [ parser^.parseTableName $ table
@@ -581,6 +602,7 @@ parseValueFunc _       SqlValueDefault         = "DEFAULT"
 parseValueFunc _      (SqlValueInt int)        = show int
 parseValueFunc _       SqlValueNull            = "NULL"
 parseValueFunc parser (SqlValueString string)  = parser^.quoteVal $ string
+parseValueFunc _       Placeholder             = "?"
 
 -- | Parse a WHERE clause.  
 parseWhereFunc :: QueryParser a -> Where a -> String

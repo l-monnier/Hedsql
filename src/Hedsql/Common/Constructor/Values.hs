@@ -16,6 +16,7 @@ Constructor functions for values which can then be used in queries.
 -}
 module Hedsql.Common.Constructor.Values
     ( CoerceToSqlValue
+    , (/?)
     , value
     , values
     ) where
@@ -57,6 +58,10 @@ instance CoerceToSqlValue [SqlString a] [SqlValue a] where
     coerceToSqlValue = map SqlValueString
 
 -- public functions.
+
+-- | Create a placeholder "?" for a prepared statement.
+(/?) :: SqlValue a
+(/?) = Placeholder
 
 {-|
 Convert a primitive value so it can be used in SQL queries as "raw" values.

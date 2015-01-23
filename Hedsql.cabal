@@ -6,7 +6,7 @@ author:         Leonard Monnier
 stability:      alpha
 maintainer:     Leonard Monnier <leonard.monnier@gmail.com>
 synopsis:       EDSL for SQL
-description:    Provide an easy way to write SQL in Haskell.
+description:    Provide a convenient way to write SQL in Haskell.
 category:       Database
 license:        GPL-3
 copyright:      (c) 2014-2015 Leonard Monnier
@@ -25,9 +25,6 @@ data-files:
                 src/Hedsql/Drivers/PostgreSQL/Parser.hs, 
                 src/Hedsql/Drivers/SqLite/Driver.hs, 
                 src/Hedsql/Drivers/SqLite/Parser.hs, 
-                src/Hedsql/Helpers/Json.hs, 
-                src/Hedsql/Helpers/Map.hs, 
-                src/Hedsql/Helpers/Patterns.hs, 
                 src/Hedsql/MariaDB.hs, 
                 src/Hedsql/PostgreSQL.hs, 
                 src/Hedsql/SqLite.hs, 
@@ -74,11 +71,7 @@ library
                     Hedsql.Drivers.PostgreSQL.Driver,
                     Hedsql.Drivers.PostgreSQL.Parser,
                     Hedsql.Drivers.SqLite.Driver,
-                    Hedsql.Drivers.SqLite.Parser,
-                    Hedsql.Helpers.Json,
-                    Hedsql.Helpers.Map,
-                    Hedsql.Helpers.Patterns,
-                    Paths_Hedsql
+                    Hedsql.Drivers.SqLite.Parser
   exposed-modules:  
                     Hedsql.MariaDB,
                     Hedsql.PostgreSQL,
@@ -96,11 +89,7 @@ test-suite tests
                    test-framework-quickcheck2,
                    test-framework-hunit,
                    random >=1.0.1
-  other-modules:   
-                         Hedsql.Helpers.Map,
-                         Hedsql.Helpers.MapTest
   hs-source-dirs:  
                    src,
                    tests
   main-is:         Test.hs
-
