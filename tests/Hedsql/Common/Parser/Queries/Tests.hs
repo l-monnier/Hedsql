@@ -102,7 +102,7 @@ testInnerJoinOnSqLite = testCase "Inner join SqLite" assertFrom
            ("SELECT * "
          ++ "FROM \"People\" "
          ++ "INNER JOIN \"Countries\" "
-         ++ "ON (\"People\".\"countryId\" = \"Countries\".\"countryId\")")
+         ++ "ON \"People\".\"countryId\" = \"Countries\".\"countryId\"")
             (S.parse fromInnerJoinOn)
 
 testInnerJoinUsingSqLite :: Test

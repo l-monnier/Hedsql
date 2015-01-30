@@ -65,7 +65,7 @@ fromCrossJoin =  select (//*) /++  from ("People" `crossJoin` "Countries")
 {-|
 SELECT *
 FROM "People"
-    INNER JOIN "Countries" ON "(People"."countryId" = "Countries"."countryId)"
+    INNER JOIN "Countries" ON "People"."countryId" = "Countries"."countryId"
 -}
 fromInnerJoinOn :: Select a
 fromInnerJoinOn =

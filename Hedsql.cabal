@@ -1,7 +1,7 @@
 name:           Hedsql
 version:        0.1
-cabal-version:  >=1.2
-build-type:     Configure
+cabal-version:  >=1.8
+build-type:     Simple
 author:         Leonard Monnier
 stability:      alpha
 maintainer:     Leonard Monnier <leonard.monnier@gmail.com>
@@ -9,6 +9,7 @@ synopsis:       EDSL for SQL
 description:    Provide a convenient way to write SQL in Haskell.
 category:       Database
 license:        GPL-3
+license-file:   LICENCE.md
 copyright:      (c) 2014-2015 Leonard Monnier
 data-files:     
                 src/Hedsql/Common/DataStructure/Create.hs, 
@@ -34,44 +35,10 @@ tested-with:    GHC==7.8.2
 library
   hs-source-dirs:   src
   build-depends:    
-                   base >= 4,
                    lens >=4.0.1,
-                   template-haskell >=2.8.0
+                   template-haskell >=2.8.0,
+                   base >=4.7.0 && <4.8
   ghc-options:      -Wall
-  other-modules:    
-                    Hedsql.Common.Constructor,
-                    Hedsql.Common.Constructor.Columns,
-                    Hedsql.Common.Constructor.Composition,
-                    Hedsql.Common.Constructor.Conditions,
-                    Hedsql.Common.Constructor.DataManipulation,
-                    Hedsql.Common.Constructor.Functions,
-                    Hedsql.Common.Constructor.Select,
-                    Hedsql.Common.Constructor.Statements,
-                    Hedsql.Common.Constructor.Tables,
-                    Hedsql.Common.Constructor.TablesManipulation,
-                    Hedsql.Common.Constructor.Types,
-                    Hedsql.Common.Constructor.Values,
-                    Hedsql.Common.DataStructure,
-                    Hedsql.Common.DataStructure.Create,
-                    Hedsql.Common.DataStructure.Delete,
-                    Hedsql.Common.DataStructure.Drop,
-                    Hedsql.Common.DataStructure.Insert,
-                    Hedsql.Common.DataStructure.Inspect,
-                    Hedsql.Common.DataStructure.Select,
-                    Hedsql.Common.DataStructure.Update,
-                    Hedsql.Common.Parser,
-                    Hedsql.Common.Parser.Interface,
-                    Hedsql.Common.Parser.Queries,
-                    Hedsql.Common.Parser.Quoter,
-                    Hedsql.Common.Parser.TableManipulations,
-                    Hedsql.Drivers.MariaDB.Constructor,
-                    Hedsql.Drivers.MariaDB.Driver,
-                    Hedsql.Drivers.MariaDB.Parser,
-                    Hedsql.Drivers.PostgreSQL.Constructor,
-                    Hedsql.Drivers.PostgreSQL.Driver,
-                    Hedsql.Drivers.PostgreSQL.Parser,
-                    Hedsql.Drivers.SqLite.Driver,
-                    Hedsql.Drivers.SqLite.Parser
   exposed-modules:  
                     Hedsql.MariaDB,
                     Hedsql.PostgreSQL,
@@ -93,3 +60,4 @@ test-suite tests
                    src,
                    tests
   main-is:         Test.hs
+  other-modules:   Hedsql.Common.Parser.TableManipulations.Drop

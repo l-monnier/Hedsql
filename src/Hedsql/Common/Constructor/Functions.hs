@@ -32,6 +32,7 @@ module Hedsql.Common.Constructor.Functions
     , (/<=)
     , (/<>)
     , and_
+    , ands
     , between
     , count
     , currentDate
@@ -180,10 +181,10 @@ between ::
     -> b -- ^ Lower bound condition.
     -> c -- ^ Higher bound condition.
     -> Condition d -- ^ Between condition.
-between exp lower higher =
+between ex lower higher =
     FuncCond $ Between exprRef lowerRef higherRef
     where
-        exprRef = colRef exp
+        exprRef = colRef ex
         lowerRef = colRef lower
         higherRef = colRef higher
 
@@ -275,8 +276,8 @@ notBetween ::
     -> b           -- ^ Lower bound condition.
     -> c           -- ^ Higher bound condition.
     -> Condition d -- ^ Not between condition.
-notBetween expr lower higher =
-    FuncCond $ NotBetween (colRef expr) (colRef lower) (colRef higher)
+notBetween ex lower higher =
+    FuncCond $ NotBetween (colRef ex) (colRef lower) (colRef higher)
 
 -- | Create a random() function.
 random :: Function a

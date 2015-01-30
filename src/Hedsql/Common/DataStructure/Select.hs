@@ -32,7 +32,6 @@ data SqlDataType a =
      Date
    | Char Int
    | Varchar Int
-   | SqlChar Int
    -- Numeric types
    | SmallInt -- ^ 2 bytes integer - range from -32768 to +32767.
    | Integer  -- ^ 4 bytes integer - range from -2147483648 to +2147483647.

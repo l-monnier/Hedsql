@@ -20,9 +20,20 @@ import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser
 import Hedsql.Drivers.MariaDB.Driver
 
+import qualified Hedsql.Common.Parser.TableManipulations as T
+
 import Control.Lens
 
 -- Private.
+
+-- | Parse MariaDB data types.
+mariaDBDataTypeFunc :: SqlDataType MariaDB -> String
+mariaDBDataTypeFunc  Date         = "DATE"
+mariaDBDataTypeFunc (Char lenght) = "CHAR(" ++ show lenght ++ ")"
+mariaDBDataTypeFunc  SmallInt     = "SMALLINT"
+mariaDBDataTypeFunc  Integer      = "INTEGER"
+mariaDBDataTypeFunc  BigInt       = "BIGINT"
+mariaDBDataTypeFunc (Varchar mx)  = "VARCHAR(" ++ show mx ++ ")"
 
 mariaDBFuncFunc :: Function MariaDB -> String
 mariaDBFuncFunc Random        = "RAND()"
@@ -32,13 +43,19 @@ mariaDBFuncFunc func          = parseFuncFunc mariaDBQueryParser func
 
 -- | Create the MariaDB parser.
 mariaDBParser :: Parser MariaDB
-mariaDBParser = getParser $ getStmtParser mariaDBQueryParser genTableParser
+mariaDBParser = getParser $ getStmtParser mariaDBQueryParser mariaDBTableParser
     
 -- | Create the MariaDB query parser.
 mariaDBQueryParser :: QueryParser MariaDB
 mariaDBQueryParser =
-    (getQueryParser mariaDBQueryParser genTableParser)
+    (getQueryParser mariaDBQueryParser mariaDBTableParser)
         & parseFunc .~ mariaDBFuncFunc
+
+-- | Create the MariaDB table manipulations parser.
+mariaDBTableParser :: T.TableParser MariaDB
+mariaDBTableParser =
+    (getTableParser mariaDBQueryParser mariaDBTableParser)
+        & T.parseDataType    .~ mariaDBDataTypeFunc
 
 -- Public.
 

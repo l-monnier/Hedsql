@@ -63,7 +63,7 @@ import Hedsql.Common.DataStructure
 
 import Control.Lens hiding (from)
 
-import Hedsql.Common.Constructor.Functions
+import Hedsql.Common.Constructor.Functions()
 
 -- private functions.
 

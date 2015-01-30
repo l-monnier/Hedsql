@@ -20,24 +20,40 @@ import Hedsql.Common.DataStructure
 import Hedsql.Common.Parser
 import Hedsql.Drivers.SqLite.Driver
 
+import qualified Hedsql.Common.Parser.TableManipulations as T
+
 import Control.Lens
 
 -- Private.
+
+-- | Parse SqLite data types.
+sqLiteDataTypeFunc :: SqlDataType SqLite -> String
+sqLiteDataTypeFunc  Date         = "DATE"
+sqLiteDataTypeFunc (Char lenght) = "CHARACTER(" ++ show lenght ++ ")"
+sqLiteDataTypeFunc  SmallInt     = "SMALLINT"
+sqLiteDataTypeFunc  Integer      = "INTEGER"
+sqLiteDataTypeFunc  BigInt       = "BIGINT"
+sqLiteDataTypeFunc (Varchar mx)  = "VARCHAR(" ++ show mx ++ ")"
 
 -- | Create the SqLite function parser.
 sqLiteFuncFunc :: Function SqLite -> String
 sqLiteFuncFunc CurrentDate = "Date('now')"
 sqLiteFuncFunc func        = parseFuncFunc sqLiteQueryParser func
-    
+
+-- | Create the SqLite table manipulations parser.
+sqLiteTableParser :: T.TableParser SqLite
+sqLiteTableParser =
+    (getTableParser sqLiteQueryParser sqLiteTableParser)
+        & T.parseDataType    .~ sqLiteDataTypeFunc
 
 -- | Create the SqLite parser.
 sqLiteParser :: Parser SqLite
-sqLiteParser = getParser $ getStmtParser sqLiteQueryParser genTableParser
+sqLiteParser = getParser $ getStmtParser sqLiteQueryParser sqLiteTableParser
     
 -- | Create the SqLite query parser.
 sqLiteQueryParser :: QueryParser SqLite
 sqLiteQueryParser =
-    (getQueryParser sqLiteQueryParser genTableParser)
+    (getQueryParser sqLiteQueryParser sqLiteTableParser)
         & parseFunc .~ sqLiteFuncFunc
 
 -- Public.

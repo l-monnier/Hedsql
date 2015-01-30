@@ -21,8 +21,6 @@ module Hedsql.Common.Constructor.Statements
 
 import Hedsql.Common.DataStructure
 
-import Control.Lens
-
 -- private functions.
 
 class CoerceToStmt a b where

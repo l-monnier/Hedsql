@@ -104,8 +104,11 @@ makeLenses ''TableParser
 
 -- | Parse a CASCADE or RESTRICT action.
 parseActionFunc :: SqlAction a -> String
-parseActionFunc Cascade  = "CASCADE"
-parseActionFunc Restrict = "RESTRICT"
+parseActionFunc Cascade    = "CASCADE"
+parseActionFunc NoAction   = ""
+parseActionFunc Restrict   = "RESTRICT"
+parseActionFunc SetDefault = "SET DEFAULT"
+parseActionFunc SetNull    = "SET NULL"
 
 -- | Parse a column which can be used for a CREATE statement.
 parseColCreateFunc :: TableParser a -> Column a -> String
@@ -120,8 +123,8 @@ parseColCreateFunc parser col = concat $ catMaybes
 
 -- | Parse a column constraint type.
 parseColConstTypeFunc :: TableParser a -> ColConstraintType a -> String
-parseColConstTypeFunc parser const =
-    case const of
+parseColConstTypeFunc parser cst =
+    case cst of
         (Check condition)-> 
             "CHECK (" ++ (parser^.parseCondition) condition ++ ")"
     
@@ -144,7 +147,7 @@ parseColConstTypeFunc parser const =
             , makeAction action
             ]
             where
-                makeAction (Just action) = " " ++ (parser^.parseOnAction) action
+                makeAction (Just act) = " " ++ (parser^.parseOnAction) act
                 makeAction Nothing = ""
          
         Unique -> "UNIQUE"
@@ -205,12 +208,12 @@ parseCreateViewFunc parser stmt = concat
 
 -- | Parse SQL data types.
 parseDataTypeFunc :: SqlDataType a -> String
-parseDataTypeFunc  Date            = "date"
-parseDataTypeFunc (SqlChar lenght) = "char(" ++ show lenght ++ ")"
-parseDataTypeFunc  SmallInt        = "smallint"
-parseDataTypeFunc  Integer         = "integer"
-parseDataTypeFunc  BigInt          = "bigint"
-parseDataTypeFunc (Varchar max)    = "varchar(" ++ show max ++ ")"
+parseDataTypeFunc  Date         = "date"
+parseDataTypeFunc (Char lenght) = "char(" ++ show lenght ++ ")"
+parseDataTypeFunc  SmallInt     = "smallint"
+parseDataTypeFunc  Integer      = "integer"
+parseDataTypeFunc  BigInt       = "bigint"
+parseDataTypeFunc (Varchar mx) = "varchar(" ++ show mx ++ ")"
 
 -- | Parse a FOREIGN KEY clause.
 parseFkClauseFunc :: TableParser a -> ForeignKeyClause a -> String
@@ -258,9 +261,11 @@ parseTableConstFunc parser table = concat $ catMaybes
 parseTableConstTypeFunc :: TableParser a -> TableConstraintType a -> String
 parseTableConstTypeFunc parser cond =
     case cond of
-        (TableConstraintCheck condition) -> 
-                "CHECK "
-             ++ (parser^.parseCondition) condition
+        (TableConstraintCheck condition) -> concat
+            [ "CHECK ("
+            , (parser^.parseCondition) condition
+            , ")"
+            ]
     
         (ForeignKey cols clause) -> concat
             [ "FOREIGN KEY ("
@@ -278,6 +283,7 @@ parseTableConstTypeFunc parser cond =
         (TableConstraintUnique cols) -> concat
             [ "UNIQUE ("
             , parseCols cols
+            , ")"
             ]
     where
         parseCols cols = intercalate ", " $ map (parser^.parseCol) cols      

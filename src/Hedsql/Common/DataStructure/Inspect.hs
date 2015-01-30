@@ -13,11 +13,11 @@ All the SQL data structures of Hedsql have lenses, but sometimes they are not
 the most convenient way to get some data. In this module you will find
 functions which makes it easier.
 -}
-module Hedsql.Common.DataStructure.Inspect where
+module Hedsql.Common.DataStructure.Inspect
+    ( getTableRefAlias
+    ) where
 
 import Hedsql.Common.DataStructure.Select
-
-import Control.Lens
 
 -- Private functions.
 

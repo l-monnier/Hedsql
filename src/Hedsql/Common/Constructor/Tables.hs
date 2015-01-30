@@ -20,14 +20,13 @@ module Hedsql.Common.Constructor.Tables
     , alias
     , coerceToTable
     , table
+    , tables
     , tableRef
     , tableRefs
     ) where
 
 import Hedsql.Common.Constructor.Types
 import Hedsql.Common.DataStructure
-
-import Control.Lens
 
 -- private functions.
 

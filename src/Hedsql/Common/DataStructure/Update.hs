@@ -1,13 +1,20 @@
--- file : Hedsql/Common/DataStructure/Update
 {-# LANGUAGE TemplateHaskell #-}
 
 {-|
-    Update statement data type definitions.
--}
+Module      : Hedsql/Commun/DataStructure/Update.hs
+Description : Data structure of the UPDATE statement.
+Copyright   : (c) Leonard Monnier, 2014
+License     : GPL-3
+Maintainer  : leonard.monnier@gmail.com
+Stability   : experimental
+Portability : portable
 
+Data structure of the UPDATE statement.
+-}
 module Hedsql.Common.DataStructure.Update where
 
 import Hedsql.Common.DataStructure.Select
+
 import Control.Lens
 
 -- | UPDATE query.

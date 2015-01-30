@@ -30,10 +30,10 @@ module Hedsql.Common.Constructor.Columns
 
 import Hedsql.Common.Constructor.Tables
 import Hedsql.Common.Constructor.Types
-import Hedsql.Common.Constructor.Values
+import Hedsql.Common.Constructor.Values()
 import Hedsql.Common.DataStructure
 
-import Control.Lens ((^.), view, set)
+import Control.Lens (view, set)
 
 -- private functions.
 
@@ -111,7 +111,7 @@ instance CoerceToColRef [SqlValue a] [ColRef a] where
 
 -- | Create column reference label using AS.
 as_ :: ColRef a -> Label -> ColRef a
-as_ colRef name = set colRefLabel (Just name) colRef
+as_ cRef name = set colRefLabel (Just name) cRef
 
 -- | Create one column based on a value which can then be used in a query.
 column :: CoerceToCol a [Column b] => a -> Column b

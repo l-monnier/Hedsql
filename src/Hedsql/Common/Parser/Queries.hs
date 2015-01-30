@@ -246,12 +246,7 @@ parseConditionFunc parser condition =
         Or  conds      -> pCond "OR"  conds
     where
         cs = map (parser^.parseCondition)
-        pCond name conds =
-            concat
-                [ "("
-                , intercalate (" " ++ name ++ " ") $ cs conds
-                , ")"
-                ]
+        pCond name conds = intercalate (" " ++ name ++ " ") $ cs conds
             
 -- | Parse a DELETE statement.
 parseDeleteFunc :: QueryParser a -> Delete a -> String
@@ -327,25 +322,21 @@ parseFuncBoolFunc parser funcBool =
     where
         parseBetweens func colRef lower higher =
             concat
-                [ "("
-                , parser^.parseColRef $ colRef
+                [parser^.parseColRef $ colRef
                 , " "
                 , if func then "" else "NOT"
                 , " BETWEEN "
                 , parser^.parseColRef $ lower
                 , " AND "
                 , parser^.parseColRef $ higher
-                , ")"
                 ]
         parseInfix name colRef1 colRef2 =
             concat
-                [ "("
-                , parser^.parseColRef $ colRef1
+                [parser^.parseColRef $ colRef1
                 , " "
                 , name
                 , " "
                 , parser^.parseColRef $ colRef2
-                , ")"
                 ]
         parseIs colRef text =
             concat
