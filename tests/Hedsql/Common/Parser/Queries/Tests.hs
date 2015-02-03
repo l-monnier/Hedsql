@@ -2,8 +2,8 @@ module Hedsql.Common.Parser.Queries.Tests where
 
 import Hedsql.Common.Parser.Queries.Select
 
-import qualified Hedsql.SqLite     as S
-import qualified Hedsql.PostgreSQL as P
+import qualified Database.Hedsql.SqLite     as S
+import qualified Database.Hedsql.PostgreSQL as P
 
 import Test.Framework                 (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)

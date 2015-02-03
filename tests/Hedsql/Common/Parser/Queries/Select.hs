@@ -11,10 +11,10 @@ A collection of SELECT queries to be used in tests or as examples.
 -}
 module Hedsql.Common.Parser.Queries.Select where
 
-import Hedsql.SqLite
+import Database.Hedsql.SqLite
 
-import qualified Hedsql.PostgreSQL                     as Pg
-import qualified Hedsql.Drivers.PostgreSQL.Constructor as P
+import qualified Database.Hedsql.PostgreSQL                     as Pg
+import qualified Database.Hedsql.Drivers.PostgreSQL.Constructor as P
 
 -- Selects.
 

@@ -1,6 +1,6 @@
 module Hedsql.Common.Parser.Quoter.Tests where
 
-import Hedsql.Common.Parser.Quoter
+import Database.Hedsql.Common.Parser.Quoter
 
 import Control.Lens
 
