@@ -36,7 +36,7 @@ class CoerceToTable a b | a -> b where
 
 -- | Create a table from its name.
 instance CoerceToTable (SqlString a) (Table a) where
-    coerceToTable = Table
+    coerceToTable name = Table False name [] Nothing
 
 -- | Create a table from itself.
 instance CoerceToTable (Table a) (Table a) where

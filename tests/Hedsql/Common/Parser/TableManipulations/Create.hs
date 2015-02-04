@@ -14,7 +14,7 @@ module Hedsql.Common.Parser.TableManipulations.Create where
 import Database.Hedsql.SqLite
       
 -- | CREATE TABLE "People" ("country" varchar(256) DEFAULT('Switzerland'))
-defaultVal :: CreateTable a
+defaultVal :: Table a
 defaultVal = createTable
     "People"
     [column "country" /++ varchar 256 /++ defaultValue (value "Switzerland")]
@@ -25,7 +25,7 @@ CREATE TABLE "People" (
     "lastName"  varchar(256) NOT NULL
 )
 -}
-noNulls :: CreateTable a
+noNulls :: Table a
 noNulls =
     createTable "People" cols
     where
@@ -35,7 +35,7 @@ noNulls =
             ]
 
 -- | > CREATE TABLE "People" ("firstName" varchar(256))        
-simpleTable :: CreateTable a
+simpleTable :: Table a
 simpleTable = createTable "People" [column "firstName" /++ varchar 256]
 
 {-|
@@ -45,7 +45,7 @@ Maria DB and SqLite:
 PostgreSQL:
 > CREATE TABLE "People" ("id" integer PRIMARY KEY)
 -}
-primaryKeyCol :: CreateTable a
+primaryKeyCol :: Table a
 primaryKeyCol =
     createTable "People" [column "id" /++ integer /++ primary False]
 
@@ -56,7 +56,7 @@ Maria DB and SqLite:
 PostgreSQL:
 > CREATE TABLE "People" ("id" serial PRIMARY KEY)
 -}
-primaryKeyColAuto :: CreateTable a
+primaryKeyColAuto :: Table a
 primaryKeyColAuto =
     createTable "People" [column "id" /++ integer /++ primary True]
 
@@ -67,7 +67,7 @@ CREATE TABLE "People" (
     CONSTRAINT "pk" PRIMARY KEY ("firstName", "lastName")
 )
 -}
-primaryKeyTable :: CreateTable a
+primaryKeyTable :: Table a
 primaryKeyTable =
     createTable
         "People"
@@ -75,7 +75,7 @@ primaryKeyTable =
         /++ tableConstraint "pk" (primaryT ["firstName", "lastName"])
      
 -- | CREATE TABLE "People" ("age" integer CHECK ("age" > -1))
-createCheck :: CreateTable a
+createCheck :: Table a
 createCheck =
     createTable
         "People"
@@ -88,7 +88,7 @@ CREATE TABLE "People" (
     CONSTRAINT "checks" CHECK ("age" > -1 AND "lastName" <> '')
 )
 -}
-createChecks :: CreateTable a
+createChecks :: Table a
 createChecks =
     createTable
         "People"
@@ -104,14 +104,14 @@ createChecks =
 {-|
 CREATE TABLE "People" ("countryId" integer REFERENCES "Countries"("countryId"))
 -}
-createFK :: CreateTable a
+createFK :: Table a
 createFK =
     createTable
         "People"
         [column "countryId" /++ integer /++ foreignKey "Countries" "countryId"]
 
 -- | CREATE TABLE "People" ("passportNo" varchar(256) UNIQUE)
-createUnique :: CreateTable a
+createUnique :: Table a
 createUnique =
     createTable "People" [column "passportNo" /++ varchar 256 /++ unique]
     
@@ -122,7 +122,7 @@ CREATE TABLE "People" (
     UNIQUE ("firstName", "lastName")
 )
 -}
-createUniqueT :: CreateTable a
+createUniqueT :: Table a
 createUniqueT =
     createTable "People" cols /++ tableConstraint "" (uniqueT cols)
     where

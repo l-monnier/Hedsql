@@ -103,7 +103,7 @@ import Data.Maybe
 -- | Interface of the statements parser.
 data StmtParser a = StmtParser
     { _parseCombined    :: CombinedQuery a -> String
-    , _parseCreateTable :: CreateTable   a -> String
+    , _parseCreateTable :: Table         a -> String
     , _parseCreateView  :: CreateView    a -> String
     , _parseDelete      :: Delete        a -> String
     , _parseDropTable   :: DropTable     a -> String

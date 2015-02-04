@@ -21,10 +21,6 @@ module Database.Hedsql.Common.DataStructure.Select where
 
 import Control.Lens
 
--- Types
-
-type Label = String
-
 -- Values.
 
 -- | SQL data types.
@@ -48,11 +44,10 @@ data SqlValue a =
     | Placeholder
       deriving (Show)
 
--- Table components.
-
--- | Table definition.
-data Table a = Table
-    { _tableName  :: String
+-- | CREATE VIEW query.
+data CreateView a = CreateView
+    { _viewName   :: String
+    , _viewSelect :: Select a
     } deriving (Show)
 
 {-|
@@ -73,8 +68,62 @@ data TableRefAs a = TableRefAs
     , _tableRefAliasColumns :: [String]
     } deriving (Show)
 
--- Column components
+-- | Table definition.
+data Table a = Table
+    { _tableIfNotExists :: Bool -- ^ If true the IF NOT EXISTS clause is added
+    , _tableName        :: String
+    , _tableCols        :: [Column a]
+    , _tableConstraints :: Maybe [TableConstraint a]
+    } deriving (Show)
 
+-- | Table constraints to be used in CREATE statement.
+data TableConstraint a = TableConstraint
+    { _tableConstraintName       :: Maybe String
+    , _tableConstraintConstraint :: TableConstraintType a
+    , _tableConstraintTiming     :: Maybe (ConstraintTiming a)
+    } deriving (Show)
+
+-- | Table constraints types used in CREATE statement.
+data TableConstraintType a =
+      ForeignKey [Column a] (ForeignKeyClause a)
+    | TableConstraintPrimaryKey [Column a]
+    | TableConstraintUnique [Column a]
+    | TableConstraintCheck (Condition a)
+      deriving (Show)
+
+-- | Foreign key clause to be used in a table constraint of a CREATE statement.
+data ForeignKeyClause a = ForeignKeyClause
+    { _foreignKeyClauseTable  :: Table a
+    , _foreignKeyClauseCols   :: [Column a]
+    , _foreignKeyMatch        :: Maybe (Match a)
+    , _foreignKeyClauseAction :: Maybe (OnAction a)
+    } deriving (Show)
+
+-- | Foreign key match type.
+data Match a =
+      Full
+    | Partial
+    | Simple
+      deriving (Show)
+      
+-- | Timing of a constraint.
+data ConstraintTiming a = ConstraintTiming
+    { _constraintTimingType  :: ConstraintTimingType a
+    , _constraintTimingCheck :: ConstraintTimingCheck a
+    } deriving (Show)
+
+-- | Type of a timing constraint.
+data ConstraintTimingType a =
+      Deferable
+    | NotDeferable
+      deriving (Show)
+
+-- | Timing of a timing constraint.
+data ConstraintTimingCheck a =
+      InitiallyImmediate
+    | InitiallyDeferred
+      deriving (Show)
+      
 -- | Column definition used for data queries such as SELECT queries.
 data Column a = Column
     { _colName        :: String
@@ -87,7 +136,7 @@ data Column a = Column
 -- | Constraint on a column.
 data ColConstraint a = ColConstraint
     { _colConstraintName :: Maybe String
-    , _colConstraintType :: (ColConstraintType a)
+    , _colConstraintType :: ColConstraintType a
     } deriving (Show)
 
 -- | Column constraints types.
@@ -103,12 +152,14 @@ data ColConstraintType a =
     | Unique
       deriving (Show)
 
+-- Column components
+
 {- |
 Generic definition of a column reference used in the SELECT clause of the query.
 -}
 data ColRef a = ColRef
     { _colRefExpr :: Expression a
-    , _colRefLabel :: Maybe Label
+    , _colRefLabel :: Maybe String
     } deriving (Show)
 
 -- | Actions to be performed on foreign keys.
@@ -179,14 +230,14 @@ The JoinColumn are the joins having a ON or USING clause.
 data Join a =
     JoinTable
     { _joinTableType   :: JoinTypeTable a
-    , _joinTableTable1 :: (TableRef a)
-    , _joinTableTable2 :: (TableRef a)
+    , _joinTableTable1 :: TableRef a
+    , _joinTableTable2 :: TableRef a
     }
     | JoinColumn
     { _joinColumnType   :: JoinTypeCol a
-    , _joinColumnTable1 :: (TableRef a)
-    , _joinColumnTable2 :: (TableRef a)
-    , _joinColumnClause :: (JoinClause a)
+    , _joinColumnTable1 :: TableRef a
+    , _joinColumnTable2 :: TableRef a
+    , _joinColumnClause :: JoinClause a
     } deriving (Show)
 
 -- | JOIN clause: ON or USING.
@@ -367,4 +418,8 @@ makeLenses ''Column
 makeLenses ''Select
 makeLenses ''SortRef
 makeLenses ''Table
+makeLenses ''TableConstraint
 makeLenses ''TableRefAs
+makeLenses ''ConstraintTiming
+makeLenses ''CreateView
+makeLenses ''ForeignKeyClause

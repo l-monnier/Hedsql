@@ -93,7 +93,7 @@ instance CoerceToColRef [SqlInt a] [ColRef a] where
 instance CoerceToColRef [Select a] [ColRef a] where
     coerceToColRef = map (head.coerceToColRef)
 
-instance CoerceToColRef [(SqlString a)] [ColRef a] where
+instance CoerceToColRef [SqlString a] [ColRef a] where
     coerceToColRef = map (head.coerceToColRef)
     
 instance CoerceToColRef [SqlValue a] [ColRef a] where
@@ -110,7 +110,7 @@ instance CoerceToColRef [SqlValue a] [ColRef a] where
         col = set colTable (Just (table tName)) $ column cName
 
 -- | Create column reference label using AS.
-as_ :: ColRef a -> Label -> ColRef a
+as_ :: ColRef a -> String -> ColRef a
 as_ cRef name = set colRefLabel (Just name) cRef
 
 -- | Create one column based on a value which can then be used in a query.

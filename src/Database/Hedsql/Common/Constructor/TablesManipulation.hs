@@ -42,7 +42,8 @@ import Database.Hedsql.Common.Constructor.Conditions
 import Database.Hedsql.Common.Constructor.Tables
 import Database.Hedsql.Common.DataStructure
 
-import Prelude hiding (null)
+import Control.Lens
+import Prelude      hiding (null)
 
 -- TODO: implement ALTER statements.
 
@@ -65,24 +66,25 @@ checkT = TableConstraintCheck . condition
 
 -- | Create a constraint which shall then be applied on a column.
 colConstraint :: String -> ColConstraintType a -> ColConstraint a
-colConstraint name constraintType =
-    ColConstraint (maybeString name) constraintType
+colConstraint name = ColConstraint (maybeString name)
 
 -- | Create a CREATE TABLE statement.
-createTable :: CoerceToTable a (Table b) => a -> [Column b] -> CreateTable b
-createTable t cols = CreateTable False (table t) cols Nothing
+createTable :: CoerceToTable a (Table b) => a -> [Column b] -> Table b
+createTable t c = table t & tableCols .~ c
 
 -- | Create a CREATE TABLE IF NOT EXIST statement.
-createTableIfNotExist ::
-    CoerceToTable a (Table b) => a -> [Column b] -> CreateTable b
-createTableIfNotExist t cols = CreateTable True (table t) cols Nothing
+createTableIfNotExist :: CoerceToTable a (Table b) => a -> [Column b] -> Table b
+createTableIfNotExist t c =
+    table t
+        & tableCols .~ c
+        & tableIfNotExists .~ True
 
 -- | Create a CREATE VIEW query.
 createView ::
        String       -- ^ Name of the view.
     -> Select a     -- ^ Select query from which the view is created.
     -> CreateView a
-createView name select = CreateView name select
+createView = CreateView
 
 -- | Create a DEFAULT value constraint.
 defaultValue :: CoerceToColRef a [ColRef b] => a -> ColConstraintType b

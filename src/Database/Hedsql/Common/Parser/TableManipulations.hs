@@ -80,7 +80,7 @@ data TableParser a = TableParser
     , _parseConstTiming      :: ConstraintTiming      a -> String
     , _parseConstTimingCheck :: ConstraintTimingCheck a -> String
     , _parseConstTimingType  :: ConstraintTimingType  a -> String
-    , _parseCreateTable      :: CreateTable           a -> String
+    , _parseCreateTable      :: Table                 a -> String
     , _parseCreateView       :: CreateView            a -> String
     , _parseDataType         :: SqlDataType           a -> String
     , _parseExpr             :: Expression            a -> String
@@ -119,7 +119,7 @@ parseColCreateFunc parser col = concat $ catMaybes
     ]
     where
         consts cols =
-            " " ++ (intercalate ", " $ map (parser^.parseColConst) cols)
+            " " ++ intercalate ", " (map (parser ^. parseColConst) cols)
 
 -- | Parse a column constraint type.
 parseColConstTypeFunc :: TableParser a -> ColConstraintType a -> String
@@ -183,18 +183,18 @@ parseConstTimingCheckFunc InitiallyImmediate = "INITIALLY IMMEDIATE"
 parseConstTimingCheckFunc InitiallyDeferred  = "INITIALLY DEFERRED"
 
 -- | Parse a CREATE TABLE statement.   
-parseCreateTableFunc :: TableParser a -> CreateTable a -> String
+parseCreateTableFunc :: TableParser a -> Table a -> String
 parseCreateTableFunc parser stmt = concat
     [ "CREATE TABLE "
-    , parser^.parseTable $ stmt^.createTableTable
+    , parser^.parseTable $ stmt
     , " ("
-    , intercalate ", " $ map (parser^.parseColCreate) (stmt^.createTableCols)
-    , constraints (stmt^.createTableConstraints)
+    , intercalate ", " $ map (parser^.parseColCreate) (stmt^.tableCols)
+    , constraints (stmt^.tableConstraints)
     , ")"
     ]
     where
         constraints (Just consts) =
-            ", " ++ (intercalate ", " $ map (parser^.parseTableConst) consts)
+            ", " ++ intercalate ", " (map (parser^.parseTableConst) consts)
         constraints Nothing = ""
 
 -- | Create a CREATE VIEW statement.

@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 
 {-|
@@ -64,8 +63,8 @@ instance Add OrderBy Offset where
     (/++) = setMaybe partOrderByOffset
 
 -- | Add a table constraint to a CREATE TABLE statement.
-instance Add CreateTable TableConstraint where
-    (/++) target el = setMaybe createTableConstraints target [el]
+instance Add Table TableConstraint where
+    (/++) target el = setMaybe tableConstraints target [el]
 
 --instance Add CreateTable TableConstraint where
 --    (/++) = setMaybe createTableConstraints

@@ -26,7 +26,7 @@ import Database.Hedsql.Common.DataStructure
 class CoerceToStmt a b where
     coerceToStmt :: a c -> b c
 
-instance CoerceToStmt CreateTable Statement where
+instance CoerceToStmt Table Statement where
     coerceToStmt = CreateTableStmt
 
 instance CoerceToStmt CreateView Statement where

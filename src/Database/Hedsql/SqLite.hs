@@ -15,14 +15,9 @@ build and parse queries which are specific to SqLite such as:
 > select currentDate /++ from "table1"
 > SELECT Date('now') FROM "table1"
 -}
-module Database.Hedsql.SqLite
-    ( module Database.Hedsql.Drivers.SqLite.Driver
-    , module Database.Hedsql.Drivers.SqLite.Parser
-    , module Database.Hedsql.Common.Constructor
-    , module Database.Hedsql.Common.DataStructure
-    ) where
+module Database.Hedsql.SqLite (module S) where
 
-import Database.Hedsql.Drivers.SqLite.Driver
-import Database.Hedsql.Drivers.SqLite.Parser
-import Database.Hedsql.Common.Constructor
-import Database.Hedsql.Common.DataStructure
+import Database.Hedsql.Drivers.SqLite.Driver as S
+import Database.Hedsql.Drivers.SqLite.Parser as S
+import Database.Hedsql.Common.Constructor as S
+import Database.Hedsql.Common.DataStructure as S

@@ -25,14 +25,9 @@ You will then be able to write queries such as:
 
 Such queries cannot be parsed by another parser than the PostgreSQL one.
 -}
-module Database.Hedsql.PostgreSQL
-    ( module Database.Hedsql.Drivers.PostgreSQL.Driver
-    , module Database.Hedsql.Drivers.PostgreSQL.Parser
-    , module Database.Hedsql.Common.Constructor
-    , module Database.Hedsql.Common.DataStructure
-    ) where
+module Database.Hedsql.PostgreSQL (module P) where
 
-import Database.Hedsql.Drivers.PostgreSQL.Driver
-import Database.Hedsql.Drivers.PostgreSQL.Parser
-import Database.Hedsql.Common.Constructor
-import Database.Hedsql.Common.DataStructure
+import Database.Hedsql.Drivers.PostgreSQL.Driver as P
+import Database.Hedsql.Drivers.PostgreSQL.Parser as P
+import Database.Hedsql.Common.Constructor as P
+import Database.Hedsql.Common.DataStructure as P

@@ -96,28 +96,16 @@ order of the result unless explicitly specified.
 This means that without an ORDER BY clause, using LIMIT or OFFSET would
 result in random results.
 -}
-module Database.Hedsql.Common.Constructor
-    ( module Database.Hedsql.Common.Constructor.Columns
-    , module Database.Hedsql.Common.Constructor.Composition
-    , module Database.Hedsql.Common.Constructor.Conditions
-    , module Database.Hedsql.Common.Constructor.DataManipulation
-    , module Database.Hedsql.Common.Constructor.Functions
-    , module Database.Hedsql.Common.Constructor.Select
-    , module Database.Hedsql.Common.Constructor.Statements
-    , module Database.Hedsql.Common.Constructor.Tables
-    , module Database.Hedsql.Common.Constructor.TablesManipulation
-    , module Database.Hedsql.Common.Constructor.Types
-    , module Database.Hedsql.Common.Constructor.Values
-) where
+module Database.Hedsql.Common.Constructor (module C) where
 
-import Database.Hedsql.Common.Constructor.Columns
-import Database.Hedsql.Common.Constructor.Composition
-import Database.Hedsql.Common.Constructor.Conditions
-import Database.Hedsql.Common.Constructor.DataManipulation
-import Database.Hedsql.Common.Constructor.Functions
-import Database.Hedsql.Common.Constructor.Select
-import Database.Hedsql.Common.Constructor.Statements
-import Database.Hedsql.Common.Constructor.Tables
-import Database.Hedsql.Common.Constructor.TablesManipulation
-import Database.Hedsql.Common.Constructor.Types
-import Database.Hedsql.Common.Constructor.Values
+import Database.Hedsql.Common.Constructor.Columns as C
+import Database.Hedsql.Common.Constructor.Composition as C
+import Database.Hedsql.Common.Constructor.Conditions as C
+import Database.Hedsql.Common.Constructor.DataManipulation as C
+import Database.Hedsql.Common.Constructor.Functions as C
+import Database.Hedsql.Common.Constructor.Select as C
+import Database.Hedsql.Common.Constructor.Statements as C
+import Database.Hedsql.Common.Constructor.Tables as C
+import Database.Hedsql.Common.Constructor.TablesManipulation as C
+import Database.Hedsql.Common.Constructor.Types as C
+import Database.Hedsql.Common.Constructor.Values as C

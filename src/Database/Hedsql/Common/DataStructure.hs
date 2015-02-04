@@ -14,14 +14,7 @@ easy generation of such SQL data which can then be later convert them to
 SQL strings.
 -}
 module Database.Hedsql.Common.DataStructure
-    ( module Database.Hedsql.Common.DataStructure.Create
-    , module Database.Hedsql.Common.DataStructure.Delete
-    , module Database.Hedsql.Common.DataStructure.Drop
-    , module Database.Hedsql.Common.DataStructure.Insert
-    , module Database.Hedsql.Common.DataStructure.Inspect
-    , module Database.Hedsql.Common.DataStructure.Select
-    , module Database.Hedsql.Common.DataStructure.Update
-    , Statement
+    ( Statement
         ( CreateTableStmt
         , CreateViewStmt
         , DeleteStmt
@@ -31,22 +24,22 @@ module Database.Hedsql.Common.DataStructure
         , SelectStmt
         , UpdateStmt
         , Statements
-        )
-    ) where
+     )
+     , module D
+     ) where
 
-import Database.Hedsql.Common.DataStructure.Create
-import Database.Hedsql.Common.DataStructure.Delete
-import Database.Hedsql.Common.DataStructure.Drop
-import Database.Hedsql.Common.DataStructure.Insert
-import Database.Hedsql.Common.DataStructure.Inspect
-import Database.Hedsql.Common.DataStructure.Select
-import Database.Hedsql.Common.DataStructure.Update
+import Database.Hedsql.Common.DataStructure.Delete  as D
+import Database.Hedsql.Common.DataStructure.Drop    as D
+import Database.Hedsql.Common.DataStructure.Insert  as D
+import Database.Hedsql.Common.DataStructure.Inspect as D
+import Database.Hedsql.Common.DataStructure.Select  as D
+import Database.Hedsql.Common.DataStructure.Update  as D
 
 -- Public.
 
 -- | All possible SQL statements which can be constructed using Hedsql.
 data Statement a =
-      CreateTableStmt (CreateTable a)
+      CreateTableStmt (Table a)
     | CreateViewStmt  (CreateView a)
     | DeleteStmt      (Delete a)
     | DropTableStmt   (DropTable a)
