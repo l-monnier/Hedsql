@@ -65,8 +65,8 @@ import Database.Hedsql.Common.DataStructure
 -- | "+" operator.
 (/+) ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -76,8 +76,8 @@ import Database.Hedsql.Common.DataStructure
 -- | "-" operator.
 (/-) ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -87,8 +87,8 @@ import Database.Hedsql.Common.DataStructure
 -- | "*" operator.
 (/*) ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -99,8 +99,8 @@ import Database.Hedsql.Common.DataStructure
 infix 8 /==
 (/==) ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -110,8 +110,8 @@ infix 8 /==
 -- | Greater than operator (">").
 (/>) ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -121,8 +121,8 @@ infix 8 /==
 -- | Greater than or equal to operator (">=").
 (/>=) ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -132,8 +132,8 @@ infix 8 /==
 -- | Smaller than operator ("<").
 (/<) ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -143,8 +143,8 @@ infix 8 /==
 -- | Smaller than or equal to operator ("<=").
 (/<=) ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -154,8 +154,8 @@ infix 8 /==
 -- | Unequality operator ("<>").
 (/<>) ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -163,19 +163,19 @@ infix 8 /==
 (/<>) colRef1 colRef2 = NotEqual (colRef colRef1) (colRef colRef2)
 
 -- | Join two predicates with an AND.
-and_ :: CoerceToCondition a (Condition b) => a -> a -> Condition b
+and_ :: ToConditions a [Condition b] => a -> a -> Condition b
 and_ condition1 condition2 = And [condition condition1, condition condition2]
 
 -- | Join a list of predicates with AND which will be enclosed in a parenthesis.
-ands :: CoerceToCondition a (Condition b) => [a] -> Condition b
+ands :: ToConditions a [Condition b] => [a] -> Condition b
 ands = And . map condition
 
 -- | BETWEEN condition.
 between ::
     (
-      CoerceToColRef a [ColRef d]
-    , CoerceToColRef b [ColRef d]
-    , CoerceToColRef c [ColRef d]
+      ToColRefs a [ColRef d]
+    , ToColRefs b [ColRef d]
+    , ToColRefs c [ColRef d]
     )
     => a -- ^ Expression to evaluate.
     -> b -- ^ Lower bound condition.
@@ -189,7 +189,7 @@ between ex lower higher =
         higherRef = colRef higher
 
 -- | Create a COUNT function.
-count :: CoerceToColRef a [ColRef b] => a -> Function b
+count :: ToColRefs a [ColRef b] => a -> Function b
 count = Count . expr
 
 {- |
@@ -200,14 +200,14 @@ currentDate :: Function a
 currentDate = CurrentDate
 
 -- | Create an EXISTS function.
-exists :: CoerceToColRef a [ColRef b] => a -> Condition b
+exists :: ToColRefs a [ColRef b] => a -> Condition b
 exists = FuncCond . Exists . colRef
 
 -- | Create an IN operator.
 in_ ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -217,8 +217,8 @@ in_ colRef1 colRef2 = In (colRef colRef1) (colRef colRef2)
 -- | Create a NOT IN operator.
 notIn ::
     (
-      CoerceToColRef a [ColRef c]
-    , CoerceToColRef b [ColRef c]
+      ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
     )
     => a
     -> b
@@ -226,51 +226,51 @@ notIn ::
 notIn colRef1 colRef2 = NotIn (colRef colRef1) (colRef colRef2)
 
 -- | Create a IS FALSE function.
-isFalse :: CoerceToColRef a [ColRef b] => a -> Condition b
+isFalse :: ToColRefs a [ColRef b] => a -> Condition b
 isFalse = FuncCond . IsFalse . colRef
 
 -- | Create a IS NOT FALSE function.
-isNotFalse :: CoerceToColRef a [ColRef b] => a -> Condition b
+isNotFalse :: ToColRefs a [ColRef b] => a -> Condition b
 isNotFalse = FuncCond . IsNotFalse . colRef
 
 -- | Create a IS NOT NULL function.
-isNotNull :: CoerceToColRef a [ColRef b] => a -> Condition b
+isNotNull :: ToColRefs a [ColRef b] => a -> Condition b
 isNotNull = FuncCond . IsNotNull . colRef
 
 -- | Create a IS NOT TRUE function.
-isNotTrue :: CoerceToColRef a [ColRef b] => a -> Condition b
+isNotTrue :: ToColRefs a [ColRef b] => a -> Condition b
 isNotTrue = FuncCond . IsNotTrue . colRef
 
 -- | Create a IS NOT UNKNOWN function.
-isNotUnknown :: CoerceToColRef a [ColRef b] => a -> Condition b
+isNotUnknown :: ToColRefs a [ColRef b] => a -> Condition b
 isNotUnknown = FuncCond . IsNotUnknown . colRef
 
 -- | Create a IS NULL function.
-isNull :: CoerceToColRef a [ColRef b] => a -> Condition b
+isNull :: ToColRefs a [ColRef b] => a -> Condition b
 isNull = FuncCond . IsNull . colRef
 
 -- | Create a IS TRUE function.
-isTrue :: CoerceToColRef a [ColRef b] => a -> Condition b
+isTrue :: ToColRefs a [ColRef b] => a -> Condition b
 isTrue = FuncCond . IsTrue . colRef
 
 -- | Create a IS UNKNOWN function.
-isUnknown :: CoerceToColRef a [ColRef b] => a -> Condition b
+isUnknown :: ToColRefs a [ColRef b] => a -> Condition b
 isUnknown = FuncCond . IsUnknown . colRef
 
 -- | Create a MAX function.
-max_ :: CoerceToColRef a [ColRef b] => a -> Function b
+max_ :: ToColRefs a [ColRef b] => a -> Function b
 max_ = Max . expr
 
 -- | Create a MIN function.
-min_ :: CoerceToColRef a [ColRef b] => a -> Function b
+min_ :: ToColRefs a [ColRef b] => a -> Function b
 min_ = Min . expr
 
 -- | NOT BETWEEN condition.
 notBetween ::
     (
-      CoerceToColRef a [ColRef d]
-    , CoerceToColRef b [ColRef d]
-    , CoerceToColRef c [ColRef d]
+      ToColRefs a [ColRef d]
+    , ToColRefs b [ColRef d]
+    , ToColRefs c [ColRef d]
     )
     => a           -- ^ Expression to evaluate.
     -> b           -- ^ Lower bound condition.
@@ -284,5 +284,5 @@ random :: Function a
 random = Random
    
 -- | Create a SUM function.
-sum_ :: CoerceToColRef a [ColRef b] => a -> Function b
+sum_ :: ToColRefs a [ColRef b] => a -> Function b
 sum_ = Sum . expr

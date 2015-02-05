@@ -47,13 +47,13 @@ mariaDBParser = getParser $ getStmtParser mariaDBQueryParser mariaDBTableParser
 -- | Create the MariaDB query parser.
 mariaDBQueryParser :: QueryParser MariaDB
 mariaDBQueryParser =
-    (getQueryParser mariaDBQueryParser mariaDBTableParser)
+    getQueryParser mariaDBQueryParser mariaDBTableParser
         & parseFunc .~ mariaDBFuncFunc
 
 -- | Create the MariaDB table manipulations parser.
 mariaDBTableParser :: T.TableParser MariaDB
 mariaDBTableParser =
-    (getTableParser mariaDBQueryParser mariaDBTableParser)
+    getTableParser mariaDBQueryParser mariaDBTableParser
         & T.parseDataType    .~ mariaDBDataTypeFunc
 
 -- Public.
@@ -62,5 +62,5 @@ mariaDBTableParser =
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: CoerceToStmt a Statement => (a MariaDB) -> String
+parse :: ToStmt a Statement => a MariaDB -> String
 parse = (mariaDBParser^.parseStmt).statement

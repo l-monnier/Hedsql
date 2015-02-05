@@ -33,18 +33,18 @@ import Database.Hedsql.Common.DataStructure
 -- | Create a column/value pair to be used in an UPDATE statement.
 assign ::
     (
-       CoerceToCol      a [Column c]
-    ,  CoerceToSqlValue b [SqlValue c]
+       ToCols      a [Column   c]
+    ,  ToSqlValues b [SqlValue c]
     )
     => a -- ^ Column or name of the column.
     -> b -- ^ Value for this column.
     -> Assignment c
-assign a val = Assignment (column a) (ValueExpr $ value val)
+assign a val = Assignment (toCol a) (ValueExpr $ value val)
 
 -- | Create a DELETE FROM statement.
 deleteFrom ::
-       CoerceToTable a (Table b)
-    => a -- ^ Table or name of the table to delete from.
+       ToTables a [Table b]
+    => a        -- ^ Table or name of the table to delete from.
     -> Delete b
 deleteFrom t = Delete (table t) Nothing
 
@@ -56,11 +56,11 @@ than one row in the database.
 -}
 insertInto ::
     (
-       CoerceToTable     a  (Table c)
-    ,  CoerceToSqlValue [b] [SqlValue c]
+       ToTables    a   [Table    c]
+    ,  ToSqlValues [b] [SqlValue c]
     )
-    =>   a    -- ^ Table or name of the table to insert the data into.
-    -> [[b]]  -- ^ Values to insert.
+    => a        -- ^ Table or name of the table to insert the data into.
+    -> [[b]]    -- ^ Values to insert.
     -> Insert c
 insertInto t vals = Insert (table t) Nothing $ map values vals
 
@@ -72,20 +72,20 @@ than one row in the database.
 -}
 insertIntoCols ::
     (
-      CoerceToTable     a  (Table d)
-    , CoerceToCol       b  [Column d]
-    , CoerceToSqlValue [c] [SqlValue d]
+      ToTables    a   [Table d]
+    , ToCols      b   [Column d]
+    , ToSqlValues [c] [SqlValue d]
     )
-    =>   a     -- ^ Table or name of the table to insert the data into.
-    ->  [b]    -- ^ Columns or names of the columns.
-    -> [[c]]   -- ^ Values to insert.
+    => a     -- ^ Table or name of the table to insert the data into.
+    -> [b]   -- ^ Columns or names of the columns.
+    -> [[c]] -- ^ Values to insert.
     -> Insert d
-insertIntoCols t cols vals =
-    Insert (table t) (Just $ map column cols) $ map values vals
+insertIntoCols t cs vals =
+    Insert (table t) (Just $ map toCol cs) $ map values vals
 
 -- | Create an UPDATE statement.
 update ::
-       CoerceToTable a (Table b)
+       ToTables a [Table b]
     => a              -- ^ Table to update.
     -> [Assignment b] -- ^ Column/value assignements.
     -> Update b

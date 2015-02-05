@@ -17,7 +17,7 @@ import Database.Hedsql.SqLite
 defaultVal :: Table a
 defaultVal = createTable
     "People"
-    [column "country" /++ varchar 256 /++ defaultValue (value "Switzerland")]
+    [col "country" (varchar 256) /++ defaultValue (value "Switzerland")]
 
 {-|
 CREATE TABLE "People" (
@@ -30,13 +30,13 @@ noNulls =
     createTable "People" cols
     where
         cols =
-            [ column "firstName" /++ varchar 256 /++ colConstraint "no_null" notNull
-            , column "lastName"  /++ varchar 256 /++ notNull
+            [ col "firstName" (varchar 256) /++ colConstraint "no_null" notNull
+            , col "lastName"  (varchar 256) /++ notNull
             ]
 
 -- | > CREATE TABLE "People" ("firstName" varchar(256))        
 simpleTable :: Table a
-simpleTable = createTable "People" [column "firstName" /++ varchar 256]
+simpleTable = createTable "People" [col "firstName" $ varchar 256]
 
 {-|
 Maria DB and SqLite:
@@ -47,7 +47,7 @@ PostgreSQL:
 -}
 primaryKeyCol :: Table a
 primaryKeyCol =
-    createTable "People" [column "id" /++ integer /++ primary False]
+    createTable "People" [col "id" integer /++ primary False]
 
 {-|
 Maria DB and SqLite:
@@ -58,7 +58,7 @@ PostgreSQL:
 -}
 primaryKeyColAuto :: Table a
 primaryKeyColAuto =
-    createTable "People" [column "id" /++ integer /++ primary True]
+    createTable "People" [col "id" integer /++ primary True]
 
 {-|
 CREATE TABLE "People" (
@@ -71,7 +71,7 @@ primaryKeyTable :: Table a
 primaryKeyTable =
     createTable
         "People"
-        [column "firstName" /++ varchar 256, column "lastName" /++ varchar 256]
+        [col "firstName" (varchar 256), col "lastName" (varchar 256)]
         /++ tableConstraint "pk" (primaryT ["firstName", "lastName"])
      
 -- | CREATE TABLE "People" ("age" integer CHECK ("age" > -1))
@@ -79,7 +79,7 @@ createCheck :: Table a
 createCheck =
     createTable
         "People"
-        [column "age"  /++ integer /++ check ("age" /> (-1::Int))]
+        [col "age" integer /++ check ("age" /> (-1::Int))]
         
 {-|            
 CREATE TABLE "People" (
@@ -92,8 +92,8 @@ createChecks :: Table a
 createChecks =
     createTable
         "People"
-        [ column "lastName" /++ varchar 256
-        , column "age"      /++ integer
+        [ col "lastName" (varchar 256)
+        , col "age"      integer
         ] /++ c1
     where
         c1 =
@@ -108,12 +108,12 @@ createFK :: Table a
 createFK =
     createTable
         "People"
-        [column "countryId" /++ integer /++ foreignKey "Countries" "countryId"]
+        [col "countryId" integer /++ foreignKey "Countries" "countryId"]
 
 -- | CREATE TABLE "People" ("passportNo" varchar(256) UNIQUE)
 createUnique :: Table a
 createUnique =
-    createTable "People" [column "passportNo" /++ varchar 256 /++ unique]
+    createTable "People" [col "passportNo" (varchar 256) /++ unique]
     
 {-|
 CREATE TABLE "People" (
@@ -127,6 +127,6 @@ createUniqueT =
     createTable "People" cols /++ tableConstraint "" (uniqueT cols)
     where
         cols =
-            [ column "firstName" /++ varchar 256
-            , column "lastName"  /++ varchar 256
+            [ col "firstName" $ varchar 256
+            , col "lastName"  $ varchar 256
             ]

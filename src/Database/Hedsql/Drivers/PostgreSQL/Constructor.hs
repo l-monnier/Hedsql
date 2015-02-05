@@ -40,8 +40,8 @@ lateral s a = LateralTableRef s $ TableRefAs a []
 
 -- | Create a SELECT DISTINCT ON query.
 selectDistinctOn ::
-     ( CoerceToColRef a [ColRef PostgreSQL]
-     , CoerceToColRef b [ColRef PostgreSQL]
+     ( ToColRefs a [ColRef PostgreSQL]
+     , ToColRefs b [ColRef PostgreSQL]
      )
     => a                 -- ^ Distinct expression.
     -> b                 -- ^ Select clause.

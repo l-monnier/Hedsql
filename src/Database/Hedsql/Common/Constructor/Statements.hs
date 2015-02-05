@@ -14,7 +14,7 @@ Portability : portable
 Constructor functions for SQL statements which can then be parsed.
 -}
 module Database.Hedsql.Common.Constructor.Statements
-    ( CoerceToStmt
+    ( ToStmt
     , statement
     , statements
     ) where
@@ -23,38 +23,38 @@ import Database.Hedsql.Common.DataStructure
 
 -- private functions.
 
-class CoerceToStmt a b where
-    coerceToStmt :: a c -> b c
+class ToStmt a b where
+    toStmt :: a c -> b c
 
-instance CoerceToStmt Table Statement where
-    coerceToStmt = CreateTableStmt
+instance ToStmt Table Statement where
+    toStmt = CreateTableStmt
 
-instance CoerceToStmt CreateView Statement where
-    coerceToStmt = CreateViewStmt
+instance ToStmt CreateView Statement where
+    toStmt = CreateViewStmt
 
-instance CoerceToStmt Delete Statement where
-    coerceToStmt = DeleteStmt
+instance ToStmt Delete Statement where
+    toStmt = DeleteStmt
 
-instance CoerceToStmt DropTable Statement where
-    coerceToStmt = DropTableStmt
+instance ToStmt DropTable Statement where
+    toStmt = DropTableStmt
 
-instance CoerceToStmt DropView Statement where
-    coerceToStmt = DropViewStmt
+instance ToStmt DropView Statement where
+    toStmt = DropViewStmt
 
-instance CoerceToStmt Insert Statement where
-    coerceToStmt = InsertStmt
+instance ToStmt Insert Statement where
+    toStmt = InsertStmt
 
-instance CoerceToStmt Select Statement where
-    coerceToStmt = SelectStmt
+instance ToStmt Select Statement where
+    toStmt = SelectStmt
     
-instance CoerceToStmt Update Statement where
-    coerceToStmt = UpdateStmt
+instance ToStmt Update Statement where
+    toStmt = UpdateStmt
 
 -- public functions.
 
 -- | Create a statement.
-statement :: CoerceToStmt a Statement => a b -> Statement b
-statement = coerceToStmt
+statement :: ToStmt a Statement => a b -> Statement b
+statement = toStmt
 
-statements :: CoerceToStmt a Statement => [a b] -> [Statement b]
+statements :: ToStmt a Statement => [a b] -> [Statement b]
 statements = map statement

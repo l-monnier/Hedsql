@@ -15,7 +15,7 @@ Portability : portable
 Constructor functions for values which can then be used in queries.
 -}
 module Database.Hedsql.Common.Constructor.Values
-    ( CoerceToSqlValue
+    ( ToSqlValues
     , (/?)
     , value
     , values
@@ -27,35 +27,35 @@ import Database.Hedsql.Common.Constructor.Types
 -- private functions.
 
 -- | Coerce a given type to a list of SqlValue.
-class CoerceToSqlValue a b | a -> b where
-    coerceToSqlValue :: a -> b
+class ToSqlValues a b | a -> b where
+    toSqlValues :: a -> b
 
-instance CoerceToSqlValue  (SqlInt a) [SqlValue a] where
-    coerceToSqlValue a = [SqlValueInt a]
+instance ToSqlValues  (SqlInt a) [SqlValue a] where
+    toSqlValues a = [SqlValueInt a]
 
-instance CoerceToSqlValue  [SqlInt a] [SqlValue a] where
-    coerceToSqlValue = map SqlValueInt
+instance ToSqlValues  [SqlInt a] [SqlValue a] where
+    toSqlValues = map SqlValueInt
 
 {-|
 If the value is "Just a", then "coerce" will be applied on "a".
 Else, the value is "Nothing" and it will be considered as a NULL value.
 -}
-instance CoerceToSqlValue a [SqlValue a]
-      => CoerceToSqlValue (Maybe a) [SqlValue a] where
-    coerceToSqlValue (Just a) = coerceToSqlValue a
-    coerceToSqlValue Nothing = [SqlValueNull]
+instance ToSqlValues a [SqlValue a]
+      => ToSqlValues (Maybe a) [SqlValue a] where
+    toSqlValues (Just a) = toSqlValues a
+    toSqlValues Nothing = [SqlValueNull]
 
-instance CoerceToSqlValue (SqlValue a) [SqlValue a] where
-    coerceToSqlValue a = [id a]
+instance ToSqlValues (SqlValue a) [SqlValue a] where
+    toSqlValues a = [id a]
 
-instance CoerceToSqlValue [SqlValue a] [SqlValue a] where
-    coerceToSqlValue = id
+instance ToSqlValues [SqlValue a] [SqlValue a] where
+    toSqlValues = id
     
-instance CoerceToSqlValue (SqlString a) [SqlValue a] where
-    coerceToSqlValue a = [SqlValueString a]
+instance ToSqlValues (SqlString a) [SqlValue a] where
+    toSqlValues a = [SqlValueString a]
 
-instance CoerceToSqlValue [SqlString a] [SqlValue a] where
-    coerceToSqlValue = map SqlValueString
+instance ToSqlValues [SqlString a] [SqlValue a] where
+    toSqlValues = map SqlValueString
 
 -- public functions.
 
@@ -66,12 +66,12 @@ instance CoerceToSqlValue [SqlString a] [SqlValue a] where
 {-|
 Convert a primitive value so it can be used in SQL queries as "raw" values.
 -}
-value :: CoerceToSqlValue a [SqlValue b] => a -> SqlValue b
-value = head.coerceToSqlValue
+value :: ToSqlValues a [SqlValue b] => a -> SqlValue b
+value = head.toSqlValues
     
 {-|
 Convert a list of primitive values so they can be used in SQL queries
 as "raw" values.
 -}
-values :: CoerceToSqlValue a [SqlValue b] => a -> [SqlValue b]
-values = coerceToSqlValue
+values :: ToSqlValues a [SqlValue b] => a -> [SqlValue b]
+values = toSqlValues

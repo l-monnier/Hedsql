@@ -15,10 +15,11 @@ Portability : portable
 Constructor functions for table references which can then be used in queries.
 -}
 module Database.Hedsql.Common.Constructor.Tables
-    ( CoerceToTable
-    , CoerceToTableRef
+    ( ToTables
+    , ToTableRefs
     , alias
-    , coerceToTable
+    , toTable
+    , toTables
     , table
     , tables
     , tableRef
@@ -30,47 +31,47 @@ import Database.Hedsql.Common.DataStructure
 
 -- private functions.
 
--- | Coerce a given type to a Table.
-class CoerceToTable a b | a -> b where
-    coerceToTable :: a -> b
+-- | Coerce a given type to a list of tables.
+class ToTables a b | a -> b where
+    toTables :: a -> b
 
 -- | Create a table from its name.
-instance CoerceToTable (SqlString a) (Table a) where
-    coerceToTable name = Table False name [] Nothing
+instance ToTables (SqlString a) [Table a] where
+    toTables name = [Table False name [] Nothing]
 
 -- | Create a table from itself.
-instance CoerceToTable (Table a) (Table a) where
-    coerceToTable = id
+instance ToTables (Table a) [Table a] where
+    toTables t = [t]
 
 -- | Coerce a given type to a list of TableRef.
-class CoerceToTableRef a b | a -> b where
-    coerceToTableRef :: a -> b
+class ToTableRefs a b | a -> b where
+    toTablesRef :: a -> b
 
-instance CoerceToTableRef (Join a) [TableRef a] where
-    coerceToTableRef join = [TableJoinRef join Nothing]
+instance ToTableRefs (Join a) [TableRef a] where
+    toTablesRef join = [TableJoinRef join Nothing]
 
-instance CoerceToTableRef (SqlString a) [TableRef a] where
-    coerceToTableRef name = [TableTableRef (coerceToTable name) Nothing]
+instance ToTableRefs (SqlString a) [TableRef a] where
+    toTablesRef name = [TableTableRef (toTable name) Nothing]
 
-instance CoerceToTableRef (Table a) [TableRef a] where
-    coerceToTableRef name = [TableTableRef name Nothing]
+instance ToTableRefs (Table a) [TableRef a] where
+    toTablesRef name = [TableTableRef name Nothing]
 
-instance CoerceToTableRef (TableRef a) [TableRef a] where
-    coerceToTableRef ref = [ref]
+instance ToTableRefs (TableRef a) [TableRef a] where
+    toTablesRef ref = [ref]
 
-instance CoerceToTableRef [SqlString a] [TableRef a] where
-    coerceToTableRef = map (head.coerceToTableRef)
+instance ToTableRefs [SqlString a] [TableRef a] where
+    toTablesRef = map (head.toTablesRef)
     
-instance CoerceToTableRef [Table a] [TableRef a] where
-    coerceToTableRef = map (head.coerceToTableRef)
+instance ToTableRefs [Table a] [TableRef a] where
+    toTablesRef = map (head.toTablesRef)
     
-instance CoerceToTableRef [TableRef a] [TableRef a] where
-    coerceToTableRef = id
+instance ToTableRefs [TableRef a] [TableRef a] where
+    toTablesRef = id
 
 -- public functions.
 
 -- | Create a table alias using AS.
-alias :: CoerceToTableRef a [TableRef b] => a -> String -> TableRef b
+alias :: ToTableRefs a [TableRef b] => a -> String -> TableRef b
 alias t name =
     setAlias ref
     where
@@ -83,22 +84,26 @@ alias t name =
 
 -- | Create a table which can then be used as so in a query.
 table ::
-       CoerceToTable a (Table b)
+       ToTables a [Table b]
     => a -- ^ The table itself or its name as a string.
     -> Table b
-table = coerceToTable
+table = toTable
 
 -- | Create a table reference which can then be used in a query.
-tableRef :: CoerceToTableRef a [TableRef b] => a -> TableRef b
-tableRef = head.coerceToTableRef
+tableRef :: ToTableRefs a [TableRef b] => a -> TableRef b
+tableRef = head.toTablesRef
 
 -- | Create many table reference which can then be used in a query.
-tableRefs :: CoerceToTableRef a [TableRef b] => a -> [TableRef b]
-tableRefs = coerceToTableRef
+tableRefs :: ToTableRefs a [TableRef b] => a -> [TableRef b]
+tableRefs = toTablesRef
 
 -- | Create many tables which can then be used as so in a query.
 tables ::
-       CoerceToTable a (Table b)
+       ToTables a [Table b]
     => [a] -- ^ The tables themselves or their name as a string.
     -> [Table b]
 tables = map table
+
+-- | Coerce a given type to a table.
+toTable :: ToTables a [Table b] => a -> Table b
+toTable = head.toTables

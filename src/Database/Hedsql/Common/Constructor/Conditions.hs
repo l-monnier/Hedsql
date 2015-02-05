@@ -16,26 +16,37 @@ Constructor functions for conditions which can then be used in WHERE clauses
 or for tables creation.
 -}
 module Database.Hedsql.Common.Constructor.Conditions
-    ( CoerceToCondition
+    ( ToConditions
     , condition
+    , conditions
+    , toCondition
+    , toConditions
     ) where
 
 import Database.Hedsql.Common.DataStructure
 
 -- private functions.
 
--- | Coerce a given type to a Condition.
-class CoerceToCondition a b | a -> b where
-    coerceToCondition :: a -> b
+-- | Coerce a given type to a list of conditions.
+class ToConditions a b | a -> b where
+    toConditions :: a -> b
 
-instance CoerceToCondition (Condition a) (Condition a) where
-    coerceToCondition = id
+instance ToConditions (Condition a) [Condition a] where
+    toConditions c = [c]
 
-instance CoerceToCondition (FuncBool a) (Condition a) where
-    coerceToCondition = FuncCond
+instance ToConditions (FuncBool a) [Condition a] where
+    toConditions c = [FuncCond c]
 
 -- public functions.
 
 -- | Create a condition.
-condition :: CoerceToCondition a (Condition b) => a -> Condition b
-condition = coerceToCondition
+condition :: ToConditions a [Condition b] => a -> Condition b
+condition = toCondition
+
+-- | Create a list of conditions from a list of element.
+conditions :: ToConditions a [Condition b] => [a] -> [Condition b]
+conditions = map toCondition
+
+-- | Coerce a type to a condition.
+toCondition :: ToConditions a [Condition b] => a -> Condition b
+toCondition = head.toConditions
