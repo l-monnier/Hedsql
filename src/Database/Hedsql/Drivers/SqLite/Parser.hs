@@ -43,8 +43,8 @@ sqLiteFuncFunc func        = parseFuncFunc sqLiteQueryParser func
 -- | Create the SqLite table manipulations parser.
 sqLiteTableParser :: T.TableParser SqLite
 sqLiteTableParser =
-    (getTableParser sqLiteQueryParser sqLiteTableParser)
-        & T.parseDataType    .~ sqLiteDataTypeFunc
+    getTableParser sqLiteQueryParser sqLiteTableParser
+        & T.parseDataType .~ sqLiteDataTypeFunc
 
 -- | Create the SqLite parser.
 sqLiteParser :: Parser SqLite
@@ -53,7 +53,7 @@ sqLiteParser = getParser $ getStmtParser sqLiteQueryParser sqLiteTableParser
 -- | Create the SqLite query parser.
 sqLiteQueryParser :: QueryParser SqLite
 sqLiteQueryParser =
-    (getQueryParser sqLiteQueryParser sqLiteTableParser)
+    getQueryParser sqLiteQueryParser sqLiteTableParser
         & parseFunc .~ sqLiteFuncFunc
 
 -- Public.
@@ -62,5 +62,5 @@ sqLiteQueryParser =
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: CoerceToStmt a Statement => (a SqLite) -> String
+parse :: ToStmt a Statement => a SqLite -> String
 parse = (sqLiteParser^.parseStmt).statement

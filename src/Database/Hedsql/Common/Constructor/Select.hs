@@ -67,103 +67,120 @@ import Control.Lens hiding (from)
 -- private functions.
 
 -- | Coerce a type to a CombinedQuery type.
-class CoerceToCombined a b where
-    coerceToCombined :: a c -> b c
+class ToCombined a b where
+    toCombined :: a c -> b c
 
-instance CoerceToCombined CombinedQuery CombinedQuery where
-    coerceToCombined = id
+instance ToCombined CombinedQuery CombinedQuery where
+    toCombined = id
  
-instance CoerceToCombined Select CombinedQuery where
-    coerceToCombined = CombinedQuerySingle
+instance ToCombined Select CombinedQuery where
+    toCombined = CombinedQuerySingle
 
--- | Coerce a type to a JoinClause type.
-class CoerceToJoinClause a b | a -> b where
-    coerceToJoinClause :: a -> b
+-- | Coerce a type to a list of JoinClause type.
+class ToJoinClauses a b | a -> b where
+    toJoinClauses :: a -> b
 
 -- | Create an ON join clause from a predicate.
-instance CoerceToJoinClause (Condition a) (JoinClause a) where
-    coerceToJoinClause = JoinClauseOn
+instance ToJoinClauses (Condition a) [JoinClause a] where
+    toJoinClauses = list . JoinClauseOn
     
 -- | Create an ON join clause from a boolean function.
-instance CoerceToJoinClause (FuncBool a) (JoinClause a) where
-    coerceToJoinClause = JoinClauseOn . FuncCond
+instance ToJoinClauses (FuncBool a) [JoinClause a] where
+    toJoinClauses = list . JoinClauseOn . FuncCond
 
 -- | Create an USING joint clause from a column.
-instance CoerceToJoinClause (Column a) (JoinClause a) where
-    coerceToJoinClause col = JoinClauseUsing [col]
+instance ToJoinClauses (Column a) [JoinClause a] where
+    toJoinClauses c = list $ JoinClauseUsing [c]
 
 -- | Create an USING join clause from a list of columns.
-instance CoerceToJoinClause [Column a] (JoinClause a) where
-    coerceToJoinClause = JoinClauseUsing
+instance ToJoinClauses [Column a] [JoinClause a] where
+    toJoinClauses = list . JoinClauseUsing
 
 -- | Create an USING join clause from a string which is a column name.
-instance CoerceToJoinClause (SqlString a) (JoinClause a) where
-    coerceToJoinClause col = JoinClauseUsing [column col]
+instance ToJoinClauses (SqlString a) [JoinClause a] where
+    toJoinClauses = list . JoinClauseUsing . toCols
 
 -- | Create an USING join clause from a list of strings which are column names.    
-instance CoerceToJoinClause [SqlString a] (JoinClause a) where
-    coerceToJoinClause cols = JoinClauseUsing (columns cols)
+instance ToJoinClauses [SqlString a] [JoinClause a] where
+    toJoinClauses = list . JoinClauseUsing . toCols
 
-instance CoerceToJoinClause (Join a) (TableRef a) where
-    coerceToJoinClause join = TableJoinRef join Nothing
+-- TODO: check if used at all.
+--instance ToJoinClauses (Join a) (TableRef a) where
+--    toJoinClauses join = list $ TableJoinRef join Nothing
 
 -- | Coerce a type to a list of SortRef types.
-class CoerceToSortRef a b | a -> b where
-    coerceToSortRef :: a -> b
+class ToSortRefs a b | a -> b where
+    toSortRefs :: a -> b
 
-instance CoerceToSortRef (ColRef a) [SortRef a] where
-    coerceToSortRef ref = [SortRef ref Nothing Nothing]
+instance ToSortRefs (ColRef a) [SortRef a] where
+    toSortRefs ref = [SortRef ref Nothing Nothing]
 
-instance CoerceToSortRef (SqlString a) [SortRef a] where
-    coerceToSortRef name = [SortRef (colRef name) Nothing Nothing]
+instance ToSortRefs (SqlString a) [SortRef a] where
+    toSortRefs name = [SortRef (colRef name) Nothing Nothing]
 
-instance CoerceToSortRef (SortRef a) [SortRef a] where
-    coerceToSortRef ref = [ref]
+instance ToSortRefs (SortRef a) [SortRef a] where
+    toSortRefs ref = [ref]
 
 -- | Create a join on columns with a USING or ON clause.
 columnJoin ::
    (
-      CoerceToTableRef   a [TableRef d]
-   ,  CoerceToTableRef   b [TableRef d]
-   ,  CoerceToJoinClause c (JoinClause d))
-   => JoinTypeCol d -> a -> b -> c -> Join d
+      ToTableRefs   a [TableRef   d]
+   ,  ToTableRefs   b [TableRef   d]
+   ,  ToJoinClauses c [JoinClause d]
+   )
+   => JoinTypeCol d
+   -> a
+   -> b
+   -> c
+   -> Join        d
 columnJoin joinType tableRef1 tableRef2 clause =
     JoinColumn
          joinType
         (tableRef tableRef1)
         (tableRef tableRef2)
         (joinClause clause)
+
+-- | Convert an element to a list with itself as the only item.
+list :: a -> [a]
+list a = [a]
  
 -- | Create a join on tables (CROSS or NATURAL join).
 tableJoin ::
-       CoerceToTableRef a [TableRef b]
-    => JoinTypeTable b -> a -> a -> Join b
+       ToTableRefs   a [TableRef b]
+    => JoinTypeTable b
+    -> a
+    -> a
+    -> Join b
 tableJoin joinType tableRef1 tableRef2 =
     JoinTable
         joinType
         (tableRef tableRef1)
         (tableRef tableRef2)
 
+-- | Convert a type to a join clause.
+toJoinClause :: ToJoinClauses a [JoinClause b] => a -> JoinClause b
+toJoinClause = head.toJoinClauses
+
 -- public functions.
 
 -- | Create a combined query such as an INTERSECT, EXCEPT, etc.
 combinedQuery ::
-    CoerceToCombined a CombinedQuery => a b -> CombinedQuery b
-combinedQuery = coerceToCombined
+    ToCombined a CombinedQuery => a b -> CombinedQuery b
+combinedQuery = toCombined
    
 -- | Create a JOIN clause such as ON or USING.
-joinClause :: CoerceToJoinClause a (JoinClause b) => a -> JoinClause b
-joinClause = coerceToJoinClause
+joinClause :: ToJoinClauses a [JoinClause b] => a -> JoinClause b
+joinClause = toJoinClause
 
 {-|
 Convert a value to a sorting reference: a reference which can be used in an
 ORDER BY clause.
 -}
-sortRef :: CoerceToSortRef a [SortRef b] => a -> SortRef b
-sortRef = head.coerceToSortRef
+sortRef :: ToSortRefs a [SortRef b] => a -> SortRef b
+sortRef = head.toSortRefs
 
-sortRefs :: CoerceToSortRef a [SortRef b] => a -> [SortRef b]
-sortRefs = coerceToSortRef
+sortRefs :: ToSortRefs a [SortRef b] => a -> [SortRef b]
+sortRefs = toSortRefs
 
 -- | Create a joker - "*" - character.
 (//*) :: Function a
@@ -173,21 +190,21 @@ sortRefs = coerceToSortRef
 Add an ascending sorting order (ASC) to a sort reference
 (which can be a column reference).
 -}
-asc :: CoerceToSortRef a [SortRef b] => a -> SortRef b
+asc :: ToSortRefs a [SortRef b] => a -> SortRef b
 asc ref =  set sortRefOrder (Just Asc) (sortRef ref)
 
 -- | Create a CROSS JOIN.
-crossJoin :: CoerceToTableRef a [TableRef b] => a -> a -> Join b
+crossJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
 crossJoin = tableJoin CrossJoin
 
 -- | Apply an EXCEPT to two queries.
 except ::
-    CoerceToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
+    ToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
 except c1 c2 = CombinedQueryExcept [combinedQuery c1, combinedQuery c2]
 
 -- | Apply an EXCEPT ALL to two queries.
 exceptAll ::
-    CoerceToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
+    ToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
 exceptAll c1 c2 =
     CombinedQueryExceptAll [combinedQuery c1, combinedQuery c2]
 
@@ -195,44 +212,52 @@ exceptAll c1 c2 =
 Add a descending sorting order (DESC) to a sort reference
 (which can be a column reference).
 -}
-desc :: CoerceToSortRef a [SortRef b] => a -> SortRef b
+desc :: ToSortRefs a [SortRef b] => a -> SortRef b
 desc ref =  set sortRefOrder (Just Desc) (sortRef ref)
 
 -- | Add a FROM clause to a SELECT query.
-from :: CoerceToTableRef a [TableRef b] => a -> From b
+from :: ToTableRefs a [TableRef b] => a -> From b
 from = From . tableRefs
 
 -- | Create a FULL JOIN.
 fullJoin ::
-    ( CoerceToTableRef   a [TableRef d]
-    , CoerceToTableRef   b [TableRef d]
-    , CoerceToJoinClause c (JoinClause d)
+    ( ToTableRefs   a [TableRef   d]
+    , ToTableRefs   b [TableRef   d]
+    , ToJoinClauses c [JoinClause d]
     )
-    => a -- ^ First table reference.
-    -> b -- ^ Second table reference.
-    -> c -- ^ Join clause.
+    => a      -- ^ First table reference.
+    -> b      -- ^ Second table reference.
+    -> c      -- ^ Join clause.
     -> Join d
 fullJoin = columnJoin FullJoin
 
 -- | Create a GROUP BY clause.
-groupBy :: CoerceToColRef a [ColRef b] => a -> GroupBy b
-groupBy cols = GroupBy (colRefs cols) Nothing
+groupBy :: ToColRefs a [ColRef b] => a -> GroupBy b
+groupBy cs = GroupBy (colRefs cs) Nothing
 
 -- | Add a HAVING clause to a GROUP BY clause.
-having :: CoerceToCondition a (Condition b) => a -> Having b
+having :: ToConditions a [Condition b] => a -> Having b
 having = Having . condition
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
-      (CoerceToColRef a [ColRef c], CoerceToColRef b [ColRef c])
-    => a -> b -> FuncBool c
+    ( ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
+    )
+    => a
+    -> b
+    -> FuncBool c
 isDistinctFrom colRef1 colRef2 =
     IsDistinctFrom (colRef colRef1) (colRef colRef2)
 
 -- | Create a IS NOT DISTINCT FROM operator.
-isNotDistinctFrom
-  :: (CoerceToColRef a [ColRef c], CoerceToColRef b [ColRef c]) =>
-     a -> b -> FuncBool c
+isNotDistinctFrom ::
+    ( ToColRefs a [ColRef c]
+    , ToColRefs b [ColRef c]
+    )
+    => a
+    -> b
+    -> FuncBool c
 isNotDistinctFrom colRef1 colRef2 =
     IsNotDistinctFrom (colRef colRef1) (colRef colRef2)
 
@@ -244,33 +269,33 @@ If the join clause is a column, a string or a list of columns or strings, it
 will be an USING clause.
 -} 
 innerJoin ::
-    ( CoerceToTableRef   a [TableRef d]
-    , CoerceToTableRef   b [TableRef d]
-    , CoerceToJoinClause c (JoinClause d)
+    ( ToTableRefs   a [TableRef   d]
+    , ToTableRefs   b [TableRef   d]
+    , ToJoinClauses c [JoinClause d]
     )
-    => a -- ^ First table reference.
-    -> b -- ^ Second table reference.
-    -> c -- ^ Join clause.
+    => a      -- ^ First table reference.
+    -> b      -- ^ Second table reference.
+    -> c      -- ^ Join clause.
     -> Join d
 innerJoin = columnJoin InnerJoin
 
 -- | Apply an INTERSECT to two queries.
 intersect ::
-    CoerceToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
+    ToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
 intersect c1 c2 =
     CombinedQueryIntersect [combinedQuery c1, combinedQuery c2]
 
 -- | Apply an INTERSECT ALL to two queries.
 intersectAll ::
-    CoerceToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
+    ToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
 intersectAll c1 c2 =
     CombinedQueryIntersectAll [combinedQuery c1, combinedQuery c2]
 
 -- | Create a LEFT JOIN.
 leftJoin ::
-    ( CoerceToTableRef   a [TableRef d]
-    , CoerceToTableRef   b [TableRef d]
-    , CoerceToJoinClause c (JoinClause d)
+    ( ToTableRefs   a [TableRef   d]
+    , ToTableRefs   b [TableRef   d]
+    , ToJoinClauses c [JoinClause d]
     )
     => a -- ^ First table reference.
     -> b -- ^ Second table reference.
@@ -283,33 +308,33 @@ limit :: Int -> Limit a
 limit = Limit
 
 -- | Create a NATURAL FULL JOIN.
-naturalFullJoin :: CoerceToTableRef a [TableRef b] => a -> a -> Join b
+naturalFullJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
 naturalFullJoin = tableJoin NaturalFullJoin
 
 -- | Create a NATURAL LEFT JOIN.
-naturalLeftJoin :: CoerceToTableRef a [TableRef b] => a -> a -> Join b
+naturalLeftJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
 naturalLeftJoin = tableJoin NaturalLeftJoin
 
 -- | Create a NATURAL INNER JOIN.
-naturalInnerJoin :: CoerceToTableRef a [TableRef b] => a -> a -> Join b
+naturalInnerJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
 naturalInnerJoin = tableJoin NaturalInnerJoin
 
 -- | Create a NATURAL RIGHT JOIN.
-naturalRightJoin :: CoerceToTableRef a [TableRef b] => a -> a -> Join b
+naturalRightJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
 naturalRightJoin = tableJoin NaturalRightJoin
 
 {-|
 Add a nulls first option (NULLS FIRST) to a sort reference
 (which can be a column reference).
 -}
-nullsFirst :: CoerceToSortRef a [SortRef b] => a -> SortRef b
+nullsFirst :: ToSortRefs a [SortRef b] => a -> SortRef b
 nullsFirst sRef =  set sortRefNulls (Just NullsFirst) (sortRef sRef)
 
 {-|
 Add a nulls last option (NULLS LAST) to a sort reference
 (which can be a column reference).
 -}
-nullsLast:: CoerceToSortRef a [SortRef b] => a -> SortRef b
+nullsLast:: ToSortRefs a [SortRef b] => a -> SortRef b
 nullsLast sRef =  set sortRefNulls (Just NullsLast) (sortRef sRef)
 
 -- | Create an OFFSET clause.
@@ -317,53 +342,56 @@ offset :: Int -> Offset a
 offset = Offset
 
 -- | Add an ORDER BY clause to a query.
-orderBy :: CoerceToSortRef a [SortRef b] => a -> OrderBy b
-orderBy cols = OrderBy (sortRefs cols) Nothing Nothing
+orderBy ::
+       ToSortRefs a [SortRef b]
+    => a          -- ^ Sorting references.
+    -> OrderBy b
+orderBy cs = OrderBy (sortRefs cs) Nothing Nothing
 
 -- | Create a RIGHT JOIN.
 rightJoin ::
-    ( CoerceToTableRef   a [TableRef d]
-    , CoerceToTableRef   b [TableRef d]
-    , CoerceToJoinClause c (JoinClause d)
+    ( ToTableRefs   a [TableRef d]
+    , ToTableRefs   b [TableRef d]
+    , ToJoinClauses c [JoinClause d]
     )
-    => a -- ^ First table reference.
-    -> b -- ^ Second table reference.
-    -> c -- ^ Join clause.
+    => a      -- ^ First table reference.
+    -> b      -- ^ Second table reference.
+    -> c      -- ^ Join clause.
     -> Join d
 rightJoin = columnJoin RightJoin
 
 -- | Create a SELECT query.
-select :: CoerceToColRef a [ColRef b] => a -> Select b
+select :: ToColRefs a [ColRef b] => a -> Select b
 select a =
     Select
         (colRefs a)
-         Nothing
-         Nothing
-         Nothing
-         Nothing
-         Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
 
 -- | Create a SELECT DISTINCT query.
-selectDistinct :: CoerceToColRef a [ColRef b] => a -> Select b   
+selectDistinct :: ToColRefs a [ColRef b] => a -> Select b   
 selectDistinct a =
     Select
         (colRefs a)
         (Just Distinct)
-         Nothing
-         Nothing
-         Nothing
-         Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
 
 -- | Create a sub-query in a FROM clause.
 subQuery ::
-       Select a   -- ^ Sub-query.
+       Select   a -- ^ Sub-query.
     -> String     -- ^ Alias of the sub-query.
     -> TableRef a -- ^ Table reference.
 subQuery sub name = SelectTableRef sub $ TableRefAs name []
 
 -- | Create an UNION operation between two queries.
 union ::
-       CoerceToCombined a CombinedQuery
+       ToCombined a CombinedQuery
     => a b
     -> a b
     -> CombinedQuery b
@@ -371,12 +399,12 @@ union c1 c2 = CombinedQueryUnion [combinedQuery c1, combinedQuery c2]
 
 -- | Create an UNION ALL operation between two queries.
 unionAll ::
-       CoerceToCombined a CombinedQuery
-    => a b
-    -> a b
+       ToCombined a CombinedQuery
+    => a             b
+    -> a             b
     -> CombinedQuery b
 unionAll c1 c2 = CombinedQueryUnionAll [combinedQuery c1, combinedQuery c2]
 
 -- | Create a WHERE clause for a SELECT query.
-where_ :: CoerceToCondition a (Condition b) => a -> Where b
+where_ :: ToConditions a [Condition b] => a -> Where b
 where_ = Where . condition

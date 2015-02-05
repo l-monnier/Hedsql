@@ -22,8 +22,6 @@ module Database.Hedsql.Common.Constructor.Types
 
 import Database.Hedsql.Common.DataStructure
 
--- private functions.
-
 -- public functions.
 
 {- |

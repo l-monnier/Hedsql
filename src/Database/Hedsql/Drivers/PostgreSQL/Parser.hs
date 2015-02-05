@@ -33,8 +33,8 @@ Return True if one of the provided constraint is a PRIMARY KEY.
 with auto increment.
 -}
 hasAutoIncrement :: [ColConstraint a] -> Bool
-hasAutoIncrement constraints =
-    all (\x -> isAIPK $ x^.colConstraintType) constraints
+hasAutoIncrement =
+    all (\x -> isAIPK $ x^.colConstraintType)
     where
         isAIPK (Primary isAI) = isAI
         isAIPK _              = False  
@@ -54,7 +54,7 @@ postgreSQLQueryParser =
 -- | Create the PostgreSQL table manipulations parser.
 postgreSQLTableParser :: T.TableParser PostgreSQL
 postgreSQLTableParser =
-    (getTableParser postgreSQLQueryParser postgreSQLTableParser)
+    getTableParser postgreSQLQueryParser postgreSQLTableParser
         & T.parseColConstType .~ colConstFunc
         & T.parseColCreate    .~ colCreateFunc
     where
@@ -96,7 +96,7 @@ parsePostgreSqlColCreateFunc parser col =
             ]
         cName = parser^.T.quoteElem $ col^.colName
         consts cs =
-            " " ++ (intercalate ", " $ map (parser^.T.parseColConst) cs) 
+            " " ++ intercalate ", " (map (parser ^. T.parseColConst) cs) 
 
 -- Public.
 
@@ -104,5 +104,5 @@ parsePostgreSqlColCreateFunc parser col =
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: CoerceToStmt a Statement => (a PostgreSQL) -> String
+parse :: ToStmt a Statement => a PostgreSQL -> String
 parse = (postgreSQLParser^.parseStmt).statement  

@@ -57,11 +57,11 @@ maybeString name = Just name
 -- public functions.
 
 -- | Create a CHECK constraint.
-check :: CoerceToCondition (a b) (Condition b) => a b -> ColConstraintType b
+check :: ToConditions (a b) [Condition b] => a b -> ColConstraintType b
 check cond = Check $ condition cond
 
 -- | Create a CHECK constraint to be used in a table constraint.
-checkT :: CoerceToCondition (a b) (Condition b) => a b -> TableConstraintType b
+checkT :: ToConditions (a b) [Condition b] => a b -> TableConstraintType b
 checkT = TableConstraintCheck . condition
 
 -- | Create a constraint which shall then be applied on a column.
@@ -69,11 +69,11 @@ colConstraint :: String -> ColConstraintType a -> ColConstraint a
 colConstraint name = ColConstraint (maybeString name)
 
 -- | Create a CREATE TABLE statement.
-createTable :: CoerceToTable a (Table b) => a -> [Column b] -> Table b
+createTable :: ToTables a [Table b] => a -> [Column b] -> Table b
 createTable t c = table t & tableCols .~ c
 
 -- | Create a CREATE TABLE IF NOT EXIST statement.
-createTableIfNotExist :: CoerceToTable a (Table b) => a -> [Column b] -> Table b
+createTableIfNotExist :: ToTables a [Table b] => a -> [Column b] -> Table b
 createTableIfNotExist t c =
     table t
         & tableCols .~ c
@@ -87,37 +87,37 @@ createView ::
 createView = CreateView
 
 -- | Create a DEFAULT value constraint.
-defaultValue :: CoerceToColRef a [ColRef b] => a -> ColConstraintType b
+defaultValue :: ToColRefs a [ColRef b] => a -> ColConstraintType b
 defaultValue e = Default $ expr e
 
 -- | Create a DROP TABLE statement.
 dropTable ::
-       (CoerceToTable a (Table b))
-    => a -- ^ Table to drop. 
+       (ToTables a [Table b])
+    => a                       -- ^ Table to drop. 
     -> DropTable b
 dropTable = DropTable False . table
 
 dropTableIfExists ::
-       CoerceToTable a (Table b)
+       ToTables a [Table b]
     => a -- ^ Table or name of the table.
     -> DropTable b
 dropTableIfExists name = DropTable True $ table name
 
 -- | Create a DROP VIEW query.
 dropView ::
-       String -- ^ Name of the view.
+       String      -- ^ Name of the view.
     -> DropView a
 dropView = DropView
 
 -- | Create a FOREIGN KEY constraint.
 foreignKey ::
-    ( CoerceToTable a (Table c)
-    , CoerceToCol b [Column c]
+    ( ToTables a [Table c]
+    , ToCols   b [Column c]
     )
     => a -- ^ Table.
     -> b -- ^ Column.
     -> ColConstraintType c
-foreignKey t c = Reference (table t) (column c) Nothing
+foreignKey t c = Reference (table t) (toCol c) Nothing
 
 -- | Create a NOT NULL constraint.
 notNull :: ColConstraintType a
@@ -138,8 +138,8 @@ primary ::
 primary = Primary
 
 -- | Create a PRIMARY KEY constraint to be used in a table constraint.
-primaryT :: CoerceToCol a [Column b] => a -> TableConstraintType b
-primaryT = TableConstraintPrimaryKey . columns
+primaryT :: ToCols a [Column b] => a -> TableConstraintType b
+primaryT = TableConstraintPrimaryKey . toCols
 
 -- | Create a table constraint.
 tableConstraint :: String -> TableConstraintType a -> TableConstraint a
@@ -151,5 +151,5 @@ unique :: ColConstraintType a
 unique = Unique
 
 -- | Create an UNIQUE table constraint
-uniqueT :: CoerceToCol a [Column b] => a -> TableConstraintType b
-uniqueT = TableConstraintUnique . columns
+uniqueT :: ToCols a [Column b] => a -> TableConstraintType b
+uniqueT = TableConstraintUnique . toCols
