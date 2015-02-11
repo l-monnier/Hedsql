@@ -11,38 +11,52 @@ category:       Database
 license:        GPL-3
 license-file:   LICENCE.md
 copyright:      (c) 2014-2015 Leonard Monnier
-data-files:     
-                src/Database/Hedsql/Common/DataStructure/Create.hs, 
-                src/Database/Hedsql/Common/DataStructure/Delete.hs, 
-                src/Database/Hedsql/Common/DataStructure/Drop.hs, 
-                src/Database/Hedsql/Common/DataStructure/Insert.hs, 
-                src/Database/Hedsql/Common/DataStructure/Update.hs, 
-                src/Database/Hedsql/Common/Constructor.hs, 
-                src/Database/Hedsql/Common/Parser.hs, 
-                src/Database/Hedsql/Drivers/MariaDB/Driver.hs, 
-                src/Database/Hedsql/Drivers/MariaDB/Parser.hs, 
-                src/Database/Hedsql/Drivers/PostgreSQL/Constructor.hs, 
-                src/Database/Hedsql/Drivers/PostgreSQL/Driver.hs, 
-                src/Database/Hedsql/Drivers/PostgreSQL/Parser.hs, 
-                src/Database/Hedsql/Drivers/SqLite/Driver.hs, 
-                src/Database/Hedsql/Drivers/SqLite/Parser.hs, 
-                src/Database/Hedsql/MariaDB.hs, 
-                src/Database/Hedsql/PostgreSQL.hs, 
-                src/Database/Hedsql/SqLite.hs, 
-                Hedsql.cabal
 tested-with:    GHC==7.8.2
 
 library
   hs-source-dirs:   src
   ghc-options:      -Wall
   exposed-modules:  
-                    Database.Hedsql.MariaDB
-                    Database.Hedsql.PostgreSQL
+                    Database.Hedsql.Drivers.MariaDB.Constructor,
+                    Database.Hedsql.Drivers.PostgreSQL.Constructor,
+                    Database.Hedsql.MariaDB,
+                    Database.Hedsql.PostgreSQL,
                     Database.Hedsql.SqLite
   build-depends:    
                     base,
                     lens,
                     template-haskell
+  other-modules:    
+                    Database.Hedsql.Common.Constructor,
+                    Database.Hedsql.Common.Constructor.Columns,
+                    Database.Hedsql.Common.Constructor.Composition,
+                    Database.Hedsql.Common.Constructor.Conditions,
+                    Database.Hedsql.Common.Constructor.DataManipulation,
+                    Database.Hedsql.Common.Constructor.Functions,
+                    Database.Hedsql.Common.Constructor.Select,
+                    Database.Hedsql.Common.Constructor.Statements,
+                    Database.Hedsql.Common.Constructor.Tables,
+                    Database.Hedsql.Common.Constructor.TablesManipulation,
+                    Database.Hedsql.Common.Constructor.Types,
+                    Database.Hedsql.Common.Constructor.Values,
+                    Database.Hedsql.Common.DataStructure,
+                    Database.Hedsql.Common.DataStructure.Delete,
+                    Database.Hedsql.Common.DataStructure.Drop,
+                    Database.Hedsql.Common.DataStructure.Insert,
+                    Database.Hedsql.Common.DataStructure.Inspect,
+                    Database.Hedsql.Common.DataStructure.Select,
+                    Database.Hedsql.Common.DataStructure.Update,
+                    Database.Hedsql.Common.Parser,
+                    Database.Hedsql.Common.Parser.Interface,
+                    Database.Hedsql.Common.Parser.Queries,
+                    Database.Hedsql.Common.Parser.Quoter,
+                    Database.Hedsql.Common.Parser.TableManipulations,
+                    Database.Hedsql.Drivers.MariaDB.Driver,
+                    Database.Hedsql.Drivers.MariaDB.Parser,
+                    Database.Hedsql.Drivers.PostgreSQL.Driver,
+                    Database.Hedsql.Drivers.PostgreSQL.Parser,
+                    Database.Hedsql.Drivers.SqLite.Driver,
+                    Database.Hedsql.Drivers.SqLite.Parser
 
 test-suite tests
   type:            exitcode-stdio-1.0
@@ -60,4 +74,3 @@ test-suite tests
                    src,
                    tests
   main-is:         Test.hs
-  other-modules:   Hedsql.Common.Parser.TableManipulations.Drop

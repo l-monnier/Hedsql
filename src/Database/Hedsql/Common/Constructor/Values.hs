@@ -15,16 +15,29 @@ Portability : portable
 Constructor functions for values which can then be used in queries.
 -}
 module Database.Hedsql.Common.Constructor.Values
-    ( ToSqlValues
-    , (/?)
+    ( 
+      -- * Values constructors
+      (/?)
+    , null
+    
+      -- * To value converters
+    , ToSqlValues
     , value
     , values
     ) where
 
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
 import Database.Hedsql.Common.DataStructure
 import Database.Hedsql.Common.Constructor.Types
 
--- private functions.
+import Prelude hiding (null)
+
+--------------------------------------------------------------------------------
+-- PRIVATE
+--------------------------------------------------------------------------------
 
 -- | Coerce a given type to a list of SqlValue.
 class ToSqlValues a b | a -> b where
@@ -36,17 +49,8 @@ instance ToSqlValues  (SqlInt a) [SqlValue a] where
 instance ToSqlValues  [SqlInt a] [SqlValue a] where
     toSqlValues = map SqlValueInt
 
-{-|
-If the value is "Just a", then "coerce" will be applied on "a".
-Else, the value is "Nothing" and it will be considered as a NULL value.
--}
-instance ToSqlValues a [SqlValue a]
-      => ToSqlValues (Maybe a) [SqlValue a] where
-    toSqlValues (Just a) = toSqlValues a
-    toSqlValues Nothing = [SqlValueNull]
-
 instance ToSqlValues (SqlValue a) [SqlValue a] where
-    toSqlValues a = [id a]
+    toSqlValues a = [a]
 
 instance ToSqlValues [SqlValue a] [SqlValue a] where
     toSqlValues = id
@@ -57,11 +61,17 @@ instance ToSqlValues (SqlString a) [SqlValue a] where
 instance ToSqlValues [SqlString a] [SqlValue a] where
     toSqlValues = map SqlValueString
 
--- public functions.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 -- | Create a placeholder "?" for a prepared statement.
 (/?) :: SqlValue a
 (/?) = Placeholder
+
+-- | Create a NULL value.
+null :: SqlValue a
+null = SqlValueNull
 
 {-|
 Convert a primitive value so it can be used in SQL queries as "raw" values.

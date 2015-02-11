@@ -12,7 +12,9 @@ MariaDB specific constructors for functions/clauses specific to this vendor.
 module Database.Hedsql.Drivers.MariaDB.Constructor
     ( calcFoundRows
     , foundRows
-    ) whereDatabase.Hedsql.Common.DataStructureStructure
+    ) where
+    
+import Database.Hedsql.Common.DataStructure
 import Database.Hedsql.Drivers.MariaDB.Driver
 
 -- Public.

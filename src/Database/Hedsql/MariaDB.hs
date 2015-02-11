@@ -25,5 +25,5 @@ module Database.Hedsql.MariaDB (module M) where
 
 import Database.Hedsql.Drivers.MariaDB.Driver as M
 import Database.Hedsql.Drivers.MariaDB.Parser as M
-import Database.Hedsql.Common.Constructor as M
-import Database.Hedsql.Common.DataStructure as M
+import Database.Hedsql.Common.Constructor     as M
+import Database.Hedsql.Common.DataStructure   as M

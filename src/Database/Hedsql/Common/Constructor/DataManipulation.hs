@@ -20,15 +20,19 @@ module Database.Hedsql.Common.Constructor.DataManipulation
     , insertIntoCols
     , update
     ) where
+
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
     
 import Database.Hedsql.Common.Constructor.Columns
 import Database.Hedsql.Common.Constructor.Tables
 import Database.Hedsql.Common.Constructor.Values
 import Database.Hedsql.Common.DataStructure
 
--- private functions.
-
--- public functions.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 -- | Create a column/value pair to be used in an UPDATE statement.
 assign ::

@@ -23,9 +23,15 @@ module Database.Hedsql.Common.Constructor.Conditions
     , toConditions
     ) where
 
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
 import Database.Hedsql.Common.DataStructure
 
--- private functions.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 -- | Coerce a given type to a list of conditions.
 class ToConditions a b | a -> b where
@@ -36,8 +42,6 @@ instance ToConditions (Condition a) [Condition a] where
 
 instance ToConditions (FuncBool a) [Condition a] where
     toConditions c = [FuncCond c]
-
--- public functions.
 
 -- | Create a condition.
 condition :: ToConditions a [Condition b] => a -> Condition b

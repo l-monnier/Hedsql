@@ -14,7 +14,6 @@ Portability : portable
 
 Constructor functions for columns references which can then be used in queries.
 -}
-
 module Database.Hedsql.Common.Constructor.Columns
     ( ToCols
     , ToColRefs
@@ -30,6 +29,10 @@ module Database.Hedsql.Common.Constructor.Columns
     , exprs
     ) where
 
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
 import Database.Hedsql.Common.Constructor.Tables
 import Database.Hedsql.Common.Constructor.Types
 import Database.Hedsql.Common.Constructor.Values()
@@ -37,7 +40,9 @@ import Database.Hedsql.Common.DataStructure
 
 import Control.Lens ((&), (.~), view, set)
 
--- private functions.
+--------------------------------------------------------------------------------
+-- PRIVATE
+--------------------------------------------------------------------------------
 
 -- | Coerce a given type to a list of Column.
 class ToCols a b | a -> b where
@@ -101,7 +106,9 @@ instance ToColRefs [SqlString a] [ColRef a] where
 instance ToColRefs [SqlValue a] [ColRef a] where
     toColRefs = map (head.toColRefs)
 
--- public functions.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 -- | Create a column reference with a qualified name.
 (/.) ::

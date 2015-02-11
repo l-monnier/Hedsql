@@ -98,14 +98,18 @@ result in random results.
 -}
 module Database.Hedsql.Common.Constructor (module C) where
 
-import Database.Hedsql.Common.Constructor.Columns as C
-import Database.Hedsql.Common.Constructor.Composition as C
-import Database.Hedsql.Common.Constructor.Conditions as C
-import Database.Hedsql.Common.Constructor.DataManipulation as C
-import Database.Hedsql.Common.Constructor.Functions as C
-import Database.Hedsql.Common.Constructor.Select as C
-import Database.Hedsql.Common.Constructor.Statements as C
-import Database.Hedsql.Common.Constructor.Tables as C
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
+import Database.Hedsql.Common.Constructor.Columns            as C
+import Database.Hedsql.Common.Constructor.Composition        as C
+import Database.Hedsql.Common.Constructor.Conditions         as C
+import Database.Hedsql.Common.Constructor.DataManipulation   as C
+import Database.Hedsql.Common.Constructor.Functions          as C
+import Database.Hedsql.Common.Constructor.Select             as C
+import Database.Hedsql.Common.Constructor.Statements         as C
+import Database.Hedsql.Common.Constructor.Tables             as C
 import Database.Hedsql.Common.Constructor.TablesManipulation as C
-import Database.Hedsql.Common.Constructor.Types as C
-import Database.Hedsql.Common.Constructor.Values as C
+import Database.Hedsql.Common.Constructor.Types              as C
+import Database.Hedsql.Common.Constructor.Values             as C

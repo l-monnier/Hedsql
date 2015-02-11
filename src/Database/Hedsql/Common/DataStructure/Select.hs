@@ -19,9 +19,19 @@ such as columns and tables.
 -}
 module Database.Hedsql.Common.DataStructure.Select where
 
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
 import Control.Lens
 
--- Values.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
+
+----------------------------------------
+-- Values
+----------------------------------------
 
 -- | SQL data types.
 data SqlDataType a =
@@ -44,11 +54,19 @@ data SqlValue a =
     | Placeholder
       deriving (Show)
 
+----------------------------------------
+-- View
+----------------------------------------
+
 -- | CREATE VIEW query.
 data CreateView a = CreateView
     { _viewName   :: String
     , _viewSelect :: Select a
     } deriving (Show)
+
+----------------------------------------
+-- Table
+----------------------------------------
 
 {-|
 A table reference can be a real table, or a derived table such as

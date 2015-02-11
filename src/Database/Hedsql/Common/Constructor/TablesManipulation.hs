@@ -16,26 +16,37 @@ Currently only CREATE and DROP statements are implemented.
 ALTER statements are in project.
 -}
 module Database.Hedsql.Common.Constructor.TablesManipulation
-    ( check
+    ( 
+      -- * Tables
+    
+      -- ** Create
+      check
     , checkT
     , colConstraint
     , createTable
     , createTableIfNotExist
-    , createView
     , defaultValue
-    , dropTable
-    , dropTableIfExists
-    , dropView
     , foreignKey
     , notNull
-    , null
-    , nullVal
+    , nullable
     , primary
     , primaryT
     , tableConstraint
     , unique
     , uniqueT
+    
+    -- ** Drop
+    , dropTable
+    , dropTableIfExists
+    
+      -- * Views
+    , createView
+    , dropView
     ) where
+
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
     
 import Database.Hedsql.Common.Constructor.Columns
 import Database.Hedsql.Common.Constructor.Conditions
@@ -45,16 +56,20 @@ import Database.Hedsql.Common.DataStructure
 import Control.Lens
 import Prelude      hiding (null)
 
--- TODO: implement ALTER statements.
+--------------------------------------------------------------------------------
+-- PRIVATE
+--------------------------------------------------------------------------------
 
--- private functions.
+-- TODO: implement ALTER statements.
 
 -- | Return nothing if the provided string is empty.
 maybeString :: String -> Maybe String
 maybeString ""   = Nothing
 maybeString name = Just name
 
--- public functions.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 -- | Create a CHECK constraint.
 check :: ToConditions (a b) [Condition b] => a b -> ColConstraintType b
@@ -124,12 +139,8 @@ notNull :: ColConstraintType a
 notNull = NotNull
 
 -- | Create a NULL constraint.
-null :: ColConstraintType a
-null = Null
-
--- | Create a NULL value.
-nullVal :: SqlValue a
-nullVal = SqlValueNull
+nullable :: ColConstraintType a
+nullable = Null
 
 -- | Create a PRIMARY KEY constraint.
 primary ::

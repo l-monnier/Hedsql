@@ -22,7 +22,9 @@ Note that the functions and, max, min, in and sum exist also in the prelude.
 Their name is therefore followed by an underscore.
 -}
 module Database.Hedsql.Common.Constructor.Functions
-    ( (/+)
+    (
+      -- * Operators
+      (/+)
     , (/-)
     , (/*)
     , (/==)
@@ -31,13 +33,20 @@ module Database.Hedsql.Common.Constructor.Functions
     , (/<)
     , (/<=)
     , (/<>)
-    , and_
-    , ands
+    
+      -- * Comparison
     , between
-    , count
-    , currentDate
     , exists
     , in_
+    , notBetween
+    , notIn
+    
+      -- * Logic
+    , and_
+    , ands
+    -- TODO: or?
+    
+    -- * Conditions
     , isFalse
     , isNotFalse
     , isNotNull
@@ -46,12 +55,16 @@ module Database.Hedsql.Common.Constructor.Functions
     , isNull
     , isTrue
     , isUnknown
+    
+    -- * Maths
+    , count
     , max_
     , min_
-    , notBetween
-    , notIn
     , random
     , sum_
+    
+    -- * Dates
+    , currentDate
     ) where
     
 import Database.Hedsql.Common.Constructor.Columns

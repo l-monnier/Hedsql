@@ -24,7 +24,9 @@ data Update a = Update
     , _updateWherePart :: Maybe (Where a)
     } deriving (Show)
 
--- | A value assigned to a column (used in the SET clause of an UPDATE statement).
+{-|
+A value assigned to a column (used in the SET clause of an UPDATE statement).
+-}
 data Assignment a = Assignment
     { _assignmentCol :: Column a
     , _assignmentVal :: Expression a
