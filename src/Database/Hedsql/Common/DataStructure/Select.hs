@@ -296,9 +296,9 @@ data Where a =
 
 -- | SQL Condition.
 data Condition a =
-      FuncCond (FuncBool a)
-    | And [Condition a]
-    | Or [Condition a]
+      FuncCond (FuncBool  a)
+    | And      [Condition a]
+    | Or       [Condition a]
       deriving (Show)
 
 -- | GROUP BY clause.

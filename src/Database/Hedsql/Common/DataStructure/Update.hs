@@ -13,16 +13,17 @@ Data structure of the UPDATE statement.
 -}
 module Database.Hedsql.Common.DataStructure.Update where 
 
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
 import Database.Hedsql.Common.DataStructure.Select
 
 import Control.Lens
 
--- | UPDATE query.
-data Update a = Update
-    { _updateTable :: Table a
-    , _updateAssignments :: [Assignment a]
-    , _updateWherePart :: Maybe (Where a)
-    } deriving (Show)
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 {-|
 A value assigned to a column (used in the SET clause of an UPDATE statement).
@@ -30,6 +31,13 @@ A value assigned to a column (used in the SET clause of an UPDATE statement).
 data Assignment a = Assignment
     { _assignmentCol :: Column a
     , _assignmentVal :: Expression a
+    } deriving (Show)
+
+-- | UPDATE query.
+data Update a = Update
+    { _updateTable :: Table a
+    , _updateAssignments :: [Assignment a]
+    , _updateWherePart :: Maybe (Where a)
     } deriving (Show)
 
 -- Make the lenses.

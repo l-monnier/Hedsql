@@ -37,13 +37,13 @@ import Database.Hedsql.Common.DataStructure
 -- | Create a column/value pair to be used in an UPDATE statement.
 assign ::
     (
-       ToCols      a [Column   c]
-    ,  ToSqlValues b [SqlValue c]
+       ToCols    a [Column c]
+    ,  ToColRefs b [ColRef c]
     )
     => a -- ^ Column or name of the column.
-    -> b -- ^ Value for this column.
+    -> b -- ^ Value for this column. It can also be an expression.
     -> Assignment c
-assign a val = Assignment (toCol a) (ValueExpr $ value val)
+assign a val = Assignment (toCol a) (expr val)
 
 -- | Create a DELETE FROM statement.
 deleteFrom ::

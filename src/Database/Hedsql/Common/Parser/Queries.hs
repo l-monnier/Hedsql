@@ -311,7 +311,7 @@ parseUpdateFunc parser update =
         , Just $ parser^.quoteElem $ update^.updateTable.tableName
         , Just   " SET "
         , Just $ intercalate ", " $ map (parser^.parseAssgnmt) assignments
-        , fmap (parser^.parseWhere) (update^.updateWherePart)
+        , fmap (\x -> " " ++ (parser^.parseWhere) x) (update^.updateWherePart)
         ]
     where
         assignments = update^.updateAssignments
@@ -634,12 +634,18 @@ parseWhereFunc parser (Where condition) =
 parseJoinClauseFunc :: QueryParser a -> JoinClause a -> String
 parseJoinClauseFunc parser jClause =
     case jClause of
-        JoinClauseOn predicate -> "ON " ++ (parser^.parseCondition) predicate
-        JoinClauseUsing cols -> concat
-                                [ "USING ("
-                                , intercalate ", " $ map (parser^.parseCol) cols
-                                , ")"
-                                ]
+        JoinClauseOn predicate ->
+            let cond = (parser^.parseCondition) predicate
+            in "ON " ++
+            case predicate of
+                FuncCond _ ->  cond
+                _          ->  "(" ++ cond ++ ")"
+        JoinClauseUsing cols ->
+            concat
+                [ "USING ("
+                , intercalate ", " $ map (parser^.parseCol) cols
+                , ")"
+                ]
 
 -- | Parser a join on a column.
 parseJoinTColFunc :: JoinTypeCol a -> String
