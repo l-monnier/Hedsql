@@ -29,6 +29,9 @@ class ToStmt a b where
 instance ToStmt Table Statement where
     toStmt = CreateTableStmt
 
+instance ToStmt CombinedQuery Statement where
+    toStmt = CombinedQueryStmt
+
 instance ToStmt CreateView Statement where
     toStmt = CreateViewStmt
 

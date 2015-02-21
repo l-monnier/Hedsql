@@ -1,9 +1,4 @@
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
-{-# LANGUAGE TemplateHaskell           #-}
-{-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {-|
 Module      : Database/Hedsql/Commun/DataStructure/Select.hs
@@ -65,7 +60,7 @@ data CreateView a = CreateView
     } deriving (Show)
 
 ----------------------------------------
--- Table
+-- Tables
 ----------------------------------------
 
 {-|
@@ -147,8 +142,6 @@ data Column a = Column
     { _colName        :: String
     , _colDataType    :: Maybe (SqlDataType a)
     , _colConstraints :: Maybe [ColConstraint a]
-    , _colTable       :: Maybe (Table a) -- ^ If provided, the qualified column
-                                         --   name will be used.
     } deriving (Show)
 
 -- | Constraint on a column.
@@ -170,13 +163,11 @@ data ColConstraintType a =
     | Unique
       deriving (Show)
 
--- Column components
-
-{- |
+{-|
 Generic definition of a column reference used in the SELECT clause of the query.
 -}
 data ColRef a = ColRef
-    { _colRefExpr :: Expression a
+    { _colRefExpr  :: Expression a
     , _colRefLabel :: Maybe String
     } deriving (Show)
 
@@ -195,7 +186,9 @@ data SqlAction a =
     | SetNull
       deriving (Show) 
 
--- Expression.
+----------------------------------------
+-- Expression
+----------------------------------------
 
 {-|
 Generic expression which can then be used in a SELECT or WHERE part.
@@ -206,14 +199,19 @@ An expression can either be:
 - a value.
 -}
 data Expression a =
-      ColExpr (Column a)
-    | FuncExpr (Function a)
+      ColExpr
+          { _colExpr           :: (Column a)
+          , _colExprTableLabel :: Maybe (TableRef a) -- ^ Qualified column name.
+          }
+    | FuncExpr   (Function a)
     | SelectExpr (Select a)
-    | ValueExpr (SqlValue a)
+    | ValueExpr  (SqlValue a)
     | ValueExprs [SqlValue a]
       deriving (Show)
 
--- SELECT components.
+----------------------------------------
+-- SELECT
+----------------------------------------
 
 -- | SELECT query.
 data Select a = Select
@@ -352,16 +350,18 @@ data SortRef a = SortRef
 
 -- | Combined query such as UNION.
 data CombinedQuery a =
-      CombinedQuerySingle (Select a)
-    | CombinedQueryExcept [CombinedQuery a]
-    | CombinedQueryExceptAll [CombinedQuery a]
-    | CombinedQueryIntersect [CombinedQuery a]
-    | CombinedQueryIntersectAll [CombinedQuery a]
-    | CombinedQueryUnion [CombinedQuery a]
-    | CombinedQueryUnionAll [CombinedQuery a]
+      Single       (Select a)
+    | Except       [CombinedQuery a]
+    | ExceptAll    [CombinedQuery a]
+    | Intersect    [CombinedQuery a]
+    | IntersectAll [CombinedQuery a]
+    | Union        [CombinedQuery a]
+    | UnionAll     [CombinedQuery a]
       deriving (Show)
 
--- Functions.
+----------------------------------------
+-- Functions
+----------------------------------------
 
 data Function a =
     -- Operators.
@@ -424,7 +424,10 @@ data FuncBool a =
     | SmallerThanOrEqTo (ColRef a) (ColRef a)            -- ^ \<=
     deriving (Show)
 
--- Lenses.
+----------------------------------------
+-- Lenses
+----------------------------------------
+
 makeLenses ''GroupBy
 makeLenses ''Join
 makeLenses ''From
@@ -433,6 +436,7 @@ makeLenses ''Where
 makeLenses ''ColConstraint
 makeLenses ''ColRef
 makeLenses ''Column
+makeLenses ''Expression
 makeLenses ''Select
 makeLenses ''SortRef
 makeLenses ''Table

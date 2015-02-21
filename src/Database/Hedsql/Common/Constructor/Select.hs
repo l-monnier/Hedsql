@@ -92,7 +92,7 @@ instance ToCombined CombinedQuery CombinedQuery where
     toCombined = id
  
 instance ToCombined Select CombinedQuery where
-    toCombined = CombinedQuerySingle
+    toCombined = Single
 
 -- | Coerce a type to a list of JoinClause type.
 class ToJoinClauses a b | a -> b where
@@ -106,7 +106,7 @@ instance ToJoinClauses (Condition a) [JoinClause a] where
 instance ToJoinClauses (FuncBool a) [JoinClause a] where
     toJoinClauses = list . JoinClauseOn . FuncCond
 
--- | Create an USING joint clause from a column.
+-- | Create an USING join clause from a column.
 instance ToJoinClauses (Column a) [JoinClause a] where
     toJoinClauses c = list $ JoinClauseUsing [c]
 
@@ -121,10 +121,6 @@ instance ToJoinClauses (SqlString a) [JoinClause a] where
 -- | Create an USING join clause from a list of strings which are column names.    
 instance ToJoinClauses [SqlString a] [JoinClause a] where
     toJoinClauses = list . JoinClauseUsing . toCols
-
--- TODO: check if used at all.
---instance ToJoinClauses (Join a) (TableRef a) where
---    toJoinClauses join = list $ TableJoinRef join Nothing
 
 -- | Coerce a type to a list of SortRef types.
 class ToSortRefs a b | a -> b where
@@ -168,11 +164,13 @@ list a = [a]
  
 -- | Create a join on tables (CROSS or NATURAL join).
 tableJoin ::
-       ToTableRefs   a [TableRef b]
-    => JoinTypeTable b
+    (  ToTableRefs   a [TableRef c]
+    ,  ToTableRefs   b [TableRef c]
+    )
+    => JoinTypeTable c
     -> a
-    -> a
-    -> Join b
+    -> b
+    -> Join c
 tableJoin joinType tableRef1 tableRef2 =
     JoinTable
         joinType
@@ -248,7 +246,13 @@ from :: ToTableRefs a [TableRef b] => a -> From b
 from = From . tableRefs
 
 -- | Create a CROSS JOIN.
-crossJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
+crossJoin ::
+    (  ToTableRefs a [TableRef c]
+    ,  ToTableRefs b [TableRef c]
+    )
+    => a
+    -> b
+    -> Join c
 crossJoin = tableJoin CrossJoin
 
 -- | Create a FULL JOIN.
@@ -294,19 +298,43 @@ leftJoin ::
 leftJoin = columnJoin LeftJoin
 
 -- | Create a NATURAL FULL JOIN.
-naturalFullJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
+naturalFullJoin ::
+    (  ToTableRefs a [TableRef c]
+    ,  ToTableRefs b [TableRef c]
+    )
+    => a
+    -> b
+    -> Join c
 naturalFullJoin = tableJoin NaturalFullJoin
 
 -- | Create a NATURAL LEFT JOIN.
-naturalLeftJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
+naturalLeftJoin ::
+    (  ToTableRefs a [TableRef c]
+    ,  ToTableRefs b [TableRef c]
+    )
+    => a
+    -> b
+    -> Join c
 naturalLeftJoin = tableJoin NaturalLeftJoin
 
 -- | Create a NATURAL INNER JOIN.
-naturalInnerJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
+naturalInnerJoin ::
+    (  ToTableRefs a [TableRef c]
+    ,  ToTableRefs b [TableRef c]
+    )
+    => a
+    -> b
+    -> Join c
 naturalInnerJoin = tableJoin NaturalInnerJoin
 
 -- | Create a NATURAL RIGHT JOIN.
-naturalRightJoin :: ToTableRefs a [TableRef b] => a -> a -> Join b
+naturalRightJoin ::
+    (  ToTableRefs a [TableRef c]
+    ,  ToTableRefs b [TableRef c]
+    )
+    => a
+    -> b
+    -> Join c
 naturalRightJoin = tableJoin NaturalRightJoin
 
 -- | Create a RIGHT JOIN.
@@ -424,39 +452,60 @@ combinedQuery = toCombined
 
 -- | Apply an EXCEPT to two queries.
 except ::
-    ToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
-except c1 c2 = CombinedQueryExcept [combinedQuery c1, combinedQuery c2]
+    ( ToCombined a CombinedQuery
+    , ToCombined b CombinedQuery
+    )
+    => a c
+    -> b c
+    -> CombinedQuery c
+except c1 c2 = Except [combinedQuery c1, combinedQuery c2]
 
 -- | Apply an EXCEPT ALL to two queries.
 exceptAll ::
-    ToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
-exceptAll c1 c2 =
-    CombinedQueryExceptAll [combinedQuery c1, combinedQuery c2]
+    ( ToCombined a CombinedQuery
+    , ToCombined b CombinedQuery
+    )
+    => a c
+    -> b c
+    -> CombinedQuery c
+exceptAll c1 c2 = ExceptAll [combinedQuery c1, combinedQuery c2]
 
 -- | Apply an INTERSECT to two queries.
 intersect ::
-    ToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
-intersect c1 c2 =
-    CombinedQueryIntersect [combinedQuery c1, combinedQuery c2]
+    ( ToCombined a CombinedQuery
+    , ToCombined b CombinedQuery
+    )
+    => a c
+    -> b c
+    -> CombinedQuery c
+intersect c1 c2 = Intersect [combinedQuery c1, combinedQuery c2]
 
 -- | Apply an INTERSECT ALL to two queries.
 intersectAll ::
-    ToCombined a CombinedQuery => a b -> a b -> CombinedQuery b
-intersectAll c1 c2 =
-    CombinedQueryIntersectAll [combinedQuery c1, combinedQuery c2]
+    ( ToCombined a CombinedQuery
+    , ToCombined b CombinedQuery
+    )
+    => a c
+    -> b c
+    -> CombinedQuery c
+intersectAll c1 c2 = IntersectAll [combinedQuery c1, combinedQuery c2]
 
 -- | Create an UNION operation between two queries.
 union ::
-       ToCombined a CombinedQuery
-    => a             b
-    -> a             b
-    -> CombinedQuery b
-union c1 c2 = CombinedQueryUnion [combinedQuery c1, combinedQuery c2]
+    ( ToCombined a CombinedQuery
+    , ToCombined b CombinedQuery
+    )
+    => a c
+    -> b c
+    -> CombinedQuery c
+union c1 c2 = Union [combinedQuery c1, combinedQuery c2]
 
 -- | Create an UNION ALL operation between two queries.
 unionAll ::
-       ToCombined a CombinedQuery
-    => a             b
-    -> a             b
-    -> CombinedQuery b
-unionAll c1 c2 = CombinedQueryUnionAll [combinedQuery c1, combinedQuery c2]
+    ( ToCombined a CombinedQuery
+    , ToCombined b CombinedQuery
+    )
+    => a c
+    -> b c
+    -> CombinedQuery c
+unionAll c1 c2 = UnionAll [combinedQuery c1, combinedQuery c2]

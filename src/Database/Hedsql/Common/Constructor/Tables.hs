@@ -26,10 +26,16 @@ module Database.Hedsql.Common.Constructor.Tables
     , tableRefs
     ) where
 
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
 import Database.Hedsql.Common.Constructor.Types
 import Database.Hedsql.Common.DataStructure
 
--- private functions.
+--------------------------------------------------------------------------------
+-- Public
+--------------------------------------------------------------------------------
 
 -- | Coerce a given type to a list of tables.
 class ToTables a b | a -> b where
@@ -42,6 +48,17 @@ instance ToTables (SqlString a) [Table a] where
 -- | Create a table from itself.
 instance ToTables (Table a) [Table a] where
     toTables t = [t]
+
+{-|
+Convert a table reference to a list of tables.
+If the table reference is a table, then use that table.
+Else, create a table using the name of this table reference.
+-}
+instance ToTables (TableRef a) [Table a] where
+    toTables ref =
+        case ref of
+            TableTableRef t _ -> [t]
+            _                 -> [Table False (getTableRefName ref) [] Nothing]
 
 -- | Coerce a given type to a list of TableRef.
 class ToTableRefs a b | a -> b where
@@ -67,8 +84,6 @@ instance ToTableRefs [Table a] [TableRef a] where
     
 instance ToTableRefs [TableRef a] [TableRef a] where
     toTablesRef = id
-
--- public functions.
 
 -- | Create a table alias using AS.
 alias :: ToTableRefs a [TableRef b] => a -> String -> TableRef b

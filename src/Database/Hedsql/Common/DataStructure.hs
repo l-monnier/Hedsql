@@ -15,7 +15,8 @@ SQL strings.
 -}
 module Database.Hedsql.Common.DataStructure
     ( Statement
-        ( CreateTableStmt
+        ( CombinedQueryStmt
+        , CreateTableStmt
         , CreateViewStmt
         , DeleteStmt
         , DropTableStmt
@@ -39,13 +40,14 @@ import Database.Hedsql.Common.DataStructure.Update  as D
 
 -- | All possible SQL statements which can be constructed using Hedsql.
 data Statement a =
-      CreateTableStmt (Table a)
-    | CreateViewStmt  (CreateView a)
-    | DeleteStmt      (Delete a)
-    | DropTableStmt   (DropTable a)
-    | DropViewStmt    (DropView a)
-    | InsertStmt      (Insert a)
-    | SelectStmt      (Select a)
-    | UpdateStmt      (Update a)
-    | Statements      [Statement a] -- ^ Combination of many statements.
+      CombinedQueryStmt (CombinedQuery a)
+    | CreateTableStmt   (Table a)
+    | CreateViewStmt    (CreateView a)
+    | DeleteStmt        (Delete a)
+    | DropTableStmt     (DropTable a)
+    | DropViewStmt      (DropView a)
+    | InsertStmt        (Insert a)
+    | SelectStmt        (Select a)
+    | UpdateStmt        (Update a)
+    | Statements        [Statement a] -- ^ Combination of many statements.
       deriving (Show)

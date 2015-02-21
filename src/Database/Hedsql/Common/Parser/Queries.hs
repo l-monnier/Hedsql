@@ -215,13 +215,13 @@ makeLenses ''JoinParser
 parseCombinedFunc :: StmtParser a -> CombinedQuery a -> String 
 parseCombinedFunc parser query =
     case query of
-        (CombinedQuerySingle select)      -> (parser^.parseSelect) select
-        (CombinedQueryExcept combs)       -> combine combs "EXCEPT"
-        (CombinedQueryExceptAll combs)    -> combine combs "EXCEPT ALL"
-        (CombinedQueryIntersect combs)    -> combine combs "INTERSECT"
-        (CombinedQueryIntersectAll combs) -> combine combs "INTERSECT ALL"
-        (CombinedQueryUnion combs)        -> combine combs "UNION"
-        (CombinedQueryUnionAll combs)     -> combine combs "UNION ALL"
+        Single       select -> (parser^.parseSelect) select
+        Except       combs  -> combine combs "EXCEPT"
+        ExceptAll    combs  -> combine combs "EXCEPT ALL"
+        Intersect    combs  -> combine combs "INTERSECT"
+        IntersectAll combs  -> combine combs "INTERSECT ALL"
+        Union        combs  -> combine combs "UNION"
+        UnionAll     combs  -> combine combs "UNION ALL"
     where
         combine cs typ =
             concat ["(", intercalate (" " ++ typ ++ " ") $ combineds cs, ")"]
@@ -265,16 +265,16 @@ parseInsertFunc parser insert =
 parseSelectFunc :: QueryParser a -> Select a -> String
 parseSelectFunc parser select =
       concat $ catMaybes
-        [ Just       "SELECT "
-        , fmap        parseDistinct         (select^.selectType)
-        , Just $      parseColRefs          (select^.selectColRef)
+        [ Just   "SELECT "
+        , fmap   parseDistinct          (select^.selectType)
+        , Just $ parseColRefs           (select^.selectColRef)
         , parseM (parser^.parseFrom)    (select^.fromClause)
         , parseM (parser^.parseWhere)   (select^.whereClause)
         , parseM (parser^.parseGroupBy) (select^.groupByClause)
         , parseM (parser^.parseOrderBy) (select^.orderByClause)
         ]
     where
-        parseColRefs cRef = intercalate ", " $ map (parser^.parseColRef) cRef
+        parseColRefs cRef = intercalate ", " $ map (parser^.parseColRefDef) cRef
         
         parseDistinct  All               = "All"
         parseDistinct  Distinct          = "DISTINCT "
@@ -285,23 +285,23 @@ parseSelectFunc parser select =
                 , ") "
                 ]
         
-        parseM f = fmap (\x -> " " ++ f x)
+        parseM f = fmap $ (++) " " . f
 
 -- | Parse a SQL statement.
 parseStmtFunc :: StmtParser a -> Statement a -> String
 parseStmtFunc parser stmt =
     case stmt of
-        CreateTableStmt s  -> parser^.parseCreateTable $ s
-        CreateViewStmt  s  -> parser^.parseCreateView  $ s
-        DeleteStmt      s  -> parser^.parseDelete      $ s
-        DropTableStmt   s  -> parser^.parseDropTable   $ s
-        DropViewStmt    s  -> parser^.parseDropView    $ s
-        InsertStmt      s  -> parser^.parseInsert      $ s
-        SelectStmt      s  -> parser^.parseSelect      $ s
-        UpdateStmt      s  -> parser^.parseUpdate      $ s
-        Statements      xs -> concatMap
-                                  (\x -> (parser^.parseStatement $ x) ++ "; ")
-                                  xs
+        CombinedQueryStmt s  -> parser^.parseCombined    $ s
+        CreateTableStmt   s  -> parser^.parseCreateTable $ s
+        CreateViewStmt    s  -> parser^.parseCreateView  $ s
+        DeleteStmt        s  -> parser^.parseDelete      $ s
+        DropTableStmt     s  -> parser^.parseDropTable   $ s
+        DropViewStmt      s  -> parser^.parseDropView    $ s
+        InsertStmt        s  -> parser^.parseInsert      $ s
+        SelectStmt        s  -> parser^.parseSelect      $ s
+        UpdateStmt        s  -> parser^.parseUpdate      $ s
+        Statements        xs -> xs >>= flip (++) "; " . (parser^.parseStatement)
+                                  
 
 -- | Parse an UPDATE statement.
 parseUpdateFunc :: QueryParser a -> Update a -> String    
@@ -311,7 +311,7 @@ parseUpdateFunc parser update =
         , Just $ parser^.quoteElem $ update^.updateTable.tableName
         , Just   " SET "
         , Just $ intercalate ", " $ map (parser^.parseAssgnmt) assignments
-        , fmap (\x -> " " ++ (parser^.parseWhere) x) (update^.updateWherePart)
+        , fmap ((++) " " . (parser^.parseWhere)) (update^.updateWherePart)
         ]
     where
         assignments = update^.updateAssignments
@@ -339,31 +339,36 @@ parseAssgnmtFunc parser assignment =
         , (parser^.parseExpr) (assignment^.assignmentVal)
         ]
 
-{-|
-Parse the name of a column.
-If the column has a table name defined,
-the qualified name ("tableName.columnName") will be returned.
-Else, the name of the column itself will be returned.
--}
+-- | Parse the name of a column.
 parseColFunc :: QueryParser a -> Column a -> String
-parseColFunc parser (Column name _ _ table) = 
-       parseT table ++ (parser^.quoteElem) name
-    where
-        parseT (Just tb) = (parser^.parseTableName) tb ++ "."
-        parseT  Nothing = ""
+parseColFunc parser col = (parser^.quoteElem) (col^.colName)
         
--- | Define a column reference using its alias if defined.
+{-|
+Define a column reference using its alias if defined.
+
+If the column reference is a column and belongs to a specified table reference,
+then a qualified name will be returned (for example: "Table1"."col1").
+-}
 parseColRefFunc :: QueryParser a -> ColRef a -> String
 parseColRefFunc parser colRef =
-    case colRef^.colRefLabel of
-        Just name -> parser^.quoteElem $ name
-        Nothing   -> (parser^.parseExpr) (colRef^.colRefExpr)
+        maybe ifNothing makeLabel (colRef^.colRefLabel)
+    where
+        ifNothing = (parser^.parseExpr) refExpr
+        
+        makeLabel refLabel = tableRef refExpr ++ quote refLabel
+
+        tableRef (ColExpr _ (Just l)) = quote (getTableRefName l) ++ "."
+        tableRef _                    = ""
+        
+        quote = parser^.quoteElem
+        
+        refExpr = colRef^.colRefExpr
         
 -- | Define a column reference including its alias definition if specified.
 parseColRefDefFunc :: QueryParser a -> ColRef a -> String
 parseColRefDefFunc parser colRef =
        (parser^.parseExpr) (colRef^.colRefExpr)
-    ++  parseMaybe (" AS" ++) (fmap (parser^.quoteElem) (colRef^.colRefLabel))
+    ++ maybe "" ((++) " AS " . (parser^.quoteElem)) (colRef^.colRefLabel)
         
 -- | Parse a condition.
 parseConditionFunc :: QueryParser a -> Condition a -> String
@@ -373,27 +378,38 @@ parseConditionFunc parser condition =
         And conds      -> pCond "AND" conds
         Or  conds      -> pCond "OR"  conds
     where
-        cs = map (parser^.parseCondition)
         pCond name conds = intercalate (" " ++ name ++ " ") $ cs conds
+        cs = map (parser^.parseCondition)
 
 -- | Parse a SQL expression.
 parseExprFunc :: QueryParser a -> StmtParser a -> Expression a -> String
 parseExprFunc parser stmtParser expr =
     case expr of
-        ColExpr col        -> parser^.parseCol $ col
-        SelectExpr select  -> "(" ++ (stmtParser^.parseSelect) select ++ ")"   
-        FuncExpr func      -> parser^.parseFunc $ func
-        ValueExpr val      -> parser^.parseValue $ val
-        ValueExprs vals    -> concat
-                              ["("
-                              , intercalate ", " $ map (parser^.parseValue) vals
-                              , ")"
-                              ]
+        ColExpr    col l  ->
+            concat
+                [ maybe
+                      ""
+                      (flip (++) "." . (parser^.quoteElem) . getTableRefName)
+                      l
+                , parser^.parseCol $ col
+                ]
+        SelectExpr select ->
+            concat ["(", stmtParser^.parseSelect $ select, ")"]   
+        FuncExpr   func   ->
+            parser^.parseFunc $ func
+        ValueExpr  val    ->
+            parser^.parseValue $ val
+        ValueExprs vals   ->
+            concat
+                ["("
+                , intercalate ", " $ map (parser^.parseValue) vals
+                , ")"
+                ]
 
 -- | Parse a FROM clause.
 parseFromFunc :: QueryParser a -> From a -> String
 parseFromFunc parser (From tableReferences) =
-    foldl (++) "FROM " $ map (parser^.parseTableRef) tableReferences
+    "FROM " ++ intercalate ", " (map (parser^.parseTableRef) tableReferences)
        
 -- | Parse a function returning a boolean value.
 parseFuncBoolFunc :: QueryParser a -> FuncBool a -> String
@@ -401,11 +417,7 @@ parseFuncBoolFunc parser funcBool =
     case funcBool of
         Between    ref lower higher -> parseBetweens True ref lower higher
         Equal             ref1 ref2 -> parseInfix "=" ref1 ref2
-        Exists            colRef    -> concat
-                                            ["(EXISTS "
-                                            , parser^.parseColRef $ colRef
-                                            , ")"
-                                            ]
+        Exists            colRef    -> "EXISTS " ++ (parser^.parseColRef) colRef
         GreaterThan       ref1 ref2 -> parseInfix ">" ref1 ref2
         GreaterThanOrEqTo ref1 ref2 -> parseInfix ">=" ref1 ref2
         In                ref1 ref2 -> parseInfix "IN" ref1 ref2
@@ -431,9 +443,8 @@ parseFuncBoolFunc parser funcBool =
     where
         parseBetweens func colRef lower higher =
             concat
-                [parser^.parseColRef $ colRef
-                , " "
-                , if func then "" else "NOT"
+                [ parser^.parseColRef $ colRef
+                , if func then "" else " NOT"
                 , " BETWEEN "
                 , parser^.parseColRef $ lower
                 , " AND "
@@ -441,7 +452,7 @@ parseFuncBoolFunc parser funcBool =
                 ]
         parseInfix name colRef1 colRef2 =
             concat
-                [parser^.parseColRef $ colRef1
+                [ parser^.parseColRef $ colRef1
                 , " "
                 , name
                 , " "
@@ -449,7 +460,7 @@ parseFuncBoolFunc parser funcBool =
                 ]
         parseIs colRef text =
             concat
-                [parser^.parseColRef $ colRef
+                [ parser^.parseColRef $ colRef
                 , "IS "
                 , text
                 ]
@@ -486,7 +497,14 @@ parseFuncFunc parser func =
               "FOUND_ROWS is specific to MariaDB. Use the MariaDB parser."
     where
         makeExpr string expression =
-            concat [string, "(", parser^.parseExpr $ expression, ")"]
+            string ++ expr
+            where
+                expr =
+                    let e = parser^.parseExpr $ expression in
+                    if head e == '(' && last e == ')'
+                    then e
+                    else "(" ++ e ++ ")"
+        
         parseInfix name ref1 ref2 =
             concat
                 [ "("
@@ -511,8 +529,6 @@ parseGroupByFunc parser (GroupBy colRefs having) =
 parseHavingFunc :: QueryParser a -> Having a -> String
 parseHavingFunc parser (Having c) = "HAVING " ++ (parser^.parseCondition) c
 
-
-
 -- | Parse joins.
 parseJoinFunc :: QueryParser a -> JoinParser a -> Join a -> String
 parseJoinFunc queryParser parser join =
@@ -529,18 +545,11 @@ parseJoinFunc queryParser parser join =
         
         -- Common part between column and table joins.
         pJoin joinType tableRef1 tableRef2 clause = concat
-            [
-              queryParser^.parseTableRef $ tableRef1
-            , getAlias tableRef1
+            [ queryParser^.parseTableRef $ tableRef1
             , " " ++ joinType ++ " "
             , queryParser^.parseTableRef $ tableRef2
-            , getAlias tableRef2
             , parseMaybe (parser^.parseJoinClause) clause
             ]
-        
-        -- Alias clause for the table references inside the join.
-        getAlias ref =
-            parseMaybe (queryParser^.parseTableRefAs) (getTableRefAlias ref)
         
 -- | Parse an ORDER BY clause.
 parseOrderByFunc :: QueryParser a -> OrderBy a -> String
@@ -571,9 +580,7 @@ parseSortRefFunc parser sortRef =
         ++ parseMaybe (parser^.parseSortOrder)    (sortRef^.sortRefOrder)
         ++ parseMaybe (parser^.parseSortNull)     (sortRef^.sortRefNulls)
        
-{-|
-Parse the name of a table.
--}
+-- | Parse the name of a table.
 parseTableNameFunc :: QueryParser a -> Table a -> String
 parseTableNameFunc parser table = parser^.quoteElem $ table^.tableName
 
@@ -584,10 +591,10 @@ parseTableRefFunc stmtP parser join =
         TableJoinRef    ref    alias -> concat [ maybe "" (const "(") alias
                                                , parser^.parseJoin $ ref
                                                , maybe "" (const ")") alias
-                                               , parseMaybe pAlias alias
+                                               , maybe "" pAlias alias
                                                ]
-        TableTableRef   table  alias ->   (parser^.parseTableName) table
-                                        ++ parseMaybe pAlias alias
+        TableTableRef   table  alias ->    (parser^.parseTableName) table
+                                        ++ fromMaybe "" (fmap pAlias alias)
         SelectTableRef  select alias -> concat [ "("
                                                , stmtP^.parseSelect $ select
                                                , ")"
@@ -602,7 +609,6 @@ parseTableRefFunc stmtP parser join =
         pAlias alias = " " ++ (parser^.parseTableRefAs) alias
 
 -- | Parse a table alias.
--- TODO: create a dedicated one for PostgreSQL for the columns aliaises
 parseTableRefAsFunc :: QueryParser a -> TableRefAs a -> String
 parseTableRefAsFunc parser alias =
     "AS " ++ (parser^.quoteElem) (alias^.tableRefAliasName)

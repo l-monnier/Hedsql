@@ -38,7 +38,7 @@ import Database.Hedsql.Common.Constructor.Types
 import Database.Hedsql.Common.Constructor.Values()
 import Database.Hedsql.Common.DataStructure
 
-import Control.Lens ((&), (.~), view, set)
+import Control.Lens ((&), (.~), (^.), view, set)
 
 --------------------------------------------------------------------------------
 -- PRIVATE
@@ -52,7 +52,7 @@ instance ToCols (Column a) [Column a] where
     toCols c = [c]
     
 instance ToCols (SqlString a) [Column a] where
-    toCols name = [Column name Nothing Nothing Nothing]
+    toCols name = [Column name Nothing Nothing]
     
 instance ToCols [Column a] [Column a] where
     toCols = map (head.toCols)
@@ -68,7 +68,8 @@ instance ToColRefs (ColRef a) [ColRef a] where
     toColRefs ref = [ref]
 
 instance ToColRefs (Column a) [ColRef a] where
-    toColRefs a = [ColRef (ColExpr a) Nothing]
+    toColRefs a =
+        [ColRef (ColExpr a Nothing) Nothing]
 
 instance ToColRefs (Function a) [ColRef a] where
     toColRefs func = [ColRef (FuncExpr func) Nothing]
@@ -80,7 +81,9 @@ instance ToColRefs (Select a) [ColRef a] where
     toColRefs query = [ColRef (SelectExpr query) Nothing]
 
 instance ToColRefs (SqlString a) [ColRef a] where
-    toColRefs name = [ColRef (ColExpr (toCol name)) Nothing]
+    toColRefs name =
+        [ColRef (ColExpr (toCol name) Nothing) Nothing]
+    
 
 instance ToColRefs (SqlValue a) [ColRef a] where
     toColRefs val = [ColRef (ValueExpr val) Nothing]
@@ -104,7 +107,7 @@ instance ToColRefs [SqlString a] [ColRef a] where
     toColRefs = map (head.toColRefs)
     
 instance ToColRefs [SqlValue a] [ColRef a] where
-    toColRefs = map (head.toColRefs)
+    toColRefs v = [ColRef (ValueExprs v) Nothing]
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -112,15 +115,20 @@ instance ToColRefs [SqlValue a] [ColRef a] where
 
 -- | Create a column reference with a qualified name.
 (/.) ::
-    (ToTables a [Table c], ToCols b [Column c]) => a -> b -> ColRef c
-(/.) tName cName = 
-    ColRef (ColExpr c) Nothing
+    (ToTableRefs a [TableRef c], ToColRefs b [ColRef c]) => a -> b -> ColRef c
+(/.) tName cName =
+    case cRef^.colRefExpr of
+        ColExpr _ _ ->
+            cRef &
+                colRefExpr . colExprTableLabel .~ Just (tableRef tName)
+        _           ->
+            cRef
     where
-        c = toCol cName & colTable .~ Just (table tName)
+        cRef = colRef cName
 
--- | Create column reference label using AS.
-as_ :: ColRef a -> String -> ColRef a
-as_ cRef name = set colRefLabel (Just name) cRef
+-- | Create a column reference label using AS.
+as_ :: ToColRefs a [ColRef b] => a -> String -> ColRef b
+as_ cRef name = set colRefLabel (Just name) (colRef cRef)
 
 -- | Create one column which can then be used in a query or a statement.
 col ::

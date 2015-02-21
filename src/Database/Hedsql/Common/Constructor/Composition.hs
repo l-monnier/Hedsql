@@ -78,13 +78,6 @@ instance Add Column ColConstraintTypes where
 instance Add Column SqlDataType where
     addElem = setMaybe colDataType
 
-{-|
-Add a table to a column
-(to indicate that this column belongs to a specific table).
--}
-instance Add Column Table where
-    addElem = setMaybe colTable
-
 -- | Add a WHERE part to a DELETE query.
 instance Add Delete Where where
     addElem = setMaybe deleteWhere

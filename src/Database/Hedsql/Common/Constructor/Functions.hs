@@ -38,6 +38,7 @@ module Database.Hedsql.Common.Constructor.Functions
     , between
     , exists
     , in_
+    , like
     , notBetween
     , notIn
     
@@ -66,14 +67,18 @@ module Database.Hedsql.Common.Constructor.Functions
     -- * Dates
     , currentDate
     ) where
+
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
     
 import Database.Hedsql.Common.Constructor.Columns
 import Database.Hedsql.Common.Constructor.Conditions
 import Database.Hedsql.Common.DataStructure
 
--- Private functions.
-
--- Public functions.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 -- | "+" operator.
 (/+) ::
@@ -108,8 +113,8 @@ import Database.Hedsql.Common.DataStructure
     -> Function c
 (/*) left right = Multiply (colRef left) (colRef right)
 
--- | Equality operator ("=" in SQL). Infix 8.
-infix 8 /==
+-- | Equality operator ("=" in SQL).
+infix 7 /==
 (/==) ::
     (
       ToColRefs a [ColRef c]
@@ -121,6 +126,7 @@ infix 8 /==
 (/==) colRef1 colRef2 = Equal (colRef colRef1) (colRef colRef2)
 
 -- | Greater than operator (">").
+infix 7 />
 (/>) ::
     (
       ToColRefs a [ColRef c]
@@ -132,6 +138,7 @@ infix 8 /==
 (/>) colRef1 colRef2 = GreaterThan (colRef colRef1) (colRef colRef2)
 
 -- | Greater than or equal to operator (">=").
+infix 7 />=
 (/>=) ::
     (
       ToColRefs a [ColRef c]
@@ -143,6 +150,7 @@ infix 8 /==
 (/>=) colRef1 colRef2 = GreaterThanOrEqTo (colRef colRef1) (colRef colRef2)
 
 -- | Smaller than operator ("<").
+infix 7 /<
 (/<) ::
     (
       ToColRefs a [ColRef c]
@@ -154,6 +162,7 @@ infix 8 /==
 (/<) colRef1 colRef2 = SmallerThan (colRef colRef1) (colRef colRef2)
 
 -- | Smaller than or equal to operator ("<=").
+infix 7 /<=
 (/<=) ::
     (
       ToColRefs a [ColRef c]
@@ -165,6 +174,7 @@ infix 8 /==
 (/<=) colRef1 colRef2 = SmallerThanOrEqTo (colRef colRef1) (colRef colRef2)
 
 -- | Unequality operator ("<>").
+infix 7 /<>
 (/<>) ::
     (
       ToColRefs a [ColRef c]
@@ -269,6 +279,16 @@ isTrue = FuncCond . IsTrue . colRef
 -- | Create a IS UNKNOWN function.
 isUnknown :: ToColRefs a [ColRef b] => a -> Condition b
 isUnknown = FuncCond . IsUnknown . colRef
+
+-- | Create a LIKE operator.
+like ::
+    (  ToColRefs a [ColRef c]
+    ,  ToColRefs b [ColRef c]
+    )
+    => a
+    -> b
+    -> FuncBool c
+like colRef1 colRef2 = Like (colRef colRef1) (colRef colRef2)
 
 -- | Create a MAX function.
 max_ :: ToColRefs a [ColRef b] => a -> Function b
