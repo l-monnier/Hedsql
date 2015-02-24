@@ -28,12 +28,22 @@ import Control.Lens
 
 -- | Parse SqLite data types.
 sqLiteDataTypeFunc :: SqlDataType SqLite -> String
-sqLiteDataTypeFunc  Date         = "DATE"
+sqLiteDataTypeFunc Boolean       = "BOOLEAN"
+sqLiteDataTypeFunc Date          = "DATE"
 sqLiteDataTypeFunc (Char lenght) = "CHARACTER(" ++ show lenght ++ ")"
-sqLiteDataTypeFunc  SmallInt     = "SMALLINT"
-sqLiteDataTypeFunc  Integer      = "INTEGER"
-sqLiteDataTypeFunc  BigInt       = "BIGINT"
+sqLiteDataTypeFunc SmallInt      = "SMALLINT"
+sqLiteDataTypeFunc Integer       = "INTEGER"
+sqLiteDataTypeFunc BigInt        = "BIGINT"
 sqLiteDataTypeFunc (Varchar mx)  = "VARCHAR(" ++ show mx ++ ")"
+
+{-|
+Parse a SqLite value.
+Booleans in Sqlite are represented bynumeric values only (0 or 1).
+-}
+sqLiteParseValueFunc :: QueryParser SqLite -> SqlValue SqLite -> String
+sqLiteParseValueFunc _      (SqlValueBool True)  = "1"
+sqLiteParseValueFunc _      (SqlValueBool False) = "0"
+sqLiteParseValueFunc parser val                  = parseValueFunc parser val
 
 -- | Create the SqLite function parser.
 sqLiteFuncFunc :: Function SqLite -> String
@@ -54,7 +64,8 @@ sqLiteParser = getParser $ getStmtParser sqLiteQueryParser sqLiteTableParser
 sqLiteQueryParser :: QueryParser SqLite
 sqLiteQueryParser =
     getQueryParser sqLiteQueryParser sqLiteTableParser
-        & parseFunc .~ sqLiteFuncFunc
+        & parseFunc  .~ sqLiteFuncFunc
+        & parseValue .~ sqLiteParseValueFunc sqLiteQueryParser
 
 -- Public.
 

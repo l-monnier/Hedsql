@@ -129,11 +129,20 @@ class ToSortRefs a b | a -> b where
 instance ToSortRefs (ColRef a) [SortRef a] where
     toSortRefs ref = [SortRef ref Nothing Nothing]
 
+instance ToSortRefs [ColRef a] [SortRef a] where
+    toSortRefs = map (\ref -> SortRef ref Nothing Nothing)
+
 instance ToSortRefs (SqlString a) [SortRef a] where
     toSortRefs name = [SortRef (colRef name) Nothing Nothing]
 
+instance ToSortRefs [SqlString a] [SortRef a] where
+    toSortRefs = map (\name -> SortRef (colRef name) Nothing Nothing)
+
 instance ToSortRefs (SortRef a) [SortRef a] where
-    toSortRefs ref = [ref]
+    toSortRefs = list
+
+instance ToSortRefs [SortRef a] [SortRef a] where
+    toSortRefs = id
 
 -- | Create a join on columns with a USING or ON clause.
 columnJoin ::

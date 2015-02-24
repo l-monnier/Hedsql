@@ -43,6 +43,12 @@ import Prelude hiding (null)
 class ToSqlValues a b | a -> b where
     toSqlValues :: a -> b
 
+instance ToSqlValues  (SqlBool a) [SqlValue a] where
+    toSqlValues a = [SqlValueBool a]
+
+instance ToSqlValues  [SqlBool a] [SqlValue a] where
+    toSqlValues = map SqlValueBool
+
 instance ToSqlValues  (SqlInt a) [SqlValue a] where
     toSqlValues a = [SqlValueInt a]
 

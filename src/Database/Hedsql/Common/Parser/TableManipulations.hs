@@ -208,6 +208,7 @@ parseCreateViewFunc parser stmt = concat
 
 -- | Parse SQL data types.
 parseDataTypeFunc :: SqlDataType a -> String
+parseDataTypeFunc  Boolean      = "boolean"
 parseDataTypeFunc  Date         = "date"
 parseDataTypeFunc (Char lenght) = "char(" ++ show lenght ++ ")"
 parseDataTypeFunc  SmallInt     = "smallint"

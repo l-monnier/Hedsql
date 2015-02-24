@@ -30,7 +30,9 @@ import Control.Lens
 
 -- | SQL data types.
 data SqlDataType a =
-     Date
+     Boolean
+   | Date
+   -- Character types
    | Char Int
    | Varchar Int
    -- Numeric types
@@ -42,7 +44,8 @@ data SqlDataType a =
 
 -- | SQL values.
 data SqlValue a =
-      SqlValueDefault
+      SqlValueBool Bool
+    | SqlValueDefault
     | SqlValueInt Int
     | SqlValueNull
     | SqlValueString String
@@ -152,13 +155,13 @@ data ColConstraint a = ColConstraint
 
 -- | Column constraints types.
 data ColConstraintType a =
-      Check (Condition a)
+      Check     (Condition a)
     -- TODO: | Collate
-    | Default (Expression a)
+    | Default   (Expression a)
     | NotNull
     | Null
-    | Primary Bool  -- ^ Primary key.
-                    --   If true, the primary key will have an AUTOINCREMENT.
+    | Primary   Bool  -- ^ Primary key.
+                      --   If true, the primary key will have an AUTOINCREMENT.
     | Reference (Table a) (Column a) (Maybe (OnAction a)) -- ^ Foreign key.
     | Unique
       deriving (Show)
@@ -280,9 +283,9 @@ data JoinTypeTable a =
       deriving (Show)
 
 -- | LIMIT clause.
-data Limit a =
-    Limit Int
-    deriving (Show)
+data Limit a = Limit
+    { _limitVal :: Int
+    } deriving (Show)
 
 {- |
 WHERE part of the query consisting of a condition. A can be single predicate or
@@ -311,9 +314,9 @@ data Having a =
     deriving (Show)
 
 -- | OFFSET clause.
-data Offset a =
-    Offset Int
-    deriving (Show)
+data Offset a = Offset
+    { offsetVal :: Int
+    } deriving (Show)
 
 {- |
 ORDER BY query part.
@@ -437,6 +440,8 @@ makeLenses ''ColConstraint
 makeLenses ''ColRef
 makeLenses ''Column
 makeLenses ''Expression
+makeLenses ''Limit
+makeLenses ''Offset
 makeLenses ''Select
 makeLenses ''SortRef
 makeLenses ''Table

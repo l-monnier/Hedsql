@@ -557,8 +557,12 @@ parseOrderByFunc parser clause =
     concat
         [ "ORDER BY "
         , intercalate ", " sortRefsParsed
-        , parseMaybe show (clause^.partOrderByLimit)
-        , parseMaybe show (clause^.partOrderByOffset)
+        , parseMaybe
+            (\(Limit v) -> "LIMIT " ++ show v)
+            (clause^.partOrderByLimit)
+        , parseMaybe
+            (\(Offset v) -> "OFFSET " ++ show v)
+            (clause^.partOrderByOffset)
         ]
     where
         sortRefsParsed = map (parser^.parseSortRef) (clause^.partOrderByColumns)
@@ -615,11 +619,13 @@ parseTableRefAsFunc parser alias =
 
 -- | Parse an input values.
 parseValueFunc :: QueryParser a -> SqlValue a -> String
-parseValueFunc _       SqlValueDefault         = "DEFAULT"
-parseValueFunc _      (SqlValueInt int)        = show int
-parseValueFunc _       SqlValueNull            = "NULL"
-parseValueFunc parser (SqlValueString string)  = parser^.quoteVal $ string
-parseValueFunc _       Placeholder             = "?"
+parseValueFunc _      (SqlValueBool True)     = "TRUE"
+parseValueFunc _      (SqlValueBool False)    = "FALSE"
+parseValueFunc _      SqlValueDefault         = "DEFAULT"
+parseValueFunc _      (SqlValueInt int)       = show int
+parseValueFunc _      SqlValueNull            = "NULL"
+parseValueFunc parser (SqlValueString string) = parser^.quoteVal $ string
+parseValueFunc _      Placeholder             = "?"
 
 -- | Parse a WHERE clause.  
 parseWhereFunc :: QueryParser a -> Where a -> String

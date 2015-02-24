@@ -27,11 +27,12 @@ import Control.Lens
 
 -- | Parse MariaDB data types.
 mariaDBDataTypeFunc :: SqlDataType MariaDB -> String
-mariaDBDataTypeFunc  Date         = "DATE"
+mariaDBDataTypeFunc Boolean       = "BOOLEAN"
+mariaDBDataTypeFunc Date          = "DATE"
 mariaDBDataTypeFunc (Char lenght) = "CHAR(" ++ show lenght ++ ")"
-mariaDBDataTypeFunc  SmallInt     = "SMALLINT"
-mariaDBDataTypeFunc  Integer      = "INTEGER"
-mariaDBDataTypeFunc  BigInt       = "BIGINT"
+mariaDBDataTypeFunc SmallInt      = "SMALLINT"
+mariaDBDataTypeFunc Integer       = "INTEGER"
+mariaDBDataTypeFunc BigInt        = "BIGINT"
 mariaDBDataTypeFunc (Varchar mx)  = "VARCHAR(" ++ show mx ++ ")"
 
 mariaDBFuncFunc :: Function MariaDB -> String
