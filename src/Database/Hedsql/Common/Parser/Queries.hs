@@ -393,6 +393,8 @@ parseExprFunc parser stmtParser expr =
                       l
                 , parser^.parseCol $ col
                 ]
+        CondExpr   cond   ->
+            parser^.parseCondition $ cond
         SelectExpr select ->
             concat ["(", stmtParser^.parseSelect $ select, ")"]   
         FuncExpr   func   ->

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE GADTs                  #-}
 
 {-|
 Module      : Database/Hedsql/Common/Constructor/Values.hs

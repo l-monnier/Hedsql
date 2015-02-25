@@ -71,19 +71,24 @@ instance ToColRefs (Column a) [ColRef a] where
     toColRefs a =
         [ColRef (ColExpr a Nothing) Nothing]
 
+instance ToColRefs (Condition a) [ColRef a] where
+    toColRefs cond = [ColRef (CondExpr cond) Nothing]
+
+instance ToColRefs (FuncBool a) [ColRef a] where
+    toColRefs func = [ColRef (CondExpr $ FuncCond func) Nothing]
+
 instance ToColRefs (Function a) [ColRef a] where
     toColRefs func = [ColRef (FuncExpr func) Nothing]
 
 instance ToColRefs (SqlInt a) [ColRef a] where
     toColRefs int = [ColRef (ValueExpr $ SqlValueInt int) Nothing]
-    
-instance ToColRefs (Select a) [ColRef a] where
-    toColRefs query = [ColRef (SelectExpr query) Nothing]
 
 instance ToColRefs (SqlString a) [ColRef a] where
     toColRefs name =
         [ColRef (ColExpr (toCol name) Nothing) Nothing]
-    
+
+instance ToColRefs (Select a) [ColRef a] where
+    toColRefs query = [ColRef (SelectExpr query) Nothing]
 
 instance ToColRefs (SqlValue a) [ColRef a] where
     toColRefs val = [ColRef (ValueExpr val) Nothing]
@@ -92,6 +97,12 @@ instance ToColRefs [ColRef a] [ColRef a] where
     toColRefs = id
     
 instance ToColRefs [Column a] [ColRef a] where
+    toColRefs = map (head.toColRefs)
+
+instance ToColRefs [Condition a] [ColRef a] where
+    toColRefs = map (head.toColRefs)
+
+instance ToColRefs [FuncBool a] [ColRef a] where
     toColRefs = map (head.toColRefs)
 
 instance ToColRefs [Function a] [ColRef a] where

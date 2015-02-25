@@ -206,6 +206,7 @@ data Expression a =
           { _colExpr           :: (Column a)
           , _colExprTableLabel :: Maybe (TableRef a) -- ^ Qualified column name.
           }
+    | CondExpr   (Condition a)
     | FuncExpr   (Function a)
     | SelectExpr (Select a)
     | ValueExpr  (SqlValue a)
@@ -400,7 +401,13 @@ data Function a =
     | FoundRows
       deriving (Show)
 
--- | Functions returning TRUE or FALSE.
+{-|
+Functions returning TRUE or FALSE.
+
+Note: boolean values themselves are not condisered as part of those functions.
+They are considered as values.
+Therefore, it is not possible to write statements such as "TRUE IS TRUE".
+-}
 data FuncBool a =
       Between           (ColRef a) (ColRef a) (ColRef a) -- ^ BETWEEN
     | Exists            (ColRef a)                       -- ^ EXISTS
