@@ -48,36 +48,35 @@ import Database.Hedsql.Common.DataStructure
 -- PUBLIC
 --------------------------------------------------------------------------------
 
+-- TODO: check if they are used at all...
 type SqlBool a = Bool
-
 type SqlInt a = Int
-
 type SqlString a = String
 
 -- | Create a BOOLEAN.
-boolean :: SqlDataType a
-boolean = Boolean
+boolean :: DataType Bool a
+boolean = Bool
 
 -- | Create a BIGINT.
-bigInt :: SqlDataType a
+bigInt :: DataType Numeric a
 bigInt = BigInt
 
 -- | Create a CHAR.
-char :: Int -> SqlDataType a
+char :: Int -> DataType Text a
 char = Char
 
 -- | Create a DATE.
-date :: SqlDataType a
+date :: DataType a Time
 date = Date
 
 -- | Create an INTEGER.
-integer :: SqlDataType a
+integer :: DataType Numeric a
 integer = Integer
 
 -- | Create a SMALLINT.
-smallInt :: SqlDataType a
+smallInt :: DataType Numeric a
 smallInt = SmallInt
 
 -- | Create a VARCHAR.
-varchar :: Int -> SqlDataType a
+varchar :: Int -> DataType Text a
 varchar = Varchar

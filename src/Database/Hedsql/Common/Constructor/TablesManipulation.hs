@@ -72,11 +72,11 @@ maybeString name = Just name
 --------------------------------------------------------------------------------
 
 -- | Create a CHECK constraint.
-check :: ToConditions (a b) [Condition b] => a b -> ColConstraintType b
+check :: ToConditions (a b) [Expression Bool b] => a b -> ColConstraintType b
 check cond = Check $ condition cond
 
 -- | Create a CHECK constraint to be used in a table constraint.
-checkT :: ToConditions (a b) [Condition b] => a b -> TableConstraintType b
+checkT :: ToConditions (a b) [Expression Bool b] => a b -> TableConstraintType b
 checkT = TableConstraintCheck . condition
 
 -- | Create a constraint which shall then be applied on a column.
@@ -84,11 +84,11 @@ colConstraint :: String -> ColConstraintType a -> ColConstraint a
 colConstraint name = ColConstraint (maybeString name)
 
 -- | Create a CREATE TABLE statement.
-createTable :: ToTables a [Table b] => a -> [Column b] -> Table b
+createTable :: ToTables a [Table b] => a -> [ColWrap b] -> Table b
 createTable t c = table t & tableCols .~ c
 
 -- | Create a CREATE TABLE IF NOT EXIST statement.
-createTableIfNotExist :: ToTables a [Table b] => a -> [Column b] -> Table b
+createTableIfNotExist :: ToTables a [Table b] => a -> [ColWrap b] -> Table b
 createTableIfNotExist t c =
     table t
         & tableCols .~ c
@@ -96,13 +96,13 @@ createTableIfNotExist t c =
 
 -- | Create a CREATE VIEW query.
 createView ::
-       String       -- ^ Name of the view.
-    -> Select a     -- ^ Select query from which the view is created.
+       String        -- ^ Name of the view.
+    -> SelectWrap a  -- ^ Select query from which the view is created.
     -> CreateView a
 createView = CreateView
 
 -- | Create a DEFAULT value constraint.
-defaultValue :: ToColRefs a [ColRef b] => a -> ColConstraintType b
+defaultValue :: ToColRefs a [ColRef b c] => a -> ColConstraintType c
 defaultValue e = Default $ expr e
 
 -- | Create a DROP TABLE statement.
@@ -126,13 +126,13 @@ dropView = DropView
 
 -- | Create a FOREIGN KEY constraint.
 foreignKey ::
-    ( ToTables a [Table c]
-    , ToCols   b [Column c]
+    ( ToTables a [Table d]
+    , ToCols   b [Column c d]
     )
     => a -- ^ Table.
     -> b -- ^ Column.
-    -> ColConstraintType c
-foreignKey t c = Reference (table t) (toCol c) Nothing
+    -> ColConstraintType d
+foreignKey t c = Reference (table t) (ColWrap $ toCol c) Nothing
 
 -- | Create a NOT NULL constraint.
 notNull :: ColConstraintType a
@@ -149,8 +149,8 @@ primary ::
 primary = Primary
 
 -- | Create a PRIMARY KEY constraint to be used in a table constraint.
-primaryT :: ToCols a [Column b] => a -> TableConstraintType b
-primaryT = TableConstraintPrimaryKey . toCols
+primaryT :: ToCols a [Column b c] => a -> TableConstraintType c
+primaryT c = TableConstraintPrimaryKey $ map ColWrap $ toCols c
 
 -- | Create a table constraint.
 tableConstraint :: String -> TableConstraintType a -> TableConstraint a
@@ -162,5 +162,5 @@ unique :: ColConstraintType a
 unique = Unique
 
 -- | Create an UNIQUE table constraint
-uniqueT :: ToCols a [Column b] => a -> TableConstraintType b
-uniqueT = TableConstraintUnique . toCols
+uniqueT :: [ColWrap a] -> TableConstraintType a
+uniqueT cs = TableConstraintUnique cs

@@ -60,9 +60,6 @@ getQueryParser queryParser tableParser = QueryParser
     (parseColFunc queryParser)
     (parseColRefFunc queryParser)
     (parseColRefDefFunc queryParser)
-    (parseConditionFunc queryParser)
-    (parseFuncFunc queryParser)
-    (parseFuncBoolFunc queryParser)
     (parseExprFunc queryParser stmtParser)
     (parseFromFunc queryParser)
     (parseJoinFunc queryParser genJoinParser)
@@ -114,15 +111,14 @@ getTableParser ::
     -> TableParser a
     -> TableParser a
 getTableParser queryParser tableParser = TableParser
-     parseActionFunc
+    parseActionFunc
     (parseColFunc queryParser)
     (parseColCreateFunc tableParser)
     (parseColConstFunc tableParser)
     (parseColConstTypeFunc tableParser)
-    (parseConditionFunc queryParser)
     (parseConstTimingFunc tableParser)
-     parseConstTimingCheckFunc
-     parseConstTimingTypeFunc
+    parseConstTimingCheckFunc
+    parseConstTimingTypeFunc
     (parseCreateTableFunc tableParser)
     (parseCreateViewFunc tableParser)
     parseDataTypeFunc

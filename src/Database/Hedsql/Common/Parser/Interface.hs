@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {-|
@@ -10,7 +11,6 @@ Stability   : experimental
 Portability : portable
 
 Define the high level functionalities of a SQL Parser.
-The different elements of the parser can be accessed via lenses.
 
 The Parser definition is very generic as more specialized parts can later
 be defined for each component thanks to currying.
@@ -18,7 +18,7 @@ be defined for each component thanks to currying.
 For example, for parseSelect we could define a function with the following
 type signature:
 
-> parseSelectFunc :: QueryParser a -> Select a -> String
+> parseSelectFunc :: QueryParser a -> Select a b -> String
 
 Then, when constructing a parser, we can provide to that function 
 a dedicated QueryParser. This parser can then have specialized functions
@@ -35,15 +35,23 @@ module Database.Hedsql.Common.Parser.Interface
     , parseStmt
     ) where
 
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
 import Database.Hedsql.Common.DataStructure
 
 import Control.Lens
+
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 {-|
 Interface which defines the top level functions of a SQL Parser.
 -}
 data Parser a = Parser
-    { _parseStmt  :: Statement a -> String
+    { _parseStmt :: Statement a -> String
     }
     
 makeLenses ''Parser

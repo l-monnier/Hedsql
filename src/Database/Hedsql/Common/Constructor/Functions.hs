@@ -83,239 +83,235 @@ import Database.Hedsql.Common.DataStructure
 -- | "+" operator.
 (/+) ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef Numeric c]
+    , ToColRefs b [ColRef Numeric c]
     )
     => a
     -> b
-    -> Function c
+    -> Expression Numeric c
 (/+) left right = Add (colRef left) (colRef right)
 
 -- | "-" operator.
 (/-) ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef Numeric c]
+    , ToColRefs b [ColRef Numeric c]
     )
     => a
     -> b
-    -> Function c
+    -> Expression Numeric c
 (/-) left right = Substract (colRef left) (colRef right)
 
 -- | "*" operator.
 (/*) ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef Numeric c]
+    , ToColRefs b [ColRef Numeric c]
     )
     => a
     -> b
-    -> Function c
+    -> Expression Numeric c
 (/*) left right = Multiply (colRef left) (colRef right)
 
 -- | Equality operator ("=" in SQL).
 infix 7 /==
 (/==) ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 (/==) colRef1 colRef2 = Equal (colRef colRef1) (colRef colRef2)
 
 -- | Greater than operator (">").
 infix 7 />
 (/>) ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 (/>) colRef1 colRef2 = GreaterThan (colRef colRef1) (colRef colRef2)
 
 -- | Greater than or equal to operator (">=").
 infix 7 />=
 (/>=) ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 (/>=) colRef1 colRef2 = GreaterThanOrEqTo (colRef colRef1) (colRef colRef2)
 
 -- | Smaller than operator ("<").
 infix 7 /<
 (/<) ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 (/<) colRef1 colRef2 = SmallerThan (colRef colRef1) (colRef colRef2)
 
 -- | Smaller than or equal to operator ("<=").
 infix 7 /<=
 (/<=) ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      SQLOrd c
+    , ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 (/<=) colRef1 colRef2 = SmallerThanOrEqTo (colRef colRef1) (colRef colRef2)
 
 -- | Unequality operator ("<>").
 infix 7 /<>
 (/<>) ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 (/<>) colRef1 colRef2 = NotEqual (colRef colRef1) (colRef colRef2)
 
 -- | Join two predicates with an AND.
-and_ :: ToConditions a [Condition b] => a -> a -> Condition b
+and_ :: ToConditions a [Expression Bool b] => a -> a -> Expression Bool b
 and_ condition1 condition2 = And [condition condition1, condition condition2]
 
 -- | Join a list of predicates with AND which will be enclosed in a parenthesis.
-ands :: ToConditions a [Condition b] => [a] -> Condition b
+ands :: ToConditions a [Expression Bool b] => [a] -> Expression Bool b
 ands = And . map condition
 
 -- | BETWEEN condition.
 between ::
     (
-      ToColRefs a [ColRef d]
-    , ToColRefs b [ColRef d]
-    , ToColRefs c [ColRef d]
+      ToColRefs a [ColRef d e]
+    , ToColRefs b [ColRef d e]
+    , ToColRefs c [ColRef d e]
     )
-    => a -- ^ Expression to evaluate.
-    -> b -- ^ Lower bound condition.
-    -> c -- ^ Higher bound condition.
-    -> Condition d -- ^ Between condition.
-between ex lower higher =
-    FuncCond $ Between exprRef lowerRef higherRef
-    where
-        exprRef = colRef ex
-        lowerRef = colRef lower
-        higherRef = colRef higher
+    => a                 -- ^ Expression to evaluate.
+    -> b                 -- ^ Lower bound condition.
+    -> c                 -- ^ Higher bound condition.
+    -> Expression Bool e -- ^ Between condition.
+between ex lower higher = Between (colRef ex) (colRef lower) (colRef higher)
 
 -- | Create a COUNT function.
-count :: ToColRefs a [ColRef b] => a -> Function b
-count = Count . expr
+count :: ToColRefs a [ColRef c b] => a -> Expression Numeric b 
+count = Count . colRef
 
 {- |
     Create a function which will return the current date.
     Its implementation shall vary depending on the vendor.
 -}
-currentDate :: Function a
+currentDate :: Expression Time a
 currentDate = CurrentDate
 
 -- | Create an EXISTS function.
-exists :: ToColRefs a [ColRef b] => a -> Condition b
-exists = FuncCond . Exists . colRef
+exists :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+exists = Exists . colRef
 
 -- | Create an IN operator.
 in_ ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 in_ colRef1 colRef2 = In (colRef colRef1) (colRef colRef2)
 
 -- | Create a NOT IN operator.
 notIn ::
     (
-      ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+      ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 notIn colRef1 colRef2 = NotIn (colRef colRef1) (colRef colRef2)
 
 -- | Create a IS FALSE function.
-isFalse :: ToColRefs a [ColRef b] => a -> Condition b
-isFalse = FuncCond . IsFalse . colRef
+isFalse :: ToColRefs a [ColRef Bool b] => a -> Expression Bool b
+isFalse = IsFalse . colRef
 
 -- | Create a IS NOT FALSE function.
-isNotFalse :: ToColRefs a [ColRef b] => a -> Condition b
-isNotFalse = FuncCond . IsNotFalse . colRef
+isNotFalse :: ToColRefs a [ColRef Bool b] => a -> Expression Bool b
+isNotFalse = IsNotFalse . colRef
 
 -- | Create a IS NOT NULL function.
-isNotNull :: ToColRefs a [ColRef b] => a -> Condition b
-isNotNull = FuncCond . IsNotNull . colRef
+isNotNull :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+isNotNull = IsNotNull . colRef
 
 -- | Create a IS NOT TRUE function.
-isNotTrue :: ToColRefs a [ColRef b] => a -> Condition b
-isNotTrue = FuncCond . IsNotTrue . colRef
+isNotTrue :: ToColRefs a [ColRef Bool b] => a -> Expression Bool b
+isNotTrue = IsNotTrue . colRef
 
 -- | Create a IS NOT UNKNOWN function.
-isNotUnknown :: ToColRefs a [ColRef b] => a -> Condition b
-isNotUnknown = FuncCond . IsNotUnknown . colRef
+isNotUnknown :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+isNotUnknown = IsNotUnknown . colRef
 
 -- | Create a IS NULL function.
-isNull :: ToColRefs a [ColRef b] => a -> Condition b
-isNull = FuncCond . IsNull . colRef
+isNull :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+isNull = IsNull . colRef
 
 -- | Create a IS TRUE function.
-isTrue :: ToColRefs a [ColRef b] => a -> Condition b
-isTrue = FuncCond . IsTrue . colRef
+isTrue :: ToColRefs a [ColRef Bool b] => a -> Expression Bool b
+isTrue = IsTrue . colRef
 
 -- | Create a IS UNKNOWN function.
-isUnknown :: ToColRefs a [ColRef b] => a -> Condition b
-isUnknown = FuncCond . IsUnknown . colRef
+isUnknown :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+isUnknown = IsUnknown . colRef
 
 -- | Create a LIKE operator.
 like ::
-    (  ToColRefs a [ColRef c]
-    ,  ToColRefs b [ColRef c]
+    (  ToColRefs a [ColRef Text c]
+    ,  ToColRefs b [ColRef Text c]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool c
 like colRef1 colRef2 = Like (colRef colRef1) (colRef colRef2)
 
 -- | Create a MAX function.
-max_ :: ToColRefs a [ColRef b] => a -> Function b
-max_ = Max . expr
+max_ :: ToColRefs a [ColRef Numeric b] => a -> Expression Numeric b
+max_ = Max . colRef
 
 -- | Create a MIN function.
-min_ :: ToColRefs a [ColRef b] => a -> Function b
-min_ = Min . expr
+min_ :: ToColRefs a [ColRef Numeric b] => a -> Expression Numeric b
+min_ = Min . colRef
 
 -- | NOT BETWEEN condition.
 notBetween ::
     (
-      ToColRefs a [ColRef d]
-    , ToColRefs b [ColRef d]
-    , ToColRefs c [ColRef d]
+      ToColRefs a [ColRef d e]
+    , ToColRefs b [ColRef d e]
+    , ToColRefs c [ColRef d e]
     )
-    => a           -- ^ Expression to evaluate.
-    -> b           -- ^ Lower bound condition.
-    -> c           -- ^ Higher bound condition.
-    -> Condition d -- ^ Not between condition.
+    => a                 -- ^ Expression to evaluate.
+    -> b                 -- ^ Lower bound condition.
+    -> c                 -- ^ Higher bound condition.
+    -> Expression Bool e -- ^ Not between condition.
 notBetween ex lower higher =
-    FuncCond $ NotBetween (colRef ex) (colRef lower) (colRef higher)
+    NotBetween (colRef ex) (colRef lower) (colRef higher)
 
 -- | Create a random() function.
-random :: Function a
+random :: Expression Numeric a
 random = Random
    
 -- | Create a SUM function.
-sum_ :: ToColRefs a [ColRef b] => a -> Function b
-sum_ = Sum . expr
+sum_ :: ToColRefs a [ColRef Numeric b] => a -> Expression Numeric b
+sum_ = Sum . colRef

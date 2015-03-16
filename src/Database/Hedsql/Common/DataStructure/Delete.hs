@@ -17,18 +17,23 @@ module Database.Hedsql.Common.DataStructure.Delete
     , deleteWhere
     ) where
 
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
 import Database.Hedsql.Common.DataStructure.Select
+
 import Control.Lens
 
--- Private.
-
--- Public.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 -- | DELETE statement.
 data Delete a = Delete
     { _deleteTable :: Table a
     , _deleteWhere :: Maybe (Where a)
-    } deriving (Show)
+    }
 
 -- Make the lenses.
 makeLenses ''Delete

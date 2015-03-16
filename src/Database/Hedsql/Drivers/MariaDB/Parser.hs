@@ -22,24 +22,13 @@ import Database.Hedsql.Drivers.MariaDB.Driver
 import qualified Database.Hedsql.Common.Parser.TableManipulations as T
 
 import Control.Lens
+import Data.Char
 
 -- Private.
 
 -- | Parse MariaDB data types.
-mariaDBDataTypeFunc :: SqlDataType MariaDB -> String
-mariaDBDataTypeFunc Boolean       = "BOOLEAN"
-mariaDBDataTypeFunc Date          = "DATE"
-mariaDBDataTypeFunc (Char lenght) = "CHAR(" ++ show lenght ++ ")"
-mariaDBDataTypeFunc SmallInt      = "SMALLINT"
-mariaDBDataTypeFunc Integer       = "INTEGER"
-mariaDBDataTypeFunc BigInt        = "BIGINT"
-mariaDBDataTypeFunc (Varchar mx)  = "VARCHAR(" ++ show mx ++ ")"
-
-mariaDBFuncFunc :: Function MariaDB -> String
-mariaDBFuncFunc Random        = "RAND()"
-mariaDBFuncFunc CalcFoundRows = "SQL_CALC_FOUND_ROWS"
-mariaDBFuncFunc FoundRows     = "FOUND_ROWS()"
-mariaDBFuncFunc func          = parseFuncFunc mariaDBQueryParser func
+mariaDBDataTypeFunc :: DataTypeWrap MariaDB -> String
+mariaDBDataTypeFunc = map toUpper . T.parseDataTypeFunc
 
 -- | Create the MariaDB parser.
 mariaDBParser :: Parser MariaDB
@@ -47,9 +36,7 @@ mariaDBParser = getParser $ getStmtParser mariaDBQueryParser mariaDBTableParser
     
 -- | Create the MariaDB query parser.
 mariaDBQueryParser :: QueryParser MariaDB
-mariaDBQueryParser =
-    getQueryParser mariaDBQueryParser mariaDBTableParser
-        & parseFunc .~ mariaDBFuncFunc
+mariaDBQueryParser = getQueryParser mariaDBQueryParser mariaDBTableParser
 
 -- | Create the MariaDB table manipulations parser.
 mariaDBTableParser :: T.TableParser MariaDB
@@ -63,5 +50,5 @@ mariaDBTableParser =
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: ToStmt a Statement => a MariaDB -> String
+parse :: ToStmt (a MariaDB) (Statement MariaDB) => a MariaDB -> String
 parse = (mariaDBParser^.parseStmt).statement

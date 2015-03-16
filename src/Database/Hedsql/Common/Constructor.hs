@@ -113,3 +113,4 @@ import Database.Hedsql.Common.Constructor.Tables             as C
 import Database.Hedsql.Common.Constructor.TablesManipulation as C
 import Database.Hedsql.Common.Constructor.Types              as C
 import Database.Hedsql.Common.Constructor.Values             as C
+import Database.Hedsql.Common.Constructor.Wrapper            as C

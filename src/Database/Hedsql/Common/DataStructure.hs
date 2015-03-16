@@ -47,7 +47,6 @@ data Statement a =
     | DropTableStmt     (DropTable a)
     | DropViewStmt      (DropView a)
     | InsertStmt        (Insert a)
-    | SelectStmt        (Select a)
+    | SelectStmt        (SelectWrap a)
     | UpdateStmt        (Update a)
     | Statements        [Statement a] -- ^ Combination of many statements.
-      deriving (Show)

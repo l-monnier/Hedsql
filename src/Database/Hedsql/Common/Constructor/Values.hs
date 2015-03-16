@@ -1,8 +1,8 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
 
 {-|
 Module      : Database/Hedsql/Common/Constructor/Values.hs
@@ -32,7 +32,6 @@ module Database.Hedsql.Common.Constructor.Values
 --------------------------------------------------------------------------------
 
 import Database.Hedsql.Common.DataStructure
-import Database.Hedsql.Common.Constructor.Types
 
 import Prelude hiding (null)
 
@@ -40,55 +39,60 @@ import Prelude hiding (null)
 -- PRIVATE
 --------------------------------------------------------------------------------
 
+-- | Types used for the coercion.
+type SqlBool   a = Bool
+type SqlInt    a = Int
+type SqlString a = String
+
 -- | Coerce a given type to a list of SqlValue.
 class ToSqlValues a b | a -> b where
     toSqlValues :: a -> b
 
-instance ToSqlValues  (SqlBool a) [SqlValue a] where
-    toSqlValues a = [SqlValueBool a]
-
-instance ToSqlValues  [SqlBool a] [SqlValue a] where
-    toSqlValues = map SqlValueBool
-
-instance ToSqlValues  (SqlInt a) [SqlValue a] where
-    toSqlValues a = [SqlValueInt a]
-
-instance ToSqlValues  [SqlInt a] [SqlValue a] where
-    toSqlValues = map SqlValueInt
-
-instance ToSqlValues (SqlValue a) [SqlValue a] where
+instance ToSqlValues (Value a b) [Value a b] where
     toSqlValues a = [a]
 
-instance ToSqlValues [SqlValue a] [SqlValue a] where
+instance ToSqlValues [Value a b] [Value a b] where
     toSqlValues = id
-    
-instance ToSqlValues (SqlString a) [SqlValue a] where
-    toSqlValues a = [SqlValueString a]
 
-instance ToSqlValues [SqlString a] [SqlValue a] where
-    toSqlValues = map SqlValueString
+instance ToSqlValues (SqlBool a) [Value Bool a] where
+    toSqlValues a = [BoolVal a]
+
+instance ToSqlValues [SqlBool a] [Value Bool a] where
+    toSqlValues = map BoolVal
+    
+instance ToSqlValues (SqlString a) [Value Text a] where
+    toSqlValues a = [StringVal a]
+
+instance ToSqlValues [SqlString a] [Value Text a] where
+    toSqlValues = map StringVal
+
+instance ToSqlValues (SqlInt a) [Value Numeric a] where
+    toSqlValues a = [IntVal a]
+
+instance ToSqlValues [SqlInt a] [Value Numeric a] where
+    toSqlValues = map IntVal
 
 --------------------------------------------------------------------------------
 -- PUBLIC
 --------------------------------------------------------------------------------
 
 -- | Create a placeholder "?" for a prepared statement.
-(/?) :: SqlValue a
+(/?) :: Value b a
 (/?) = Placeholder
 
 -- | Create a NULL value.
-null :: SqlValue a
-null = SqlValueNull
+null :: Value Undefined a
+null = NullVal
 
 {-|
 Convert a primitive value so it can be used in SQL queries as "raw" values.
 -}
-value :: ToSqlValues a [SqlValue b] => a -> SqlValue b
+value :: ToSqlValues a [Value b c] => a -> Value b c
 value = head.toSqlValues
     
 {-|
 Convert a list of primitive values so they can be used in SQL queries
 as "raw" values.
 -}
-values :: ToSqlValues a [SqlValue b] => a -> [SqlValue b]
+values :: ToSqlValues a [Value b c] => a -> [Value b c]
 values = toSqlValues

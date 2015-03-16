@@ -18,6 +18,7 @@ module Database.Hedsql.Common.Constructor.Select
     (
       -- * SELECT part     
       select
+    , select'
     , selectDistinct
     , isDistinctFrom
     , isNotDistinctFrom
@@ -91,52 +92,49 @@ class ToCombined a b where
 instance ToCombined CombinedQuery CombinedQuery where
     toCombined = id
  
-instance ToCombined Select CombinedQuery where
+instance ToCombined SelectWrap CombinedQuery where
     toCombined = Single
 
 -- | Coerce a type to a list of JoinClause type.
 class ToJoinClauses a b | a -> b where
     toJoinClauses :: a -> b
-
--- | Create an ON join clause from a predicate.
-instance ToJoinClauses (Condition a) [JoinClause a] where
-    toJoinClauses = list . JoinClauseOn
     
 -- | Create an ON join clause from a boolean function.
-instance ToJoinClauses (FuncBool a) [JoinClause a] where
-    toJoinClauses = list . JoinClauseOn . FuncCond
+instance ToJoinClauses (Expression Bool a) [JoinClause a] where
+    toJoinClauses = list . JoinClauseOn
 
 -- | Create an USING join clause from a column.
-instance ToJoinClauses (Column a) [JoinClause a] where
-    toJoinClauses c = list $ JoinClauseUsing [c]
+instance ToJoinClauses (Column b a) [JoinClause a] where
+    toJoinClauses c = list $ JoinClauseUsing [ColWrap c]
 
 -- | Create an USING join clause from a list of columns.
-instance ToJoinClauses [Column a] [JoinClause a] where
-    toJoinClauses = list . JoinClauseUsing
+instance ToJoinClauses [Column b a] [JoinClause a] where
+    toJoinClauses = list . JoinClauseUsing . map ColWrap
 
 -- | Create an USING join clause from a string which is a column name.
 instance ToJoinClauses (SqlString a) [JoinClause a] where
-    toJoinClauses = list . JoinClauseUsing . toCols
+    toJoinClauses = list . JoinClauseUsing . map ColWrap . toCols
 
 -- | Create an USING join clause from a list of strings which are column names.    
 instance ToJoinClauses [SqlString a] [JoinClause a] where
-    toJoinClauses = list . JoinClauseUsing . toCols
+    toJoinClauses = list . JoinClauseUsing . map ColWrap . toCols
 
 -- | Coerce a type to a list of SortRef types.
 class ToSortRefs a b | a -> b where
     toSortRefs :: a -> b
 
-instance ToSortRefs (ColRef a) [SortRef a] where
-    toSortRefs ref = [SortRef ref Nothing Nothing]
+instance ToSortRefs (ColRef b a) [SortRef a] where
+    toSortRefs ref = [SortRef (ColRefWrap ref) Nothing Nothing]
 
-instance ToSortRefs [ColRef a] [SortRef a] where
-    toSortRefs = map (\ref -> SortRef ref Nothing Nothing)
+instance ToSortRefs [ColRef b a] [SortRef a] where
+    toSortRefs = map (\ref -> SortRef (ColRefWrap ref) Nothing Nothing)
 
 instance ToSortRefs (SqlString a) [SortRef a] where
-    toSortRefs name = [SortRef (colRef name) Nothing Nothing]
+    toSortRefs name = [SortRef (ColRefWrap $ colRef name) Nothing Nothing]
 
 instance ToSortRefs [SqlString a] [SortRef a] where
-    toSortRefs = map (\name -> SortRef (colRef name) Nothing Nothing)
+    toSortRefs =
+        map (\name -> SortRef (ColRefWrap $ colRef name) Nothing Nothing)
 
 instance ToSortRefs (SortRef a) [SortRef a] where
     toSortRefs = list
@@ -198,52 +196,69 @@ toJoinClause = head.toJoinClauses
 -- SELECT
 ----------------------------------------
 
+
+select' :: ToColRefs a [ColRef b c] => a -> Select b c
+select' a =
+    TSelect (head $ colRefs a) body
+    where
+        body =
+            SelectBody
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+
 -- | Create a SELECT query.
-select :: ToColRefs a [ColRef b] => a -> Select b
-select a =
-    Select
-        (colRefs a)
-        Nothing
-        Nothing
-        Nothing
-        Nothing
-        Nothing
+select :: [ColRefWrap a] -> Select Undefineds a
+select cs =
+    USelect cs body
+    where
+        body =
+            SelectBody
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
 
 -- | Create a SELECT DISTINCT query.
-selectDistinct :: ToColRefs a [ColRef b] => a -> Select b   
-selectDistinct a =
-    Select
-        (colRefs a)
-        (Just Distinct)
-        Nothing
-        Nothing
-        Nothing
-        Nothing
+selectDistinct :: [ColRefWrap a] -> Select Undefineds a
+selectDistinct cs =
+    USelect cs body
+    where
+        body =
+            SelectBody
+                (Just Distinct)
+                Nothing
+                Nothing
+                Nothing
+                Nothing
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
-    ( ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+    ( ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 isDistinctFrom colRef1 colRef2 =
     IsDistinctFrom (colRef colRef1) (colRef colRef2)
 
 -- | Create a IS NOT DISTINCT FROM operator.
 isNotDistinctFrom ::
-    ( ToColRefs a [ColRef c]
-    , ToColRefs b [ColRef c]
+    ( ToColRefs a [ColRef c d]
+    , ToColRefs b [ColRef c d]
     )
     => a
     -> b
-    -> FuncBool c
+    -> Expression Bool d
 isNotDistinctFrom colRef1 colRef2 =
     IsNotDistinctFrom (colRef colRef1) (colRef colRef2)
 
 -- | Create a joker - "*" - character.
-(//*) :: Function a
+(//*) :: Expression Undefineds a
 (//*) = Joker
 
 ----------------------------------------
@@ -360,17 +375,17 @@ rightJoin = columnJoin RightJoin
 
 -- | Create a sub-query in a FROM clause.
 subQuery ::
-       Select   a -- ^ Sub-query.
-    -> String     -- ^ Alias of the sub-query.
-    -> TableRef a -- ^ Table reference.
-subQuery sub name = SelectTableRef sub $ TableRefAs name []
+       Select  b a -- ^ Sub-query.
+    -> String      -- ^ Alias of the sub-query.
+    -> TableRef a  -- ^ Table reference.
+subQuery sub name = SelectTableRef (SelectWrap sub) $ TableRefAs name []
 
 ----------------------------------------
 -- WHERE
 ----------------------------------------
 
 -- | Create a WHERE clause for a SELECT query.
-where_ :: ToConditions a [Condition b] => a -> Where b
+where_ :: ToConditions a [Expression Bool b] => a -> Where b
 where_ = Where . condition
 
 ----------------------------------------
@@ -431,11 +446,11 @@ nullsLast sRef =  set sortRefNulls (Just NullsLast) (sortRef sRef)
 ----------------------------------------
 
 -- | Create a GROUP BY clause.
-groupBy :: ToColRefs a [ColRef b] => a -> GroupBy b
-groupBy cs = GroupBy (colRefs cs) Nothing
+groupBy :: [ColRefWrap a] -> GroupBy a
+groupBy cs = GroupBy cs Nothing
 
 -- | Add a HAVING clause to a GROUP BY clause.
-having :: ToConditions a [Condition b] => a -> Having b
+having :: ToConditions a [Expression Bool b] => a -> Having b
 having = Having . condition
 
 ----------------------------------------
@@ -456,7 +471,7 @@ offset = Offset
 
 -- | Create a combined query such as an INTERSECT, EXCEPT, etc.
 combinedQuery ::
-    ToCombined a CombinedQuery => a b -> CombinedQuery b
+    ToCombined b CombinedQuery => b a -> CombinedQuery a
 combinedQuery = toCombined
 
 -- | Apply an EXCEPT to two queries.

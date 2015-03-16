@@ -65,7 +65,9 @@ getTableRefName ref =
                     ++ "_"
                     ++ getTableRefName table2
                 TableTableRef t                             _ ->
-                    t ^. tableName
+                    getTableName t
                 _                                             ->
-                    error "This is a bug, this pattern shouldn't been reach"
-            
+                    error "This is a bug, this pattern shouldn't been reached!"
+
+getTableName :: Table a -> String
+getTableName (Table _ name _ _) = name           

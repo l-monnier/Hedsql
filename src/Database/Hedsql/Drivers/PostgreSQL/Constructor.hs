@@ -17,7 +17,6 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     , selectDistinctOn
     ) where
     
-import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.DataStructure
 import Database.Hedsql.Drivers.PostgreSQL.Driver
 
@@ -28,29 +27,28 @@ DEFAULT instruction when used to insert a DEFAULT value.
 For example:
 > INSERT INTO films Values (DEFAULT, 'Bananas', 88, '1971-07-13', 'Comedy');
 -}
-default_ :: SqlValue PostgreSQL
-default_ = SqlValueDefault
+default_ :: Value a PostgreSQL
+default_ = DefaultVal
 
 -- | Create a sub-query preceded by LATERAL.
 lateral ::
-       Select PostgreSQL   -- ^ Select query of the lateral clause.
-    -> String              -- ^ Alias of the lateral clause.
-    -> TableRef PostgreSQL -- ^ Lateral table reference.
+       SelectWrap PostgreSQL -- ^ Select query of the lateral clause.
+    -> String                -- ^ Alias of the lateral clause.
+    -> TableRef PostgreSQL   -- ^ Lateral table reference.
 lateral s a = LateralTableRef s $ TableRefAs a []
 
 -- | Create a SELECT DISTINCT ON query.
 selectDistinctOn ::
-     ( ToColRefs a [ColRef PostgreSQL]
-     , ToColRefs b [ColRef PostgreSQL]
-     )
-    => a                 -- ^ Distinct expression.
-    -> b                 -- ^ Select clause.
-    -> Select PostgreSQL -- ^ Select query.
+       [ColRefWrap PostgreSQL]      -- ^ Distinct expression.
+    -> [ColRefWrap PostgreSQL]      -- ^ Select clause.
+    -> Select Undefineds PostgreSQL -- ^ Select query.
 selectDistinctOn distinctExpr selectExpr =
-    Select
-        (colRefs selectExpr)
-        (Just $ DistinctOn $ exprs distinctExpr)
-         Nothing
-         Nothing
-         Nothing
-         Nothing
+    USelect selectExpr body
+    where
+        body =
+            SelectBody
+                (Just $ DistinctOn distinctExpr)
+                Nothing
+                Nothing
+                Nothing
+                Nothing

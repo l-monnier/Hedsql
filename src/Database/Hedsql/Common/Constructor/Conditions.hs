@@ -33,24 +33,21 @@ import Database.Hedsql.Common.DataStructure
 -- PUBLIC
 --------------------------------------------------------------------------------
 
--- | Coerce a given type to a list of conditions.
+-- | Coerce a given type to a list of boolean expressions.
 class ToConditions a b | a -> b where
     toConditions :: a -> b
 
-instance ToConditions (Condition a) [Condition a] where
+instance ToConditions (Expression Bool a) [Expression Bool a] where
     toConditions c = [c]
 
-instance ToConditions (FuncBool a) [Condition a] where
-    toConditions c = [FuncCond c]
-
 -- | Create a condition.
-condition :: ToConditions a [Condition b] => a -> Condition b
+condition :: ToConditions a [Expression Bool b] => a -> Expression Bool b
 condition = toCondition
 
 -- | Create a list of conditions from a list of element.
-conditions :: ToConditions a [Condition b] => [a] -> [Condition b]
+conditions :: ToConditions a [Expression Bool b] => [a] -> [Expression Bool b]
 conditions = map toCondition
 
 -- | Coerce a type to a condition.
-toCondition :: ToConditions a [Condition b] => a -> Condition b
+toCondition :: ToConditions a [Expression Bool b] => a -> Expression Bool b
 toCondition = head.toConditions

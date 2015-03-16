@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs            #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 {-|
@@ -24,7 +25,6 @@ import qualified Database.Hedsql.Common.Parser.TableManipulations as T
 
 import Control.Lens
 import Data.List (intercalate)
-import Data.Maybe (catMaybes)
 
 -- Private.
 
@@ -37,7 +37,7 @@ hasAutoIncrement =
     all (\x -> isAIPK $ x^.colConstraintType)
     where
         isAIPK (Primary isAI) = isAI
-        isAIPK _              = False  
+        isAIPK _              = False
 
 -- | Create the PostgreSQL parser.
 postgreSQLParser :: Parser PostgreSQL
@@ -78,25 +78,26 @@ parsePostgreSQLColConstTypeFunc parser constraint =
 {- |
     Custom function for PostgreSQL for the creation of a table.
     The difference with the default implementation is that a PRIMARY KEY of
-    type Integer with an AUTOINCREMENT constraints get translated as a "Serial".
+    type Integer with an AUTOINCREMENT constraints get translated as a "serial".
 -}
-parsePostgreSqlColCreateFunc :: T.TableParser a -> Column a -> String
-parsePostgreSqlColCreateFunc parser col =
-        parseCols (col^.colDataType) (col^.colConstraints)        
+parsePostgreSqlColCreateFunc :: T.TableParser a -> ColWrap a -> String
+parsePostgreSqlColCreateFunc parser (ColWrap col) =
+        parseCols (DataTypeWrap $ col^.colDataType) (col^.colConstraints)        
     where
-        parseCols (Just Integer) (Just colConsts) =
+        parseCols (DataTypeWrap Integer) colConsts@(_:_) =
             if hasAutoIncrement colConsts
             then cName ++ " serial"  ++ consts colConsts
             else cName ++ " integer" ++ consts colConsts 
-        parseCols colType colConsts = concat $ catMaybes
-            [
-              Just cName
-            , fmap (\x -> " " ++ (parser^.T.parseDataType) x) colType
-            , fmap consts                                     colConsts
+        parseCols colType colConsts = concat
+            [ cName
+            , " " ++ (parser^.T.parseDataType) colType
+            , consts colConsts
             ]
+        
         cName = parser^.T.quoteElem $ col^.colName
-        consts cs =
-            " " ++ intercalate ", " (map (parser ^. T.parseColConst) cs) 
+        
+        consts [] = ""
+        consts cs = " " ++ intercalate ", " (map (parser ^. T.parseColConst) cs) 
 
 -- Public.
 
@@ -104,5 +105,5 @@ parsePostgreSqlColCreateFunc parser col =
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: ToStmt a Statement => a PostgreSQL -> String
+parse :: ToStmt (a PostgreSQL) (Statement PostgreSQL) => a PostgreSQL -> String
 parse = (postgreSQLParser^.parseStmt).statement  

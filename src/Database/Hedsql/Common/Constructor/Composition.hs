@@ -26,7 +26,7 @@ module Database.Hedsql.Common.Constructor.Composition
 import Database.Hedsql.Common.Constructor.TablesManipulation
 import Database.Hedsql.Common.DataStructure hiding (Add)
 
-import Control.Lens (ASetter, set)
+import Control.Lens (ASetter, (^.), set)
 
 --------------------------------------------------------------------------------
 -- PRIVATE
@@ -58,25 +58,22 @@ class Add a b where
         -> a c -- ^ Target returned with the added element.
 
 -- | Add one constraint to a column.
-instance Add Column ColConstraint where
-    addElem target el = setMaybe colConstraints target [el]
+instance Add ColWrap ColConstraint where
+    addElem (ColWrap target) el = ColWrap $ set colConstraints [el] target
 
 -- | Add constraints to a column.
-instance Add Column ColConstraints where
-    addElem cols (ColConstraints cs)= setMaybe colConstraints cols cs
+instance Add ColWrap ColConstraints where
+    addElem (ColWrap cols) (ColConstraints cs) =
+        ColWrap $ set colConstraints cs cols
 
 -- | Add a column constraint type to a column.
-instance Add Column ColConstraintType where
+instance Add ColWrap ColConstraintType where
     addElem target el = addElem target $ colConstraint "" el
 
 -- | Add a column constraint types to a column.
-instance Add Column ColConstraintTypes where
+instance Add ColWrap ColConstraintTypes where
     addElem target (ColConstraintTypes els) =
         addElem target $ ColConstraints $ map (colConstraint "") els
-
--- | Specify the SQL data type of a column.
-instance Add Column SqlDataType where
-    addElem = setMaybe colDataType
 
 -- | Add a WHERE part to a DELETE query.
 instance Add Delete Where where
@@ -95,24 +92,24 @@ instance Add OrderBy Offset where
     addElem = setMaybe partOrderByOffset
 
 -- | Add a FROM part to a SELECT query.
-instance Add Select From where
-    addElem = setMaybe fromClause
+instance Add (Select a) From where
+    addElem s f = set (selectBody . fromClause) (Just f) s
 
 -- | Add a GROUP BY part to a SELECT query.
-instance Add Select GroupBy where
-    addElem = setMaybe groupByClause
+instance Add (Select a) GroupBy where
+    addElem s g = set (selectBody . groupByClause) (Just g) s
 
 -- | Add an ORDER BY part to a SELECT query.
-instance Add Select OrderBy where
-    addElem = setMaybe orderByClause
+instance Add (Select a) OrderBy where
+    addElem s o = set (selectBody . orderByClause) (Just o) s
 
 -- | Add a WHERE part to a SELECT query.
-instance Add Select Where where
-    addElem = setMaybe whereClause
+instance Add (Select a) Where where
+    addElem s w = set (selectBody . whereClause) (Just w) s
 
 -- | Add a table constraint to a CREATE TABLE statement.
 instance Add Table TableConstraint where
-    addElem target el = setMaybe tableConstraints target [el]
+    addElem target el = set tableConsts [el] target
 
 -- | Add a WHERE part to an UPDATE query.
 instance Add Update Where where
@@ -164,9 +161,6 @@ instance ToAddable (Offset a) (Offset a) where
 instance ToAddable (OrderBy a) (OrderBy a) where
     toConvertible = id
 
-instance ToAddable (SqlDataType a) (SqlDataType a) where
-    toConvertible = id
-
 instance ToAddable (Table a) (Table a) where
     toConvertible = id
 
@@ -181,7 +175,7 @@ instance ToAddable (Where a) (Where a) where
 --------------------------------------------------------------------------------
 
 {-|
-Allow to easily add optional elements to data types using the '/++' infix
+Allow to easily add optional elements to data types using the @ /++ @ infix
 function.
 
 For example, if you wish to add an ORDER BY clause to a SELECT query you can do

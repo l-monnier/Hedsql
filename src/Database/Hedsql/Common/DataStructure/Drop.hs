@@ -13,24 +13,28 @@ DROP statements data type definitions.
 -}
 module Database.Hedsql.Common.DataStructure.Drop where
 
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
 import Database.Hedsql.Common.DataStructure.Select
 
 import Control.Lens
 
--- Private functions.
-
--- Public functions.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 -- | DROP TABLE statement.
 data DropTable a = DropTable
     { _dropTableIfExistsParam :: Bool
     , _dropTableTable         :: Table a
-    } deriving (Show)
+    }
 
 -- | DROP VIEW statement.
 data DropView a = DropView
     { _dropViewName :: [Char]
-    } deriving (Show)
+    }
 
 -- Make the lenses.
 makeLenses ''DropTable

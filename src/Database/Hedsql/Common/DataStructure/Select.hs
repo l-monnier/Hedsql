@@ -1,4 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE GADTs                #-}
 
 {-|
 Module      : Database/Hedsql/Commun/DataStructure/Select.hs
@@ -18,39 +20,13 @@ module Database.Hedsql.Common.DataStructure.Select where
 -- IMPORTS
 --------------------------------------------------------------------------------
 
+import Database.Hedsql.Drivers.MariaDB.Driver
+
 import Control.Lens
 
 --------------------------------------------------------------------------------
 -- PUBLIC
 --------------------------------------------------------------------------------
-
-----------------------------------------
--- Values
-----------------------------------------
-
--- | SQL data types.
-data SqlDataType a =
-     Boolean
-   | Date
-   -- Character types
-   | Char Int
-   | Varchar Int
-   -- Numeric types
-   | SmallInt -- ^ 2 bytes integer - range from -32768 to +32767.
-   | Integer  -- ^ 4 bytes integer - range from -2147483648 to +2147483647.
-   | BigInt   -- ^ 8 bytes integer -
-              --   range from -9223372036854775808 to +9223372036854775807. 
-     deriving (Show)
-
--- | SQL values.
-data SqlValue a =
-      SqlValueBool Bool
-    | SqlValueDefault
-    | SqlValueInt Int
-    | SqlValueNull
-    | SqlValueString String
-    | Placeholder
-      deriving (Show)
 
 ----------------------------------------
 -- View
@@ -59,8 +35,8 @@ data SqlValue a =
 -- | CREATE VIEW query.
 data CreateView a = CreateView
     { _viewName   :: String
-    , _viewSelect :: Select a
-    } deriving (Show)
+    , _viewSelect :: SelectWrap a
+    }
 
 ----------------------------------------
 -- Tables
@@ -72,113 +48,196 @@ a table join or a sub-query.
 Table references are usually used in FROM clauses or joins.
 -}
 data TableRef a =
-      LateralTableRef (Select a)        (TableRefAs a)
-    | SelectTableRef  (Select a)        (TableRefAs a)
-    | TableJoinRef    (Join a)   (Maybe (TableRefAs a))
-    | TableTableRef   (Table a)  (Maybe (TableRefAs a))
-      deriving (Show)
+      LateralTableRef  (SelectWrap a) (TableRefAs a)
+    | SelectTableRef   (SelectWrap a) (TableRefAs a)
+    | TableJoinRef     (Join a)       (Maybe (TableRefAs a))
+    | TableTableRef    (Table a)      (Maybe (TableRefAs a))
 
 -- | Table reference (table or join) alias. 
 data TableRefAs a = TableRefAs
     { _tableRefAliasName    ::  String
     , _tableRefAliasColumns :: [String]
-    } deriving (Show)
+    }
 
 -- | Table definition.
 data Table a = Table
-    { _tableIfNotExists :: Bool -- ^ If true the IF NOT EXISTS clause is added
-    , _tableName        :: String
-    , _tableCols        :: [Column a]
-    , _tableConstraints :: Maybe [TableConstraint a]
-    } deriving (Show)
+    { _tableIfNotExists :: Bool                -- ^ If true the IF NOT EXISTS
+                                               --   clause is added.
+    , _tableName        :: String              -- ^ Table name.                               
+    , _tableCols        :: [ColWrap a]         -- ^ Table columns.
+    , _tableConsts      :: [TableConstraint a] -- ^ Table constraints.
+    }
 
 -- | Table constraints to be used in CREATE statement.
 data TableConstraint a = TableConstraint
     { _tableConstraintName       :: Maybe String
     , _tableConstraintConstraint :: TableConstraintType a
     , _tableConstraintTiming     :: Maybe (ConstraintTiming a)
-    } deriving (Show)
+    }
 
 -- | Table constraints types used in CREATE statement.
 data TableConstraintType a =
-      ForeignKey [Column a] (ForeignKeyClause a)
-    | TableConstraintPrimaryKey [Column a]
-    | TableConstraintUnique [Column a]
-    | TableConstraintCheck (Condition a)
-      deriving (Show)
+      ForeignKey                [ColWrap a]         (ForeignKeyClause a)
+    | TableConstraintPrimaryKey [ColWrap a ]
+    | TableConstraintUnique     [ColWrap a]
+    | TableConstraintCheck      (Expression Bool a)
 
 -- | Foreign key clause to be used in a table constraint of a CREATE statement.
 data ForeignKeyClause a = ForeignKeyClause
     { _foreignKeyClauseTable  :: Table a
-    , _foreignKeyClauseCols   :: [Column a]
+    , _foreignKeyClauseCols   :: [ColWrap a]
     , _foreignKeyMatch        :: Maybe (Match a)
     , _foreignKeyClauseAction :: Maybe (OnAction a)
-    } deriving (Show)
+    }
 
 -- | Foreign key match type.
 data Match a =
       Full
     | Partial
     | Simple
-      deriving (Show)
       
 -- | Timing of a constraint.
 data ConstraintTiming a = ConstraintTiming
     { _constraintTimingType  :: ConstraintTimingType a
     , _constraintTimingCheck :: ConstraintTimingCheck a
-    } deriving (Show)
+    }
 
 -- | Type of a timing constraint.
 data ConstraintTimingType a =
       Deferable
     | NotDeferable
-      deriving (Show)
 
 -- | Timing of a timing constraint.
 data ConstraintTimingCheck a =
       InitiallyImmediate
     | InitiallyDeferred
-      deriving (Show)
-      
--- | Column definition used for data queries such as SELECT queries.
-data Column a = Column
-    { _colName        :: String
-    , _colDataType    :: Maybe (SqlDataType a)
-    , _colConstraints :: Maybe [ColConstraint a]
-    } deriving (Show)
 
 -- | Constraint on a column.
 data ColConstraint a = ColConstraint
     { _colConstraintName :: Maybe String
     , _colConstraintType :: ColConstraintType a
-    } deriving (Show)
+    }
 
 -- | Column constraints types.
-data ColConstraintType a =
-      Check     (Condition a)
+data ColConstraintType a where
     -- TODO: | Collate
-    | Default   (Expression a)
-    | NotNull
-    | Null
-    | Primary   Bool  -- ^ Primary key.
-                      --   If true, the primary key will have an AUTOINCREMENT.
-    | Reference (Table a) (Column a) (Maybe (OnAction a)) -- ^ Foreign key.
-    | Unique
-      deriving (Show)
+    
+    Check   :: Expression Bool a -> ColConstraintType a
+    
+    -- TODO: their should be a way to constraint the type of a column to the
+    --       one of the DEFAULT expression.
+    Default :: Expression b a    -> ColConstraintType a
+    NotNull ::                      ColConstraintType a
+    Null    ::                      ColConstraintType a
+    
+    -- ^ Primary key. 
+    Primary ::
+           Bool                 -- ^ If true, the primary key will have an
+                                --   AUTOINCREMENT.
+        -> ColConstraintType a 
+    
+    -- ^ Foreign key.     
+    Reference ::
+           Table a
+        -> ColWrap a
+        -> Maybe (OnAction a)
+        -> ColConstraintType a
+    
+    Unique :: ColConstraintType a
+
+-- | Column definition used for data queries such as SELECT queries.
+data Column b a = Column
+    { _colName        :: String
+    , _colDataType    :: DataType b a
+    , _colConstraints :: [ColConstraint a]
+    }
+
+-- | SQL data types.
+data DataType b a where
+    Bool :: DataType Bool a
+     
+    -- Types related to time.
+    Date :: DataType a Time
+   
+    -- Textual types.
+    Char    :: Int -> DataType Text a
+    Varchar :: Int -> DataType Text a
+    
+    -- Numeric types.
+    SmallInt :: DataType Numeric a -- ^ 2 bytes integer
+                                   --   - range from -32768 to +32767.
+    Integer  :: DataType Numeric a -- ^ 4 bytes integer
+                                   --   - range from -2147483648 to +2147483647.
+    BigInt   :: DataType Numeric a -- ^ 8 bytes integer -
+                                   --   - range from -9223372036854775808
+                                   --   to +9223372036854775807.
+    
+    -- Undefined type.                               
+    Undef :: DataType Undefined a
+                                   
+data DataTypeWrap a where
+    DataTypeWrap :: DataType b a -> DataTypeWrap a
+
+-- | Column wrapper "hiding" the types of different columns.
+data ColWrap a where
+    ColWrap :: Column b a -> ColWrap a
+
+colName :: Lens' (Column b a) String
+colName = lens _colName (\col name -> col {_colName = name})
+
+colConstraints :: Lens' (Column b a) [ColConstraint a]
+colConstraints =
+        lens _colConstraints (\col consts -> col {_colConstraints = consts})  
+
+colDataType :: Lens' (Column b a) (DataType b a)
+colDataType = lens _colDataType (\col dType -> col {_colDataType = dType})
+
+colWrapName :: Lens' (ColWrap a ) String
+colWrapName =
+    lens getter setter
+    where
+        getter (ColWrap col) = _colName col
+        setter (ColWrap col) name = ColWrap $ col {_colName = name}
+
+colWrapConstraints :: Lens' (ColWrap a) [ColConstraint a]
+colWrapConstraints =
+    lens getter setter
+    where
+        getter (ColWrap col) = _colConstraints col
+        setter (ColWrap col) name = ColWrap $ col {_colConstraints = name}
+
+colWrapDataType :: Lens' (ColWrap a) (DataTypeWrap a)
+colWrapDataType =
+    lens getter setter
+    where
+        getter (ColWrap col) = DataTypeWrap $ _colDataType col
+        setter (ColWrap col) (DataTypeWrap dType) =
+            ColWrap $ col {_colDataType = dType}
+
+{-|
+Column definition, which includes a reference to a table for qualified
+table names.
+-}
+data ColDef b a = ColDef
+    { _colExpr           :: (Column b a)
+    , _colExprTableLabel :: Maybe (TableRef a) -- ^ Qualified column name.
+    }
 
 {-|
 Generic definition of a column reference used in the SELECT clause of the query.
 -}
-data ColRef a = ColRef
-    { _colRefExpr  :: Expression a
+data ColRef b a = ColRef
+    { _colRefExpr  :: Expression b a
     , _colRefLabel :: Maybe String
-    } deriving (Show)
+    }
+
+data ColRefWrap a where
+    ColRefWrap :: ColRef b a -> ColRefWrap a
 
 -- | Actions to be performed on foreign keys.
 data OnAction a =
       OnDelete (SqlAction a)
     | OnUpdate (SqlAction a)
-      deriving (Show)
 
 -- | Action to perform when an entry in a table is updated or deleted.
 data SqlAction a =
@@ -187,7 +246,6 @@ data SqlAction a =
     | Restrict
     | SetDefault
     | SetNull
-      deriving (Show) 
 
 ----------------------------------------
 -- Expression
@@ -201,44 +259,282 @@ An expression can either be:
 - a select query
 - a value.
 -}
-data Expression a =
-      ColExpr
-          { _colExpr           :: (Column a)
-          , _colExprTableLabel :: Maybe (TableRef a) -- ^ Qualified column name.
-          }
-    | CondExpr   (Condition a)
-    | FuncExpr   (Function a)
-    | SelectExpr (Select a)
-    | ValueExpr  (SqlValue a)
-    | ValueExprs [SqlValue a]
-      deriving (Show)
+data Expression b a where
+    
+    -- Values
+    Value       :: Value b a   -> Expression b a
+    Values      :: [Value b a] -> Expression [b] a
+    
+    -- Column
+    ColExpr     :: ColDef b a -> Expression b a
+    
+    {-|
+    * sign. Note: as it is not possible to know the number of columns returned,
+    it is assumed that many are.
+    -} 
+    Joker       :: Expression Undefineds a
+    
+    -- Select
+    SelectExpr :: Select b a -> Expression b a
+    
+    -- Conditions
+    And         :: [Expression Bool a] -> Expression Bool a
+    Or          :: [Expression Bool a] -> Expression Bool a
+    
+    -- Functions
+    -- - Boolean functions
+    -- ^ BETWEEN. Note: it can also apply for textual values.
+    Between ::
+            ColRef b a
+         -> ColRef b a
+         -> ColRef b a
+         -> Expression Bool a
+         
+    -- ^ EXISTS.
+    Exists :: ColRef b a -> Expression Bool a                      
+    
+    -- ^ IS FALSE.
+    IsFalse :: ColRef Bool a -> Expression Bool a                     
+    
+    -- ^ IS NOT FALSE.
+    IsNotFalse :: ColRef Bool a -> Expression Bool a                      
+    
+    -- ^ IS NOT NULL.
+    IsNotNull :: ColRef b a -> Expression Bool a                      
+    
+    -- ^ IS NOT TRUE.
+    IsNotTrue :: ColRef Bool a -> Expression Bool a 
+    
+    -- ^ IS NOT UNKNOWN
+    IsNotUnknown :: ColRef b a -> Expression Bool a                      
+    
+    -- ^ IS NULL.
+    IsNull :: ColRef b a -> Expression Bool a
+    
+    -- ^ IS TRUE.
+    IsTrue :: ColRef Bool a -> Expression Bool a
+    
+    -- ^ IS UNKNOWN
+    IsUnknown :: ColRef b a -> Expression Bool a
+    
+    -- ^ BETWEEN. Note: it can also apply for textual values.                     
+    NotBetween ::
+            ColRef b a
+         -> ColRef b a
+         -> ColRef b a
+         -> Expression Bool a
+    
+    -- ^ Equality ("=") operator.
+    Equal :: ColRef b a -> ColRef b a ->Expression Bool a           
+    
+    -- ^ Greater than (">") operator.
+    GreaterThan :: ColRef b a -> ColRef b a ->Expression Bool a
+    
+    -- ^ Greater than or equal to (">=") operator.         
+    GreaterThanOrEqTo :: ColRef b a -> ColRef b a ->Expression Bool a          
+    
+    -- ^ IN. Note: it can be any types but no arrays.
+    In :: ColRef b a -> ColRef b a -> Expression Bool a     
+    
+    -- ^ IS DISTINCT FROM.
+    IsDistinctFrom  :: ColRef b a -> ColRef b a -> Expression Bool a          
+    
+    -- ^ IS NOT DISTINCT FROM.
+    IsNotDistinctFrom :: ColRef b a -> ColRef b a -> Expression Bool a
+    
+    -- ^ LIKE.
+    Like :: ColRef Text a -> ColRef Text a -> Expression Bool a            
+    
+    -- ^ Unequality ("<>") operator.
+    NotEqual :: ColRef b a -> ColRef b a -> Expression Bool a           
+    
+    -- ^ NOT IN. Note: it can be any types but no arrays.
+    NotIn :: ColRef b a -> ColRef b a -> Expression Bool a        
+    
+    -- ^ Smaller than ("<") operator.
+    SmallerThan :: ColRef b a -> ColRef b a -> Expression Bool a
+              
+    -- ^ Smaller than or equal to ("<=") operator.
+    SmallerThanOrEqTo ::
+           SQLOrd b 
+        => ColRef b a
+        -> ColRef b a
+        -> Expression Bool a
+    
+    -- - Numeric functions
+    -- | Addition ("+") operator.
+    Add ::                      
+           ColRef Numeric a
+        -> ColRef Numeric a
+        -> Expression Numeric a
+    
+    -- | Bitwise AND ("&") operator.
+    BitAnd :: 
+           ColRef Numeric a
+        -> ColRef Numeric a
+        -> Expression Numeric a
+    
+    -- | Bitwise OR ("|") operator.
+    BitOr ::
+           ColRef Numeric a
+        -> ColRef Numeric a
+        -> Expression Numeric a
+    
+    -- | Bitwise shift left  ("<<") operator.
+    BitShiftLeft  ::
+           ColRef Numeric a
+        -> ColRef Numeric a
+        -> Expression Numeric a
+    
+    -- | Bitwise shift right  (">>") operator.
+    BitShiftRight ::
+           ColRef Numeric a
+        -> ColRef Numeric a
+        -> Expression Numeric a
+    
+    -- | Division ("/") operator.
+    Divide ::                      
+           ColRef Numeric a
+        -> ColRef Numeric a
+        -> Expression Numeric a
+    
+    -- | Modulo - remainer - ("%") operator.        
+    Modulo ::                      
+           ColRef Numeric a
+        -> ColRef Numeric a
+        -> Expression Numeric a                       
+    
+    -- | "*" Multiplication operator.
+    Multiply ::
+           ColRef Numeric a
+        -> ColRef Numeric a
+        -> Expression Numeric a 
+    
+    -- | Subtraction "-" operator.
+    Substract ::
+           ColRef Numeric a
+        -> ColRef Numeric a
+        -> Expression Numeric a 
+    
+    -- | COUNT function.
+    Count :: ColRef b a -> Expression Numeric a
+    
+    -- | MAX function. Note: it can also operates on strings in SQL.
+    Max :: ColRef b a -> Expression b a
+    
+    -- | MIN function. Note: it can also operates on strings in SQL.
+    Min :: ColRef b a -> Expression b a
+    
+    -- | SUM function.
+    Sum :: ColRef Numeric a -> Expression Numeric a
+    
+    -- | RANDOM number function.
+    Random :: Expression Numeric a
+    
+    -- - Date functions.
+    CurrentDate :: Expression Time a
+    
+    -- MariaDB specific functions.
+    CalcFoundRows :: Expression MariaDB Void
+    FoundRows     :: Expression MariaDB Numeric
+
+-- | Expression wrapper "hiding" the types of an expression.
+data ExprWrap a where
+    ExprWrap :: Expression b a -> ExprWrap a
+
+----------------------------------------
+-- VALUES
+----------------------------------------
+
+data Value b a where
+    BoolVal     :: Bool             -> Value Bool a
+    IntVal      :: Int              -> Value Numeric a
+    StringVal   :: String           -> Value Text a
+    DefaultVal  ::                     Value b a
+    NullVal     ::                     Value Undefined a
+    Placeholder ::                     Value b a
+
+data ValueWrap a where
+    ValueWrap :: Value b a -> ValueWrap a
+
+-- | Numeric value (integer, float, double, etc.)    
+data Numeric = Numeric
+
+-- | Types related to time (date, datetime, timestamps, etc.)
+data Time = Time
+
+-- | Textual values (strings).
+data Text = Text
+
+-- | Value for which no type is defined (typically a NULL value).
+data Undefined = Undefined
+
+-- | List of undefined values used for SELECT queries.
+data Undefineds = Undefineds
+
+-- | No value returned by an expression.
+data Void = Void
+
+-- | Types which can be ordered in SQL.
+class SQLOrd a where
+instance SQLOrd Bool where
+instance SQLOrd Numeric where
+instance SQLOrd Text where
+instance SQLOrd Time where
+
+-- | Types which can be used as PRIMARY key or for an UNIQUE constraint.
+class Uniq a where
+instance Uniq Numeric where
+instance Uniq Text where
+instance Uniq Time where
+
+-- | Note: NULL values can be compared in SQL...
+instance SQLOrd Undefined where
 
 ----------------------------------------
 -- SELECT
 ----------------------------------------
 
 -- | SELECT query.
-data Select a = Select
-    { _selectColRef  :: [ColRef a]
-    , _selectType    :: Maybe (SelectType a)
+data Select b a where
+    TSelect :: ColRef b a -> SelectBody a -> Select b a
+    USelect :: [ColRefWrap a] -> SelectBody a -> Select Undefineds a
+
+getSelectColRefs :: Select b a -> [ColRefWrap a]
+getSelectColRefs (TSelect col _)  = [ColRefWrap col]
+getSelectColRefs (USelect cols _) = cols
+
+selectBody :: Lens' (Select b a) (SelectBody a)
+selectBody =
+    lens getter setter
+    where
+        getter (TSelect _ body) = body
+        getter (USelect _ body) = body
+        
+        setter (TSelect col _)  body = TSelect col  body
+        setter (USelect cols _) body = USelect cols body
+
+-- | Select wrapper.
+data SelectWrap a where
+    SelectWrap :: Select b a -> SelectWrap a
+
+-- | "Body" of a select query: all the clauses except the columns' selection.
+data SelectBody a = SelectBody
+    { _selectType    :: Maybe (SelectType a)
     , _fromClause    :: Maybe (From a)
     , _whereClause   :: Maybe (Where a)
     , _groupByClause :: Maybe (GroupBy a)
     , _orderByClause :: Maybe (OrderBy a)
-} deriving (Show)
+    }
 
 -- | Type of SELECT query (ALL or DISTINCT).
 data SelectType a =
-      All
-   |  Distinct
-   |  DistinctOn [Expression a]
-      deriving (Show)
-
+     All
+   | Distinct
+   | DistinctOn [ColRefWrap a]
 
 -- | FROM part of a query.
-data From a =
-    From [TableRef a]
-    deriving (Show)
+data From a = From [TableRef a]
 
 {-|
 A JOIN between two tables.
@@ -258,13 +554,12 @@ data Join a =
     , _joinColumnTable1 :: TableRef a
     , _joinColumnTable2 :: TableRef a
     , _joinColumnClause :: JoinClause a
-    } deriving (Show)
+    }
 
 -- | JOIN clause: ON or USING.
 data JoinClause a =
-      JoinClauseOn (Condition a)
-    | JoinClauseUsing [Column a]
-      deriving (Show)
+      JoinClauseOn    (Expression Bool a)
+    | JoinClauseUsing [ColWrap a]
 
 -- | JOIN on columns.
 data JoinTypeCol a =
@@ -272,7 +567,6 @@ data JoinTypeCol a =
     | LeftJoin
     | InnerJoin
     | RightJoin
-      deriving (Show)
 
 -- | JOIN on tables.
 data JoinTypeTable a =
@@ -281,43 +575,31 @@ data JoinTypeTable a =
     | NaturalLeftJoin
     | NaturalRightJoin
     | NaturalFullJoin
-      deriving (Show)
 
 -- | LIMIT clause.
 data Limit a = Limit
     { _limitVal :: Int
-    } deriving (Show)
+    }
 
 {- |
 WHERE part of the query consisting of a condition. A can be single predicate or
 an AND or OR list of conditions.
 -}
-data Where a =
-    Where (Condition a)
-    deriving (Show)
-
--- | SQL Condition.
-data Condition a =
-      FuncCond (FuncBool  a)
-    | And      [Condition a]
-    | Or       [Condition a]
-      deriving (Show)
+data Where a = Where (Expression Bool a)
 
 -- | GROUP BY clause.
 data GroupBy a = GroupBy
-    { _groupByCols   :: [ColRef a]
+    { _groupByCols :: [ColRefWrap a]
     , _groupByHaving :: Maybe (Having a)
-    } deriving (Show)
+    }
 
 -- | HAVING clause.
-data Having a =
-    Having (Condition a)
-    deriving (Show)
+data Having a = Having (Expression Bool a)
 
 -- | OFFSET clause.
 data Offset a = Offset
     { offsetVal :: Int
-    } deriving (Show)
+    }
 
 {- |
 ORDER BY query part.
@@ -331,129 +613,54 @@ data OrderBy a = OrderBy
     { _partOrderByColumns :: [SortRef a]
     , _partOrderByLimit   :: Maybe (Limit a)
     , _partOrderByOffset  :: Maybe (Offset a)
-    } deriving (Show)
+    }
 
 -- | NULLS FIRST and NULLS LAST parameters for sorting.
 data SortNulls a =
       NullsFirst
     | NullsLast
-      deriving (Show)
 
 -- | Sorting order.
 data SortOrder a =
       Asc
     | Desc
-      deriving (Show)
 
 -- | Defines how a given column has to be sorted.
 data SortRef a = SortRef
-    { _sortRefCol   :: ColRef a
-    , _sortRefOrder :: Maybe (SortOrder a)
-    , _sortRefNulls :: Maybe (SortNulls a)
-    } deriving (Show)
+    { _sortRefColRefs :: ColRefWrap a         -- ^ Sorted column references.
+    , _sortRefOrder   :: Maybe (SortOrder a)  -- ^ Order (ASC or DESC).
+    , _sortRefNulls   :: Maybe (SortNulls a)  -- ^ NULL values first or last.
+    }
 
 -- | Combined query such as UNION.
 data CombinedQuery a =
-      Single       (Select a)
+      Single       (SelectWrap a)
     | Except       [CombinedQuery a]
     | ExceptAll    [CombinedQuery a]
     | Intersect    [CombinedQuery a]
     | IntersectAll [CombinedQuery a]
     | Union        [CombinedQuery a]
     | UnionAll     [CombinedQuery a]
-      deriving (Show)
-
-----------------------------------------
--- Functions
-----------------------------------------
-
-data Function a =
-    -- Operators.
-      Add           (ColRef a) (ColRef a) -- ^ Addition ("+") operator.
-    | BitAnd        (ColRef a) (ColRef a) -- ^ Bitwise AND ("&") operator.
-    | BitOr         (ColRef a) (ColRef a) -- ^ Bitwise OR ("|") operator.
-    | BitShiftLeft  (ColRef a) (ColRef a) -- ^ Bitwise shift left  ("<<")
-                                          --   operator.
-    | BitShiftRight (ColRef a) (ColRef a) -- ^ Bitwise shift right  (">>")
-                                          --   operator.
-    | Divide        (ColRef a) (ColRef a) -- ^ Division ("/") operator.
-    | Modulo        (ColRef a) (ColRef a) -- ^ Modulo - remainer - ("%")
-                                          --   operator.
-    | Multiply      (ColRef a) (ColRef a) -- ^ "*" Multiplication operator.
-    | Substract     (ColRef a) (ColRef a) -- ^ Subtraction "-" operator.
-
-    -- Functions.
-    
-    -- Basic functions.
-    
-    | Count       (Expression a)
-    | CurrentDate
-    | Max         (Expression a)
-    | Min         (Expression a)
-    | Joker                       -- ^ TODO: have it somewhere else,
-                                  -- since it is a colref!
-    | Random
-    | Sum         (Expression a)
-    
-    -- MariaDB specific functions.
-    
-    | CalcFoundRows
-    | FoundRows
-      deriving (Show)
-
-{-|
-Functions returning TRUE or FALSE.
-
-Note: boolean values themselves are not condisered as part of those functions.
-They are considered as values.
-Therefore, it is not possible to write statements such as "TRUE IS TRUE".
--}
-data FuncBool a =
-      Between           (ColRef a) (ColRef a) (ColRef a) -- ^ BETWEEN
-    | Exists            (ColRef a)                       -- ^ EXISTS
-    | IsFalse           (ColRef a)                       -- ^ IS FALSE
-    | IsNotFalse        (ColRef a)                       -- ^ IS NOT FALSE
-    | IsNotNull         (ColRef a)                       -- ^ IS NOT NULL
-    | IsNotTrue         (ColRef a)                       -- ^ IS NOT TRUE
-    | IsNotUnknown      (ColRef a)                       -- ^ IS NOT UNKNOWN
-    | IsNull            (ColRef a)                       -- ^ IS NULL
-    | IsTrue            (ColRef a)                       -- ^ IS TRUE
-    | IsUnknown         (ColRef a)                       -- ^ IS UNKNOWN
-    | NotBetween        (ColRef a) (ColRef a) (ColRef a) -- ^ NOT BETWEEN
-    | Equal             (ColRef a) (ColRef a)            -- ^ =
-    | GreaterThan       (ColRef a) (ColRef a)            -- ^ \>
-    | GreaterThanOrEqTo (ColRef a) (ColRef a)            -- ^ \>=
-    | In                (ColRef a) (ColRef a)            -- ^ IN
-    | IsDistinctFrom    (ColRef a) (ColRef a)            -- ^ IS DISTINCT FROM
-    | IsNotDistinctFrom (ColRef a) (ColRef a)            -- ^ IS NOT DISTINCT
-                                                         --   FROM
-    | Like              (ColRef a) (ColRef a)            -- ^ LIKE
-    | NotEqual          (ColRef a) (ColRef a)            -- ^ <>
-    | NotIn             (ColRef a) (ColRef a)            -- ^ NOT IN
-    | SmallerThan       (ColRef a) (ColRef a)            -- ^ <
-    | SmallerThanOrEqTo (ColRef a) (ColRef a)            -- ^ \<=
-    deriving (Show)
 
 ----------------------------------------
 -- Lenses
 ----------------------------------------
 
+makeLenses ''ColConstraint
+makeLenses ''ColDef
+makeLenses ''ColRef
+makeLenses ''CreateView
+makeLenses ''From
 makeLenses ''GroupBy
 makeLenses ''Join
-makeLenses ''From
 makeLenses ''OrderBy
 makeLenses ''Where
-makeLenses ''ColConstraint
-makeLenses ''ColRef
-makeLenses ''Column
-makeLenses ''Expression
 makeLenses ''Limit
 makeLenses ''Offset
-makeLenses ''Select
 makeLenses ''SortRef
 makeLenses ''Table
 makeLenses ''TableConstraint
 makeLenses ''TableRefAs
 makeLenses ''ConstraintTiming
-makeLenses ''CreateView
 makeLenses ''ForeignKeyClause
+makeLenses ''SelectBody

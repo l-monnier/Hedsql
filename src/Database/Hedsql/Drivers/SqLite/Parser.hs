@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs            #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 {-|
@@ -24,31 +25,30 @@ import qualified Database.Hedsql.Common.Parser.TableManipulations as T
 
 import Control.Lens
 
+import Data.Char
+
 -- Private.
 
 -- | Parse SqLite data types.
-sqLiteDataTypeFunc :: SqlDataType SqLite -> String
-sqLiteDataTypeFunc Boolean       = "BOOLEAN"
-sqLiteDataTypeFunc Date          = "DATE"
-sqLiteDataTypeFunc (Char lenght) = "CHARACTER(" ++ show lenght ++ ")"
-sqLiteDataTypeFunc SmallInt      = "SMALLINT"
-sqLiteDataTypeFunc Integer       = "INTEGER"
-sqLiteDataTypeFunc BigInt        = "BIGINT"
-sqLiteDataTypeFunc (Varchar mx)  = "VARCHAR(" ++ show mx ++ ")"
+sqLiteDataTypeFunc :: DataTypeWrap SqLite -> String
+sqLiteDataTypeFunc dataType =
+    case dataType of
+        DataTypeWrap (Char lenght) -> "CHARACTER(" ++ show lenght ++ ")"
+        _                          -> map toUpper $ T.parseDataTypeFunc dataType
 
 {-|
 Parse a SqLite value.
 Booleans in Sqlite are represented bynumeric values only (0 or 1).
 -}
-sqLiteParseValueFunc :: QueryParser SqLite -> SqlValue SqLite -> String
-sqLiteParseValueFunc _      (SqlValueBool True)  = "1"
-sqLiteParseValueFunc _      (SqlValueBool False) = "0"
-sqLiteParseValueFunc parser val                  = parseValueFunc parser val
+sqLiteParseValueFunc :: QueryParser SqLite -> ValueWrap SqLite -> String
+sqLiteParseValueFunc _ (ValueWrap (BoolVal True))  = "1"
+sqLiteParseValueFunc _ (ValueWrap (BoolVal False)) = "0"
+sqLiteParseValueFunc parser val = parseValueFunc parser val
 
 -- | Create the SqLite function parser.
-sqLiteFuncFunc :: Function SqLite -> String
-sqLiteFuncFunc CurrentDate = "Date('now')"
-sqLiteFuncFunc func        = parseFuncFunc sqLiteQueryParser func
+sqLiteExprFunc :: ExprWrap SqLite -> String
+sqLiteExprFunc (ExprWrap CurrentDate) = "Date('now')"
+sqLiteExprFunc e = parseExprFunc sqLiteQueryParser sqLiteStmtParser e
 
 -- | Create the SqLite table manipulations parser.
 sqLiteTableParser :: T.TableParser SqLite
@@ -58,14 +58,17 @@ sqLiteTableParser =
 
 -- | Create the SqLite parser.
 sqLiteParser :: Parser SqLite
-sqLiteParser = getParser $ getStmtParser sqLiteQueryParser sqLiteTableParser
+sqLiteParser = getParser sqLiteStmtParser
     
 -- | Create the SqLite query parser.
 sqLiteQueryParser :: QueryParser SqLite
 sqLiteQueryParser =
     getQueryParser sqLiteQueryParser sqLiteTableParser
-        & parseFunc  .~ sqLiteFuncFunc
+        & parseExpr .~ sqLiteExprFunc
         & parseValue .~ sqLiteParseValueFunc sqLiteQueryParser
+
+sqLiteStmtParser :: StmtParser SqLite
+sqLiteStmtParser = getStmtParser sqLiteQueryParser sqLiteTableParser
 
 -- Public.
 
@@ -73,5 +76,5 @@ sqLiteQueryParser =
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: ToStmt a Statement => a SqLite -> String
+parse :: ToStmt (a SqLite) (Statement SqLite) => a SqLite -> String
 parse = (sqLiteParser^.parseStmt).statement

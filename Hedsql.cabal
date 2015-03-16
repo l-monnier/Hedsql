@@ -25,7 +25,8 @@ library
   build-depends:    
                     base,
                     lens,
-                    template-haskell
+                    template-haskell,
+                    fclabels
   other-modules:    
                     Database.Hedsql.Common.Constructor,
                     Database.Hedsql.Common.Constructor.Columns,
@@ -39,6 +40,7 @@ library
                     Database.Hedsql.Common.Constructor.TablesManipulation,
                     Database.Hedsql.Common.Constructor.Types,
                     Database.Hedsql.Common.Constructor.Values,
+                    Database.Hedsql.Common.Constructor.Wrapper,
                     Database.Hedsql.Common.DataStructure,
                     Database.Hedsql.Common.DataStructure.Delete,
                     Database.Hedsql.Common.DataStructure.Drop,

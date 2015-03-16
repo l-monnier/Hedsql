@@ -1,6 +1,7 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-} 
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-} 
 
 {-|
 Module      : Database/Hedsql/Common/Constructor/Statements.hs
@@ -23,41 +24,44 @@ import Database.Hedsql.Common.DataStructure
 
 -- private functions.
 
-class ToStmt a b where
-    toStmt :: a c -> b c
+class ToStmt a b | a -> b where
+    toStmt :: a -> b
 
-instance ToStmt Table Statement where
+instance ToStmt (Table a) (Statement a) where
     toStmt = CreateTableStmt
 
-instance ToStmt CombinedQuery Statement where
+instance ToStmt (CombinedQuery a) (Statement a) where
     toStmt = CombinedQueryStmt
 
-instance ToStmt CreateView Statement where
+instance ToStmt (CreateView a) (Statement a) where
     toStmt = CreateViewStmt
 
-instance ToStmt Delete Statement where
+instance ToStmt (Delete a) (Statement a) where
     toStmt = DeleteStmt
 
-instance ToStmt DropTable Statement where
+instance ToStmt (DropTable a) (Statement a) where
     toStmt = DropTableStmt
 
-instance ToStmt DropView Statement where
+instance ToStmt (DropView a) (Statement a) where
     toStmt = DropViewStmt
 
-instance ToStmt Insert Statement where
+instance ToStmt (Insert a) (Statement a) where
     toStmt = InsertStmt
 
-instance ToStmt Select Statement where
+instance ToStmt (Select b a) (Statement a) where
+    toStmt = SelectStmt . SelectWrap
+
+instance ToStmt (SelectWrap a) (Statement a) where
     toStmt = SelectStmt
     
-instance ToStmt Update Statement where
+instance ToStmt (Update a) (Statement a) where
     toStmt = UpdateStmt
 
 -- public functions.
 
 -- | Create a statement.
-statement :: ToStmt a Statement => a b -> Statement b
+statement :: ToStmt a (Statement b) => a -> Statement b
 statement = toStmt
 
-statements :: ToStmt a Statement => [a b] -> [Statement b]
+statements :: ToStmt a (Statement b) => [a] -> [Statement b]
 statements = map statement

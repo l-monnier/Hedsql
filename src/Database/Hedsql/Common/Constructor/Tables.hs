@@ -43,7 +43,7 @@ class ToTables a b | a -> b where
 
 -- | Create a table from its name.
 instance ToTables (SqlString a) [Table a] where
-    toTables name = [Table False name [] Nothing]
+    toTables name = [Table False name [] []]
 
 -- | Create a table from itself.
 instance ToTables (Table a) [Table a] where
@@ -58,7 +58,7 @@ instance ToTables (TableRef a) [Table a] where
     toTables ref =
         case ref of
             TableTableRef t _ -> [t]
-            _                 -> [Table False (getTableRefName ref) [] Nothing]
+            _                 -> [Table False (getTableRefName ref) [] []]
 
 -- | Coerce a given type to a list of TableRef.
 class ToTableRefs a b | a -> b where

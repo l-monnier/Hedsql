@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {-|
@@ -20,7 +21,6 @@ module Database.Hedsql.Common.Parser.TableManipulations
     , parseColCreate
     , parseColConst
     , parseColConstType
-    , parseCondition
     , parseConstTiming
     , parseConstTimingCheck
     , parseConstTimingType
@@ -61,7 +61,13 @@ import Control.Lens
 import Data.List (intercalate)
 import Data.Maybe (catMaybes)
 
--- Definition of the parsers interfaces.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
+
+----------------------------------------
+-- Parsers interfaces
+----------------------------------------
 
 {-|
 Function parser interface.
@@ -71,31 +77,30 @@ Those functions have their own parser.
 -}
 data TableParser a = TableParser
     {
-      _parseAction           :: SqlAction             a -> String
-    , _parseCol              :: Column                a -> String
-    , _parseColCreate        :: Column                a -> String
-    , _parseColConst         :: ColConstraint         a -> String
-    , _parseColConstType     :: ColConstraintType     a -> String
-    , _parseCondition        :: Condition             a -> String
-    , _parseConstTiming      :: ConstraintTiming      a -> String
-    , _parseConstTimingCheck :: ConstraintTimingCheck a -> String
-    , _parseConstTimingType  :: ConstraintTimingType  a -> String
-    , _parseCreateTable      :: Table                 a -> String
-    , _parseCreateView       :: CreateView            a -> String
-    , _parseDataType         :: SqlDataType           a -> String
-    , _parseExpr             :: Expression            a -> String
-    , _parseFkClause         :: ForeignKeyClause      a -> String
-    , _parseMatchClause      :: Match                 a -> String
-    , _parseOnAction         :: OnAction              a -> String
-    , _parseTableConst       :: TableConstraint       a -> String
-    , _parseTableConstType   :: TableConstraintType   a -> String
-    , _parseSelect           :: Select                a -> String
-    , _parseTable            :: Table                 a -> String
+      _parseAction           :: SqlAction             a      -> String
+    , _parseCol              :: ColWrap               a      -> String
+    , _parseColCreate        :: ColWrap               a      -> String
+    , _parseColConst         :: ColConstraint         a      -> String
+    , _parseColConstType     :: ColConstraintType     a      -> String
+    , _parseConstTiming      :: ConstraintTiming      a      -> String
+    , _parseConstTimingCheck :: ConstraintTimingCheck a      -> String
+    , _parseConstTimingType  :: ConstraintTimingType  a      -> String
+    , _parseCreateTable      :: Table                 a      -> String
+    , _parseCreateView       :: CreateView            a      -> String
+    , _parseDataType         :: DataTypeWrap          a      -> String
+    , _parseExpr             :: ExprWrap              a      -> String
+    , _parseFkClause         :: ForeignKeyClause      a      -> String
+    , _parseMatchClause      :: Match                 a      -> String
+    , _parseOnAction         :: OnAction              a      -> String
+    , _parseTableConst       :: TableConstraint       a      -> String
+    , _parseTableConstType   :: TableConstraintType   a      -> String
+    , _parseSelect           :: SelectWrap            a      -> String
+    , _parseTable            :: Table                 a      -> String
     
     -- Helper functions.
     , _quoteElem :: String -> String
     }
-    
+
 makeLenses ''TableParser
 
 -- Helpers functions.
@@ -111,26 +116,32 @@ parseActionFunc SetDefault = "SET DEFAULT"
 parseActionFunc SetNull    = "SET NULL"
 
 -- | Parse a column which can be used for a CREATE statement.
-parseColCreateFunc :: TableParser a -> Column a -> String
-parseColCreateFunc parser col = concat $ catMaybes
-    [ Just $ parser^.quoteElem                        $ col^.colName
-    , fmap   (\x -> " " ++ (parser^.parseDataType) x) $ col^.colDataType
-    , fmap   consts                                   $ col^.colConstraints
+parseColCreateFunc :: TableParser a -> ColWrap a -> String
+parseColCreateFunc parser col = concat
+    [ _quoteElem parser             $ col^.colWrapName
+    , " " ++ (parser^.parseDataType) (col^.colWrapDataType)
+    , consts                        $ col^.colWrapConstraints
     ]
     where
+        consts []   = ""
         consts cols =
-            " " ++ intercalate ", " (map (parser ^. parseColConst) cols)
+            " " ++ intercalate ", " (map (_parseColConst parser) cols)
 
 -- | Parse a column constraint type.
 parseColConstTypeFunc :: TableParser a -> ColConstraintType a -> String
 parseColConstTypeFunc parser cst =
     case cst of
-        (Check condition)-> 
-            "CHECK (" ++ (parser^.parseCondition) condition ++ ")"
+        (Check condition) -> 
+            "CHECK (" ++ (parser^.parseExpr) (ExprWrap condition) ++ ")"
     
-        (Default expr)   -> "DEFAULT(" ++ (parser^.parseExpr) expr ++ ")"
-        NotNull          -> "NOT NULL"
-        Null             -> "NULL"
+        (Default expr) ->
+            "DEFAULT(" ++ (parser^.parseExpr) (ExprWrap expr) ++ ")"
+        
+        NotNull ->
+            "NOT NULL"
+        
+        Null ->
+            "NULL"
     
         (Primary isAuto)  ->
             "PRIMARY KEY" ++ auto isAuto
@@ -142,7 +153,7 @@ parseColConstTypeFunc parser cst =
             [ "REFERENCES "
             , (parser^.parseTable) table
             , "("
-            , (parser^.quoteElem) (col^.colName)
+            , (_quoteElem parser) (col^.colWrapName)
             , ")"
             , makeAction action
             ]
@@ -150,7 +161,8 @@ parseColConstTypeFunc parser cst =
                 makeAction (Just act) = " " ++ (parser^.parseOnAction) act
                 makeAction Nothing = ""
          
-        Unique -> "UNIQUE"
+        Unique ->
+            "UNIQUE"
 
 -- | Parse a column constraint.
 parseColConstFunc :: TableParser a -> ColConstraint a -> String
@@ -159,14 +171,14 @@ parseColConstFunc parser colConstraint =
     ++ (parser^.parseColConstType) (colConstraint^.colConstraintType)
         where
             parseName (Just name) =    "CONSTRAINT " 
-                                    ++ (parser^.quoteElem) name
+                                    ++ (_quoteElem parser) name
                                     ++ " "
             parseName  Nothing    = ""
         
 -- | Parse a timing constraint.
 parseConstTimingFunc :: TableParser a -> ConstraintTiming  a -> String
 parseConstTimingFunc parser timing =
-       (parser^.parseConstTimingType)  (timing^.constraintTimingType)
+       (_parseConstTimingType parser)  (timing^.constraintTimingType)
     ++ " "
     ++ (parser^.parseConstTimingCheck) (timing^.constraintTimingCheck)
 
@@ -189,32 +201,34 @@ parseCreateTableFunc parser stmt = concat
     , parser^.parseTable $ stmt
     , " ("
     , intercalate ", " $ map (parser^.parseColCreate) (stmt^.tableCols)
-    , constraints (stmt^.tableConstraints)
+    , constraints (stmt^.tableConsts)
     , ")"
     ]
     where
-        constraints (Just consts) =
-            ", " ++ intercalate ", " (map (parser^.parseTableConst) consts)
-        constraints Nothing = ""
+        constraints [] = ""
+        constraints xs =
+            ", " ++ intercalate ", " (map (parser^.parseTableConst) xs)
+        
 
 -- | Create a CREATE VIEW statement.
 parseCreateViewFunc :: TableParser a -> CreateView a -> String
 parseCreateViewFunc parser stmt = concat
     [ "CREATE VIEW "
-    , parser^.quoteElem $ stmt^.viewName
+    , _quoteElem parser $ stmt^.viewName
     , " AS "
     , parser^.parseSelect $ stmt^.viewSelect
     ]
 
 -- | Parse SQL data types.
-parseDataTypeFunc :: SqlDataType a -> String
-parseDataTypeFunc  Boolean      = "boolean"
-parseDataTypeFunc  Date         = "date"
-parseDataTypeFunc (Char lenght) = "char(" ++ show lenght ++ ")"
-parseDataTypeFunc  SmallInt     = "smallint"
-parseDataTypeFunc  Integer      = "integer"
-parseDataTypeFunc  BigInt       = "bigint"
-parseDataTypeFunc (Varchar mx)  = "varchar(" ++ show mx ++ ")"
+parseDataTypeFunc :: DataTypeWrap a -> String
+parseDataTypeFunc (DataTypeWrap Bool)           = "boolean"
+parseDataTypeFunc (DataTypeWrap Date)           = "date"
+parseDataTypeFunc (DataTypeWrap (Char lenght))  = "char(" ++ show lenght ++ ")"
+parseDataTypeFunc (DataTypeWrap SmallInt)       = "smallint"
+parseDataTypeFunc (DataTypeWrap Integer)        = "integer"
+parseDataTypeFunc (DataTypeWrap BigInt)         = "bigint"
+parseDataTypeFunc (DataTypeWrap (Varchar max')) = "varchar(" ++ show max' ++ ")"
+parseDataTypeFunc (DataTypeWrap Undef)          = ""
 
 -- | Parse a FOREIGN KEY clause.
 parseFkClauseFunc :: TableParser a -> ForeignKeyClause a -> String
@@ -225,7 +239,7 @@ parseFkClauseFunc parser fk =
         , intercalate ", " $ map (parser^.parseCol) (fk^.foreignKeyClauseCols)
         , ")"
         , makeMatch  $ fk^.foreignKeyMatch
-        , makeAction $ fk^.foreignKeyClauseAction
+        , makeAction $ _foreignKeyClauseAction fk
         ]
         where
             makeMatch (Just match) = " " ++ (parser^.parseMatchClause) match
@@ -255,8 +269,8 @@ parseTableConstFunc parser table = concat $ catMaybes
     ]
     where
         -- TODO: check if constraints name can be quoted.
-        parseName name = "CONSTRAINT " ++ (parser^.quoteElem) name ++ " "
-        parseTiming timing = " " ++ (parser^.parseConstTiming) timing
+        parseName name = "CONSTRAINT " ++ (_quoteElem parser) name ++ " "
+        parseTiming timing = " " ++ (_parseConstTiming parser) timing
         
 -- | Parse a table constraint type.
 parseTableConstTypeFunc :: TableParser a -> TableConstraintType a -> String
@@ -264,7 +278,7 @@ parseTableConstTypeFunc parser cond =
     case cond of
         (TableConstraintCheck condition) -> concat
             [ "CHECK ("
-            , (parser^.parseCondition) condition
+            , (parser^.parseExpr) (ExprWrap condition)
             , ")"
             ]
     
@@ -272,7 +286,7 @@ parseTableConstTypeFunc parser cond =
             [ "FOREIGN KEY ("
             , parseCols cols
             , ")" 
-            , parser^.parseFkClause $ clause
+            , _parseFkClause parser $ clause
             ]
     
         (TableConstraintPrimaryKey cols) -> concat
@@ -287,4 +301,4 @@ parseTableConstTypeFunc parser cond =
             , ")"
             ]
     where
-        parseCols cols = intercalate ", " $ map (parser^.parseCol) cols      
+        parseCols cols = intercalate ", " $ map (parser^.parseCol) cols   

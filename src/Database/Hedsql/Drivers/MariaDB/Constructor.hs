@@ -20,9 +20,9 @@ import Database.Hedsql.Drivers.MariaDB.Driver
 -- Public.
 
 -- | SQL_CALC_FOUND_ROWS function.
-calcFoundRows :: Function MariaDB
+calcFoundRows :: Expression MariaDB Void
 calcFoundRows = CalcFoundRows
 
 -- | FOUND_ROWS function.
-foundRows :: Function MariaDB
+foundRows :: Expression MariaDB Numeric
 foundRows = FoundRows

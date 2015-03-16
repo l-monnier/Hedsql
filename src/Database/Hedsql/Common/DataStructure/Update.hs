@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 {-|
@@ -28,17 +29,15 @@ import Control.Lens
 {-|
 A value assigned to a column (used in the SET clause of an UPDATE statement).
 -}
-data Assignment a = Assignment
-    { _assignmentCol :: Column a
-    , _assignmentVal :: Expression a
-    } deriving (Show)
+data Assignment a where
+    Assignment :: Column b a -> Expression b a -> Assignment a
 
 -- | UPDATE query.
 data Update a = Update
-    { _updateTable :: Table a
+    { _updateTable       :: Table a
     , _updateAssignments :: [Assignment a]
-    , _updateWherePart :: Maybe (Where a)
-    } deriving (Show)
+    , _updateWherePart   :: Maybe (Where a)
+    }
 
 -- Make the lenses.
 makeLenses ''Assignment
