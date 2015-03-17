@@ -17,14 +17,15 @@ Constructor functions for values which can then be used in queries.
 -}
 module Database.Hedsql.Common.Constructor.Values
     ( 
-      -- * Values constructors
-      (/?)
-    , null
-    
-      -- * To value converters
-    , ToSqlValues
+      -- * Generic constructors
+      ToSqlValues
+    , (/?)
     , value
     , values
+    
+      -- * Specific constructors
+    , intVal
+    , null
     ) where
 
 --------------------------------------------------------------------------------
@@ -76,13 +77,13 @@ instance ToSqlValues [SqlInt a] [Value Numeric a] where
 -- PUBLIC
 --------------------------------------------------------------------------------
 
+---------------------------------------
+-- Generic constructors
+---------------------------------------
+
 -- | Create a placeholder "?" for a prepared statement.
 (/?) :: Value b a
 (/?) = Placeholder
-
--- | Create a NULL value.
-null :: Value Undefined a
-null = NullVal
 
 {-|
 Convert a primitive value so it can be used in SQL queries as "raw" values.
@@ -96,3 +97,15 @@ as "raw" values.
 -}
 values :: ToSqlValues a [Value b c] => a -> [Value b c]
 values = toSqlValues
+
+---------------------------------------
+-- Specific constructors
+---------------------------------------
+
+-- | Create an integer value.
+intVal :: Int -> Value Numeric a
+intVal = IntVal
+
+-- | Create a NULL value.
+null :: Value Undefined a
+null = NullVal

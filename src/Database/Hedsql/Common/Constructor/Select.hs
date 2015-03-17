@@ -16,9 +16,9 @@ Constructor functions for SQL SELECT queries.
 -}
 module Database.Hedsql.Common.Constructor.Select
     (
-      -- * SELECT part     
-      select
-    , select'
+      -- * SELECT part
+      SelectConstr  
+    , select
     , selectDistinct
     , isDistinctFrom
     , isNotDistinctFrom
@@ -196,44 +196,51 @@ toJoinClause = head.toJoinClauses
 -- SELECT
 ----------------------------------------
 
+type SqlString' b a = String
 
-select' :: ToColRefs a [ColRef b c] => a -> Select b c
-select' a =
-    TSelect (head $ colRefs a) body
-    where
-        body =
-            SelectBody
-                Nothing
-                Nothing
-                Nothing
-                Nothing
-                Nothing
+emptyBody :: SelectBody a
+emptyBody =
+    SelectBody
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
 
--- | Create a SELECT query.
-select :: [ColRefWrap a] -> Select Undefineds a
-select cs =
-    USelect cs body
-    where
-        body =
-            SelectBody
-                Nothing
-                Nothing
-                Nothing
-                Nothing
-                Nothing
+class SelectConstr a b | a -> b where
+    -- | Create a SELECT query.
+    select :: a -> b
+    
+instance SelectConstr (SqlString' b a) (Select Undefined a) where
+    select s = USelect (ColRefWrap $ colRef s) emptyBody
+
+instance SelectConstr [SqlString' b a] (Select Undefineds a) where
+    select ss = UsSelect (map (ColRefWrap . colRef) ss) emptyBody
+
+instance SelectConstr (ColRefWrap a) (Select Undefined a) where
+    select c = USelect c emptyBody
+
+instance SelectConstr [ColRefWrap a] (Select Undefineds a) where
+    select cs = UsSelect cs emptyBody
+
+instance SelectConstr (Column b a) (Select b a) where
+    select c = TSelect (colRef c) emptyBody
+
+instance SelectConstr [Column b a] (Select [b] a) where
+    select cs = TsSelect (colRefs cs) emptyBody
+
+instance SelectConstr (ColRef b a) (Select b a) where
+    select c = TSelect c emptyBody
+
+instance SelectConstr [ColRef b a] (Select [b] a) where
+    select cs = TsSelect cs emptyBody
+
+instance SelectConstr (Expression b a) (Select b a) where
+    select c = TSelect (colRef c) emptyBody
 
 -- | Create a SELECT DISTINCT query.
-selectDistinct :: [ColRefWrap a] -> Select Undefineds a
-selectDistinct cs =
-    USelect cs body
-    where
-        body =
-            SelectBody
-                (Just Distinct)
-                Nothing
-                Nothing
-                Nothing
-                Nothing
+selectDistinct :: SelectConstr a (Select c b) => a -> Select c b
+selectDistinct = set (selectBody . selectType) (Just Distinct) . select
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::

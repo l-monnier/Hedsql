@@ -497,22 +497,30 @@ instance SQLOrd Undefined where
 
 -- | SELECT query.
 data Select b a where
-    TSelect :: ColRef b a -> SelectBody a -> Select b a
-    USelect :: [ColRefWrap a] -> SelectBody a -> Select Undefineds a
+    TSelect  :: ColRef b a     -> SelectBody a -> Select b a
+    TsSelect :: [ColRef b a]   -> SelectBody a -> Select [b] a
+    USelect  :: ColRefWrap a   -> SelectBody a -> Select Undefined a
+    UsSelect :: [ColRefWrap a] -> SelectBody a -> Select Undefineds a
 
 getSelectColRefs :: Select b a -> [ColRefWrap a]
-getSelectColRefs (TSelect col _)  = [ColRefWrap col]
-getSelectColRefs (USelect cols _) = cols
+getSelectColRefs (TSelect  col  _) = [ColRefWrap col]
+getSelectColRefs (TsSelect cols _) = map ColRefWrap cols
+getSelectColRefs (USelect  col  _) = [col]
+getSelectColRefs (UsSelect cols _) = cols
 
 selectBody :: Lens' (Select b a) (SelectBody a)
 selectBody =
     lens getter setter
     where
-        getter (TSelect _ body) = body
-        getter (USelect _ body) = body
+        getter (TSelect  _ body) = body
+        getter (TsSelect _ body) = body
+        getter (USelect  _ body) = body
+        getter (UsSelect _ body) = body
         
-        setter (TSelect col _)  body = TSelect col  body
-        setter (USelect cols _) body = USelect cols body
+        setter (TSelect  col  _) body = TSelect  col  body
+        setter (TsSelect cols _) body = TsSelect cols body
+        setter (USelect  col  _) body = USelect  col  body
+        setter (UsSelect cols _) body = UsSelect cols body
 
 -- | Select wrapper.
 data SelectWrap a where

@@ -17,8 +17,11 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     , selectDistinctOn
     ) where
     
+import Database.Hedsql.Common.Constructor.Select
 import Database.Hedsql.Common.DataStructure
 import Database.Hedsql.Drivers.PostgreSQL.Driver
+
+import Control.Lens (set)
 
 -- Public.
 
@@ -39,16 +42,9 @@ lateral s a = LateralTableRef s $ TableRefAs a []
 
 -- | Create a SELECT DISTINCT ON query.
 selectDistinctOn ::
-       [ColRefWrap PostgreSQL]      -- ^ Distinct expression.
-    -> [ColRefWrap PostgreSQL]      -- ^ Select clause.
-    -> Select Undefineds PostgreSQL -- ^ Select query.
-selectDistinctOn distinctExpr selectExpr =
-    USelect selectExpr body
-    where
-        body =
-            SelectBody
-                (Just $ DistinctOn distinctExpr)
-                Nothing
-                Nothing
-                Nothing
-                Nothing
+       SelectConstr a (Select c PostgreSQL)
+    => [ColRefWrap PostgreSQL]              -- ^ Distinct expression.
+    -> a                                    -- ^ Select clause.
+    -> Select c PostgreSQL                  -- ^ Select query.
+selectDistinctOn distinctExpr =
+    set (selectBody . selectType) (Just $ DistinctOn distinctExpr) . select 

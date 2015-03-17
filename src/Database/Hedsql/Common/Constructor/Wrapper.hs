@@ -22,12 +22,14 @@ way with always the same function call.
 -}
 module Database.Hedsql.Common.Constructor.Wrapper
     ( wrap
+    , wrapColRef
     ) where
 
 --------------------------------------------------------------------------------
 -- IMPORTS
 --------------------------------------------------------------------------------
 
+import Database.Hedsql.Common.Constructor.Columns
 import Database.Hedsql.Common.DataStructure
 
 --------------------------------------------------------------------------------
@@ -48,3 +50,7 @@ instance Wrapper Select SelectWrap where
     
 instance Wrapper Value ValueWrap where
     wrap = ValueWrap
+
+-- | Create a column reference and wrap it, so it can be used in lists.
+wrapColRef :: ToColRefs a [ColRef b c] => a -> ColRefWrap c    
+wrapColRef = ColRefWrap . colRef
