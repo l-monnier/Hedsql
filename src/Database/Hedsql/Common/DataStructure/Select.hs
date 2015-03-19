@@ -469,9 +469,6 @@ data Text = Text
 -- | Value for which no type is defined (typically a NULL value).
 data Undefined = Undefined
 
--- | List of undefined values used for SELECT queries.
-data Undefineds = Undefineds
-
 -- | No value returned by an expression.
 data Void = Void
 

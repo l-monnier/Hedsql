@@ -23,7 +23,6 @@ module Database.Hedsql.Common.Constructor.Select
     , isDistinctFrom
     , isNotDistinctFrom
     , (//*)
-    , alias
     
       -- * FROM part
     , from    

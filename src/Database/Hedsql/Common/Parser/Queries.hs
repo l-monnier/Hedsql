@@ -441,29 +441,29 @@ parseExprFunc parser stmtParser (ExprWrap expr) =
         
         -- Operators.
         Add left right ->
-            parseInfix "+" (ColRefWrap left) (ColRefWrap right)
-        BitAnd left right -> parseInfix "&" (ColRefWrap left) (ColRefWrap right)
-        BitOr left right -> parseInfix "|" (ColRefWrap left) (ColRefWrap right)
+            parseOp "+" (ColRefWrap left) (ColRefWrap right)
+        BitAnd left right -> parseOp "&" (ColRefWrap left) (ColRefWrap right)
+        BitOr left right -> parseOp "|" (ColRefWrap left) (ColRefWrap right)
         BitShiftLeft  left right ->
-            parseInfix "<<" (ColRefWrap left) (ColRefWrap right)
+            parseOp "<<" (ColRefWrap left) (ColRefWrap right)
         BitShiftRight left right ->
-            parseInfix ">>" (ColRefWrap left) (ColRefWrap right)
+            parseOp ">>" (ColRefWrap left) (ColRefWrap right)
         Divide left right ->
-            parseInfix "/" (ColRefWrap left) (ColRefWrap right)
+            parseOp "/" (ColRefWrap left) (ColRefWrap right)
         Modulo left right ->
-            parseInfix "%" (ColRefWrap left) (ColRefWrap right)
+            parseOp "%" (ColRefWrap left) (ColRefWrap right)
         Multiply left right ->
-            parseInfix "*" (ColRefWrap left) (ColRefWrap right)
+            parseOp "*" (ColRefWrap left) (ColRefWrap right)
         Substract left right ->
-            parseInfix "-" (ColRefWrap left) (ColRefWrap right) 
+            parseOp "-" (ColRefWrap left) (ColRefWrap right) 
     
         -- Functions.
         Count       e -> makeExpr "COUNT" (ColRefWrap e)
-        CurrentDate      -> "CURRENT_DATE"
-        Joker            -> "*"
+        CurrentDate   -> "CURRENT_DATE"
+        Joker         -> "*"
         Max         e -> makeExpr "MAX" (ColRefWrap e)
         Min         e -> makeExpr "MIN" (ColRefWrap e)
-        Random           -> "random()"
+        Random        -> "random()"
         Sum         e -> makeExpr "SUM" (ColRefWrap e)
         
         -- MariaDB functions.
@@ -486,6 +486,7 @@ parseExprFunc parser stmtParser (ExprWrap expr) =
                 , " AND "
                 , parser^.parseColRef $ higher
                 ]
+        
         parseInfix name colRef1 colRef2 =
             concat
                 [ parser^.parseColRef $ colRef1
@@ -494,12 +495,38 @@ parseExprFunc parser stmtParser (ExprWrap expr) =
                 , " "
                 , parser^.parseColRef $ colRef2
                 ]
+        
+        -- Parse an operator.
+        parseOp name colRef1 colRef2 =
+            concat [parsePart colRef1, " ", name, " ", parsePart colRef2]
+            where
+                parsePart c@(ColRefWrap cRef) =
+                    if isOperator $ ExprWrap $ cRef^.colRefExpr
+                    then "(" ++ (parser^.parseColRef) c ++ ")"
+                    else  parser^.parseColRef $ c
+        
+        -- Return True if an expression is an operator.
+        isOperator :: ExprWrap a -> Bool
+        isOperator (ExprWrap e) =
+            case e of
+                Add _ _           -> True
+                BitAnd _ _        -> True
+                BitOr _ _         -> True
+                BitShiftLeft  _ _ -> True
+                BitShiftRight _ _ -> True
+                Divide _ _        -> True
+                Modulo _ _        -> True
+                Multiply _ _      -> True
+                Substract _ _     -> True
+                _                 -> False
+        
         parseIs colRef text =
             concat
                 [ parser^.parseColRef $ colRef
                 , "IS "
                 , text
                 ]
+        
         makeExpr string colRef =
             string ++ ref
             where
