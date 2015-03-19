@@ -225,8 +225,8 @@ exists = Exists . colRef
 -- | Create an IN operator.
 in_ ::
     (
-      ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+      ToColRefs a [ColRef c   d]
+    , ToColRefs b [ColRef [c] d]
     )
     => a
     -> b
@@ -236,8 +236,8 @@ in_ colRef1 colRef2 = In (colRef colRef1) (colRef colRef2)
 -- | Create a NOT IN operator.
 notIn ::
     (
-      ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+      ToColRefs a [ColRef c   d]
+    , ToColRefs b [ColRef [c] d]
     )
     => a
     -> b

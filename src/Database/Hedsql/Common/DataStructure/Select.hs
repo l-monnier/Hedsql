@@ -272,7 +272,7 @@ data Expression b a where
     * sign. Note: as it is not possible to know the number of columns returned,
     it is assumed that many are.
     -} 
-    Joker       :: Expression Undefineds a
+    Joker       :: Expression [Undefined] a
     
     -- Select
     SelectExpr :: Select b a -> Expression b a
@@ -334,7 +334,7 @@ data Expression b a where
     GreaterThanOrEqTo :: ColRef b a -> ColRef b a ->Expression Bool a          
     
     -- ^ IN. Note: it can be any types but no arrays.
-    In :: ColRef b a -> ColRef b a -> Expression Bool a     
+    In :: ColRef b a -> ColRef [b] a -> Expression Bool a     
     
     -- ^ IS DISTINCT FROM.
     IsDistinctFrom  :: ColRef b a -> ColRef b a -> Expression Bool a          
@@ -349,7 +349,7 @@ data Expression b a where
     NotEqual :: ColRef b a -> ColRef b a -> Expression Bool a           
     
     -- ^ NOT IN. Note: it can be any types but no arrays.
-    NotIn :: ColRef b a -> ColRef b a -> Expression Bool a        
+    NotIn :: ColRef b a -> ColRef [b] a -> Expression Bool a        
     
     -- ^ Smaller than ("<") operator.
     SmallerThan :: ColRef b a -> ColRef b a -> Expression Bool a
@@ -497,10 +497,26 @@ instance SQLOrd Undefined where
 
 -- | SELECT query.
 data Select b a where
+
+    -- ^ Select a single column. The returned type is a list representation of
+    --   the type of that column. For example, if the column is a Numeric type
+    --   then the returned type "b" of the select is [Numeric].
     TSelect  :: ColRef b a     -> SelectBody a -> Select b a
-    TsSelect :: [ColRef b a]   -> SelectBody a -> Select [b] a
-    USelect  :: ColRefWrap a   -> SelectBody a -> Select Undefined a
-    UsSelect :: [ColRefWrap a] -> SelectBody a -> Select Undefineds a
+    
+    -- ^ Select multiple columns of the same type. The returned type of the
+    --   select  will be a list of list representation of the type of
+    --   the columns.
+    --   For example, if the columns are of type Numeric the return type "b"
+    --   will be [[Numeric]].
+    TsSelect :: [ColRef b a]   -> SelectBody a -> Select b a
+    
+    -- ^ Select a column of undefined type.
+    --   The returned type of the select will be [Undefined].
+    USelect  :: ColRefWrap a   -> SelectBody a -> Select [Undefined] a
+    
+    -- ^ Select multiple columns of different or undefined types.
+    --   The return type of the select will be [[Undefined]].
+    UsSelect :: [ColRefWrap a] -> SelectBody a -> Select [[Undefined]] a
 
 getSelectColRefs :: Select b a -> [ColRefWrap a]
 getSelectColRefs (TSelect  col  _) = [ColRefWrap col]

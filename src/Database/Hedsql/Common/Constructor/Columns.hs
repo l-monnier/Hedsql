@@ -17,6 +17,7 @@ Constructor functions for columns references which can then be used in queries.
 module Database.Hedsql.Common.Constructor.Columns
     ( ToCols
     , ToColRefs
+    , ToColRefWraps
     , (/.)
     , as_
     , col
@@ -25,6 +26,8 @@ module Database.Hedsql.Common.Constructor.Columns
     , toCols
     , colRef
     , colRefs
+    , colRefWrap
+    , colRefWraps
     , expr
     , exprs
     ) where
@@ -67,36 +70,91 @@ class ToColRefs a b | a -> b where
 instance ToColRefs (ColRef b a) [ColRef b a] where
     toColRefs ref = [ref]
 
+instance ToColRefs [ColRef b a] [ColRef b a] where
+    toColRefs = id
+
 instance ToColRefs (Column b a) [ColRef b a] where
     toColRefs a =
         [ColRef (ColExpr $ ColDef a Nothing) Nothing]
-
-instance ToColRefs (Expression b a) [ColRef b a] where
-    toColRefs e = [ColRef e Nothing]
-
-instance ToColRefs (Value b a) [ColRef b a] where
-    toColRefs val = [ColRef (Value val) Nothing]
-
-instance ToColRefs (SqlString a) [ColRef Undefined a] where
-    toColRefs name = [ColRef (ColExpr $ ColDef (toCol name) Nothing) Nothing]
-
-instance ToColRefs (Select b a) [ColRef b a] where
-    toColRefs query = [ColRef (SelectExpr query) Nothing]
-
-instance ToColRefs [ColRef b a] [ColRef b a] where
-    toColRefs = id
     
 instance ToColRefs [Column b a] [ColRef b a] where
     toColRefs = map (head.toColRefs)
 
+instance ToColRefs (Expression b a) [ColRef b a] where
+    toColRefs e = [ColRef e Nothing]
+
 instance ToColRefs [Expression b a] [ColRef b a] where
     toColRefs = map (head.toColRefs)
 
-instance ToColRefs [Value b a] [ColRef b a] where
+instance ToColRefs (Value b a) [ColRef b a] where
+    toColRefs val = [ColRef (Value val) Nothing]
+
+instance ToColRefs [Value b a] [ColRef [b] a] where
+    toColRefs vals = [ColRef (Values vals) Nothing]
+
+instance ToColRefs (SqlString a) [ColRef Undefined a] where
+    toColRefs name = [ColRef (ColExpr $ ColDef (toCol name) Nothing) Nothing]
+
+instance ToColRefs [SqlString a] [ColRef Undefined a] where
     toColRefs = map (head.toColRefs)
+
+instance ToColRefs (Select b a) [ColRef b a] where
+    toColRefs query = [ColRef (SelectExpr query) Nothing]
 
 instance ToColRefs [Select b a] [ColRef b a] where
     toColRefs = map (head.toColRefs)
+
+-- | Coerce a type to a list of ColRefWrap.
+class ToColRefWraps a b | a -> b where
+    toColRefWraps :: a -> b
+
+instance ToColRefWraps (ColRef b a) [ColRefWrap a] where
+    toColRefWraps = mkColRefWraps
+
+instance ToColRefWraps [ColRef b a] [ColRefWrap a] where
+    toColRefWraps = mkColRefWrap
+
+instance ToColRefWraps (Column b a) [ColRefWrap a] where
+    toColRefWraps = mkColRefWraps
+
+instance ToColRefWraps [Column b a] [ColRefWrap a] where
+    toColRefWraps = mkColRefWrap
+
+instance ToColRefWraps (Expression b a) [ColRefWrap a] where
+    toColRefWraps = mkColRefWraps
+
+instance ToColRefWraps [Expression b a] [ColRefWrap a] where
+    toColRefWraps = mkColRefWrap
+
+instance ToColRefWraps (Value b a) [ColRefWrap a] where
+    toColRefWraps = mkColRefWraps
+
+instance ToColRefWraps [Value b a] [ColRefWrap a] where
+    toColRefWraps = mkColRefWrap
+
+instance ToColRefWraps (SqlString a) [ColRefWrap a] where
+    toColRefWraps = mkColRefWraps
+
+instance ToColRefWraps [SqlString a] [ColRefWrap a] where
+    toColRefWraps = mkColRefWrap
+
+instance ToColRefWraps (Select b a) [ColRefWrap a] where
+    toColRefWraps = mkColRefWraps
+
+instance ToColRefWraps [Select b a] [ColRefWrap a] where
+    toColRefWraps = mkColRefWrap
+
+instance ToColRefWraps (ColRefWrap a) [ColRefWrap a] where
+    toColRefWraps a = [a]
+
+instance ToColRefWraps [ColRefWrap a] [ColRefWrap a] where
+    toColRefWraps = id
+
+mkColRefWrap :: ToColRefs a [ColRef c b] => a -> [ColRefWrap b]
+mkColRefWrap = map ColRefWrap . colRefs
+
+mkColRefWraps :: ToColRefs a [ColRef c b] => a -> [ColRefWrap b]
+mkColRefWraps c = [ColRefWrap $ colRef c]
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -146,6 +204,14 @@ colRef = head.toColRefs
 -- | Creates many column references which can then be used in SELECT clause.
 colRefs :: ToColRefs a [ColRef b c] => a -> [ColRef b c]
 colRefs = toColRefs
+
+-- | Create a column reference wrapper for heteregeneous lists.
+colRefWrap :: ToColRefWraps a [ColRefWrap b] => a -> ColRefWrap b
+colRefWrap = head . toColRefWraps
+
+-- | Creates many column references for heteregeneous lists.
+colRefWraps :: ToColRefWraps a [ColRefWrap b] => a -> [ColRefWrap b]
+colRefWraps = toColRefWraps
 
 {-|
 Create a SQL expression which can then be used in condition or column reference.

@@ -79,7 +79,8 @@ import Database.Hedsql.Common.Constructor.Tables
 import Database.Hedsql.Common.Constructor.Types
 import Database.Hedsql.Common.DataStructure
 
-import Control.Lens hiding (from)
+import Control.Lens hiding (coerce, from)
+import Unsafe.Coerce
 
 --------------------------------------------------------------------------------
 -- PRIVATE
@@ -123,11 +124,30 @@ instance ToJoinClauses [SqlString a] [JoinClause a] where
 class ToSortRefs a b | a -> b where
     toSortRefs :: a -> b
 
+instance ToSortRefs (Column b a) [SortRef a] where
+    toSortRefs c = [SortRef (ColRefWrap $ colRef c) Nothing Nothing]
+
+instance ToSortRefs [Column b a] [SortRef a] where
+    toSortRefs = map (\c -> SortRef (ColRefWrap $ colRef c) Nothing Nothing)
+
+instance ToSortRefs (ColWrap a) [SortRef a] where
+    toSortRefs (ColWrap c) = [SortRef (ColRefWrap $ colRef c) Nothing Nothing]
+
+instance ToSortRefs [ColWrap a] [SortRef a] where
+    toSortRefs =
+        map (\(ColWrap c) -> SortRef (ColRefWrap $ colRef c) Nothing Nothing)
+
 instance ToSortRefs (ColRef b a) [SortRef a] where
     toSortRefs ref = [SortRef (ColRefWrap ref) Nothing Nothing]
 
 instance ToSortRefs [ColRef b a] [SortRef a] where
     toSortRefs = map (\ref -> SortRef (ColRefWrap ref) Nothing Nothing)
+
+instance ToSortRefs (ColRefWrap a) [SortRef a] where
+    toSortRefs ref = [SortRef ref Nothing Nothing]
+
+instance ToSortRefs [ColRefWrap a] [SortRef a] where
+    toSortRefs = map (\ref -> SortRef ref Nothing Nothing)
 
 instance ToSortRefs (SqlString a) [SortRef a] where
     toSortRefs name = [SortRef (ColRefWrap $ colRef name) Nothing Nothing]
@@ -211,32 +231,63 @@ class SelectConstr a b | a -> b where
     -- | Create a SELECT query.
     select :: a -> b
     
-instance SelectConstr (SqlString' b a) (Select Undefined a) where
+instance SelectConstr (SqlString' b a) (Select [Undefined] a) where
     select s = USelect (ColRefWrap $ colRef s) emptyBody
 
-instance SelectConstr [SqlString' b a] (Select Undefineds a) where
+instance SelectConstr [SqlString' b a] (Select [[Undefined]] a) where
     select ss = UsSelect (map (ColRefWrap . colRef) ss) emptyBody
 
-instance SelectConstr (ColRefWrap a) (Select Undefined a) where
+instance SelectConstr (ColRefWrap a) (Select [Undefined] a) where
     select c = USelect c emptyBody
 
-instance SelectConstr [ColRefWrap a] (Select Undefineds a) where
+instance SelectConstr [ColRefWrap a] (Select [[Undefined]] a) where
     select cs = UsSelect cs emptyBody
 
-instance SelectConstr (Column b a) (Select b a) where
-    select c = TSelect (colRef c) emptyBody
+instance SelectConstr (Column b a) (Select [b] a) where
+    select c =
+        TSelect (colRef column) emptyBody
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            column :: Column [b] a
+            column = unsafeCoerce c
 
-instance SelectConstr [Column b a] (Select [b] a) where
-    select cs = TsSelect (colRefs cs) emptyBody
+instance SelectConstr [Column b a] (Select [[b]] a) where
+    select cs =
+        TsSelect (colRefs columns) emptyBody
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            columns :: [Column [[b]] a]
+            columns = unsafeCoerce cs
 
-instance SelectConstr (ColRef b a) (Select b a) where
-    select c = TSelect c emptyBody
+instance SelectConstr (ColWrap a) (Select [Undefined] a) where
+    select (ColWrap c) = USelect (ColRefWrap $ colRef c) emptyBody
 
-instance SelectConstr [ColRef b a] (Select [b] a) where
-    select cs = TsSelect cs emptyBody
+instance SelectConstr [ColWrap a] (Select [[Undefined]] a) where
+    select cs =
+        UsSelect (map (\(ColWrap c) -> ColRefWrap $ colRef c) cs) emptyBody
 
-instance SelectConstr (Expression b a) (Select b a) where
-    select c = TSelect (colRef c) emptyBody
+instance SelectConstr (ColRef b a) (Select [b] a) where
+    select c = TSelect cRef emptyBody
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            cRef :: ColRef [b] a
+            cRef = unsafeCoerce c
+
+instance SelectConstr [ColRef b a] (Select [[b]] a) where
+    select cs =
+        TsSelect cRefs emptyBody
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            cRefs :: [ColRef [[b]] a]
+            cRefs = unsafeCoerce cs
+
+instance SelectConstr (Expression b a) (Select [b] a) where
+    select c =
+        TSelect (colRef cRef) emptyBody
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            cRef :: Expression [b] a
+            cRef = unsafeCoerce c
 
 -- | Create a SELECT DISTINCT query.
 selectDistinct :: SelectConstr a (Select c b) => a -> Select c b
@@ -265,7 +316,7 @@ isNotDistinctFrom colRef1 colRef2 =
     IsNotDistinctFrom (colRef colRef1) (colRef colRef2)
 
 -- | Create a joker - "*" - character.
-(//*) :: Expression Undefineds a
+(//*) :: Expression [Undefined] a
 (//*) = Joker
 
 ----------------------------------------
@@ -453,8 +504,8 @@ nullsLast sRef =  set sortRefNulls (Just NullsLast) (sortRef sRef)
 ----------------------------------------
 
 -- | Create a GROUP BY clause.
-groupBy :: [ColRefWrap a] -> GroupBy a
-groupBy cs = GroupBy cs Nothing
+groupBy :: ToColRefWraps a [ColRefWrap b] => a -> GroupBy b
+groupBy cs = GroupBy (colRefWraps cs) Nothing
 
 -- | Add a HAVING clause to a GROUP BY clause.
 having :: ToConditions a [Expression Bool b] => a -> Having b

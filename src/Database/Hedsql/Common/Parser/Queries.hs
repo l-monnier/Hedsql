@@ -410,18 +410,18 @@ parseExprFunc parser stmtParser (ExprWrap expr) =
             parseInfix "IN" (ColRefWrap ref1) (ColRefWrap ref2)
         IsDistinctFrom    ref1 ref2 ->
             parseInfix "IS DISTINCT FROM" (ColRefWrap ref1) (ColRefWrap ref2)
-        IsFalse expr -> parseIs (ColRefWrap expr) "FALSE"
+        IsFalse e -> parseIs (ColRefWrap e) "FALSE"
         IsNotDistinctFrom ref1 ref2 -> parseInfix
                                             "IS NOT DISTINCT FROM"
                                             (ColRefWrap ref1)
                                             (ColRefWrap ref2)
-        IsNotFalse        expr      -> parseIs (ColRefWrap expr) "NOT FALSE"
-        IsNotNull         expr      -> parseIs (ColRefWrap expr) "NOT NULL"
-        IsNotTrue         expr      -> parseIs (ColRefWrap expr) "NOT TRUE"
-        IsNotUnknown      expr      -> parseIs (ColRefWrap expr) "NOT UNKNOWN"
-        IsNull            expr      -> parseIs (ColRefWrap expr) "NULL"
-        IsTrue            expr      -> parseIs (ColRefWrap expr) "TRUE"
-        IsUnknown         expr      -> parseIs (ColRefWrap expr) "UNKNOWN"
+        IsNotFalse        e      -> parseIs (ColRefWrap e) "NOT FALSE"
+        IsNotNull         e      -> parseIs (ColRefWrap e) "NOT NULL"
+        IsNotTrue         e      -> parseIs (ColRefWrap e) "NOT TRUE"
+        IsNotUnknown      e      -> parseIs (ColRefWrap e) "NOT UNKNOWN"
+        IsNull            e      -> parseIs (ColRefWrap e) "NULL"
+        IsTrue            e      -> parseIs (ColRefWrap e) "TRUE"
+        IsUnknown         e      -> parseIs (ColRefWrap e) "UNKNOWN"
         Like              ref1 ref2 ->
             parseInfix "LIKE" (ColRefWrap ref1) (ColRefWrap ref2)
         NotBetween ref lower higher ->
@@ -458,13 +458,13 @@ parseExprFunc parser stmtParser (ExprWrap expr) =
             parseInfix "-" (ColRefWrap left) (ColRefWrap right) 
     
         -- Functions.
-        Count       expr -> makeExpr "COUNT" (ColRefWrap expr)
+        Count       e -> makeExpr "COUNT" (ColRefWrap e)
         CurrentDate      -> "CURRENT_DATE"
         Joker            -> "*"
-        Max         expr -> makeExpr "MAX" (ColRefWrap expr)
-        Min         expr -> makeExpr "MIN" (ColRefWrap expr)
+        Max         e -> makeExpr "MAX" (ColRefWrap e)
+        Min         e -> makeExpr "MIN" (ColRefWrap e)
         Random           -> "random()"
-        Sum         expr -> makeExpr "SUM" (ColRefWrap expr)
+        Sum         e -> makeExpr "SUM" (ColRefWrap e)
         
         -- MariaDB functions.
         CalcFoundRows -> error
@@ -648,13 +648,20 @@ parseJoinClauseFunc :: QueryParser a -> JoinClause a -> String
 parseJoinClauseFunc parser jClause =
     case jClause of
         JoinClauseOn predicate ->
-            "ON " ++ (parser^.parseExpr) (ExprWrap predicate)
+            "ON " ++ encapsulate predicate (makeCond predicate)
         JoinClauseUsing cols ->
             concat
                 [ "USING ("
                 , intercalate ", " $ map (parser^.parseCol) cols
                 , ")"
                 ]
+     where
+        makeCond predicate = (parser^.parseExpr) $ ExprWrap predicate
+        
+        encapsulate :: Expression Bool a -> String -> String
+        encapsulate (And _) string = "(" ++ string ++ ")"
+        encapsulate (Or  _) string = "(" ++ string ++ ")"
+        encapsulate _       string = string
 
 -- | Parser a join on a column.
 parseJoinTColFunc :: JoinTypeCol a -> String
