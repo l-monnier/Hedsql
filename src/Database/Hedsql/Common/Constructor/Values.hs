@@ -28,12 +28,6 @@ module Database.Hedsql.Common.Constructor.Values
     , numVal
     , intVal
     , stringVal
-    , nBool
-    , nNum
-    , nFloat
-    , nDouble
-    , nInt
-    , nString
     
       -- * Generic constructors
     , ToSqlValues
@@ -49,10 +43,9 @@ module Database.Hedsql.Common.Constructor.Values
       Ideally, specific constructors should be rather used instead.
       -}
     , (/?)
+    , genVal
+    , genQVal
     , null
-    , undefStringVal
-    , undefBoolVal
-    , undefNumVal
     ) where
 
 --------------------------------------------------------------------------------
@@ -148,30 +141,6 @@ intVal = IntVal
 numVal :: (Show b, Num b) => b -> Value Numeric a
 numVal = NumericVal
 
--- | Create a NULL for a boolean value.
-nBool :: Value Bool a
-nBool = NullBool
-    
--- | Create a NULL for a numeric value.
-nNum :: Value Numeric a
-nNum = NullNum
-    
--- | Create a NULL for a floating number value.
-nFloat :: Value Float a
-nFloat = NullFloat
-
--- | Create a NULL for a double precision number value.
-nDouble :: Value Double a
-nDouble = NullDouble
-    
--- | Create a NULL for a integer value.
-nInt :: Value Int a
-nInt = NullInt
-    
--- | Create a NULL for a string value.
-nString :: Value String a
-nString = NullString
-
 ---------------------------------------
 -- Generic constructors
 ---------------------------------------
@@ -194,21 +163,32 @@ values = toSqlValues
 ---------------------------------------
 
 -- | Create a placeholder "?" of undefined type for a prepared statement.
-(/?) :: Value Undefined a
+(/?) :: Value b a
 (/?) = Placeholder
 
--- | Create a NULL value of undefined type.
-null :: Value Undefined a
+-- | Create a NULL value of generic type.
+null :: Value b a
 null = NullVal
 
--- | Value of undefined type for a string.
-undefStringVal :: String -> Value Undefined a
-undefStringVal = UndefStringVal
+{-|
+Value of generic type which can be used unquoted in a statement.
+Note: such value is used "as is". For example, if you write:
+> genVal True
+It's going to be parsed as follow:
+> True
+The above is problematic with SqLite since it accepts only 1 or 0.
+So, for this database you'ld need to write:
+> genVal 1
 
--- | Value of undefined type for booleans.. 
-undefBoolVal :: Bool -> Value Undefined a
-undefBoolVal = UndefBoolVal
+To avoid this kind of issues it's better to use the specialised constructors.
+In our present case:
+> boolVal True
 
--- | Value of undefined type for numbers. 
-undefNumVal :: (Show b, Num b) => b -> Value Undefined a
-undefNumVal = UndefNumVal
+Then the value will be parsed appropriately depending on the database vendor.
+-}
+genVal :: (Raw c, Show c) => c -> Value b a
+genVal = GenVal
+
+-- | Value of generic type which needs to be quoted when used in a statement.
+genQVal :: String -> Value b a
+genQVal = GenQVal

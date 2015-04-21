@@ -72,6 +72,7 @@ module Database.Hedsql.Common.AST
     , Undefined(Undefined)
     , Void(Void)
     , SQLOrd
+    , Raw
     , SQLUniq
       
       -- ** Expressions
@@ -376,6 +377,17 @@ instance SQLOrd Time where
 
 -- | Note: NULL values can be compared in SQL...
 instance SQLOrd Undefined where
+
+{-|
+Values which can be used "raw" and don't need to be quoted when used in a
+statement.
+-}
+class Raw a where
+instance Raw Bool where
+instance Raw Double where
+instance Raw Float where
+instance Raw Numeric where
+instance Raw Int where
 
 -- | Types which can be used as PRIMARY key or for an UNIQUE constraint.
 class SQLUniq a where
@@ -981,45 +993,24 @@ data Value b a where
     -- | String value.
     StringVal :: String -> Value String a
     
-    -- | Value of undefined type for a string.
-    UndefStringVal :: String -> Value Undefined a
+    -- | Value of generic type which does not need to be quoted.
+    GenVal :: (Raw c, Show c) => c -> Value b a
     
-    -- | Value of undefined type for booleans.
-    UndefBoolVal :: Bool -> Value Undefined a
-    
-    -- | Value of undefined type for numbers.
-    UndefNumVal :: (Show b, Num b) => b -> Value Undefined a
+    -- | Value of generic type which needs must quoted.
+    GenQVal :: String -> Value b a
     
     -- | Default value (for INSERT, UPDATE or CREATE TABLE statements).
     DefaultVal  :: Value b a
     
     -- Null values.
     
-    -- | NULL value of undefined type.
-    NullVal :: Value Undefined a
-    
-    -- | NULL for a boolean value.
-    NullBool :: Value Bool a
-    
-    -- | NULL for a numeric value.
-    NullNum :: Value Numeric a
-    
-    -- | NULL for a floating number value.
-    NullFloat :: Value Float a
-
-    -- | NULL for a double precision number value.
-    NullDouble :: Value Double a
-    
-    -- | NULL for a integer value.
-    NullInt :: Value Int a
-    
-    -- | NULL for a string value.
-    NullString :: Value String a
+    -- | NULL value of generic type.
+    NullVal :: Value b a
     
     -- Placeholders
     
-    -- | Placeholder for a value which can be of any types.
-    Placeholder :: Value Undefined a
+    -- | Placeholder for a value of generic type.
+    Placeholder :: Value b a
     
     -- | Placeholder for a boolean value.
     PlaceBool :: Value Bool a

@@ -21,8 +21,6 @@ import Database.Hedsql.Common.Constructor.Select
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Drivers.PostgreSQL.Driver
 
-import Control.Lens (set)
-
 -- Public.
 
 {-|

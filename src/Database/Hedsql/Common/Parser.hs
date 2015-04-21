@@ -906,16 +906,9 @@ parseValueFunc parser (ValueWrap val) =
         IntVal         x -> show x
         NumericVal     x -> show x
         StringVal      x -> _quoteVal parser x
-        UndefStringVal x -> _quoteVal parser x
-        UndefBoolVal   x -> _parseValue parser $ ValueWrap $ BoolVal x
-        UndefNumVal    x -> show x
+        GenQVal        x -> _quoteVal parser x
+        GenVal         x -> show x
         NullVal          -> "NULL"
-        NullBool         -> "NULL"
-        NullNum          -> "NULL"
-        NullFloat        -> "NULL"
-        NullDouble       -> "NULL"
-        NullInt          -> "NULL"
-        NullString       -> "NULL"
         _                -> "?"
 
 -- | Parse a WHERE clause.  

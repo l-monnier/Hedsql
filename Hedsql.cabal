@@ -15,7 +15,8 @@ tested-with:    GHC==7.8.2
 
 library
   hs-source-dirs:   src
-  ghc-options:      -Wall, -fglasgow-exts
+  ghc-options:      -Wall
+                    -fglasgow-exts
   exposed-modules:  
                     Database.Hedsql.Drivers.MariaDB.Constructor,
                     Database.Hedsql.Drivers.PostgreSQL.Constructor,
