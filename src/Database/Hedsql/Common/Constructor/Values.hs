@@ -34,7 +34,7 @@ module Database.Hedsql.Common.Constructor.Values
     , value
     , values
     
-      -- * Constructors for undefined types
+      -- * Constructors for generic types
       {-|
       Constructors producing values of undefined types.
       This allows quick & dirty coding by not having to perform operations
@@ -146,14 +146,14 @@ numVal = NumericVal
 ---------------------------------------
 
 {-|
-Convert a primitive value so it can be used in SQL queries as "raw" values.
+Convert a primitive value so it can be used in SQL queries as values.
 -}
 value :: ToSqlValues a [Value b c] => a -> Value b c
 value = head.toSqlValues
     
 {-|
 Convert a list of primitive values so they can be used in SQL queries
-as "raw" values.
+as values.
 -}
 values :: ToSqlValues a [Value b c] => a -> [Value b c]
 values = toSqlValues
