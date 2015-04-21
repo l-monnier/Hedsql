@@ -14,4 +14,4 @@ module Database.Hedsql.Drivers.PostgreSQL.Driver
     ) where
 
 -- | PostgreSQL driver.
-data PostgreSQL = PostgreSQL
+data PostgreSQL

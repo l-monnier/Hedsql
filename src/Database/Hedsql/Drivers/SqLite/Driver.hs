@@ -13,5 +13,5 @@ module Database.Hedsql.Drivers.SqLite.Driver
     ( SqLite
     ) where
 
--- | SQLite driver
-data SqLite = SqLite
+-- | SQLite driver.
+data SqLite

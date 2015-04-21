@@ -16,5 +16,5 @@ module Database.Hedsql.Drivers.MariaDB.Driver
     
 -- Public.
 
--- | MariaDB driver
-data MariaDB = MariaDB
+-- | MariaDB driver.
+data MariaDB
