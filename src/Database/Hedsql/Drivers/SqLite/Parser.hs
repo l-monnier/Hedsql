@@ -15,66 +15,103 @@ SqLite parser implementation.
 module Database.Hedsql.Drivers.SqLite.Parser
     ( parse
     ) where
-    
+
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+
+import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor.Statements
-import Database.Hedsql.Common.DataStructure
 import Database.Hedsql.Common.Parser
 import Database.Hedsql.Drivers.SqLite.Driver
 
-import qualified Database.Hedsql.Common.Parser.TableManipulations as T
-
-import Control.Lens
-
 import Data.Char
 
--- Private.
+--------------------------------------------------------------------------------
+-- PRIVATE
+--------------------------------------------------------------------------------
 
 -- | Parse SqLite data types.
 sqLiteDataTypeFunc :: DataTypeWrap SqLite -> String
 sqLiteDataTypeFunc dataType =
     case dataType of
         DataTypeWrap (Char lenght) -> "CHARACTER(" ++ show lenght ++ ")"
-        _                          -> map toUpper $ T.parseDataTypeFunc dataType
+        _                          -> map toUpper $ parseDataTypeFunc dataType
 
 {-|
 Parse a SqLite value.
-Booleans in Sqlite are represented bynumeric values only (0 or 1).
+Booleans in SqLite are represented by numeric values only (0 or 1).
 -}
-sqLiteParseValueFunc :: QueryParser SqLite -> ValueWrap SqLite -> String
-sqLiteParseValueFunc _ (ValueWrap (BoolVal True))  = "1"
-sqLiteParseValueFunc _ (ValueWrap (BoolVal False)) = "0"
-sqLiteParseValueFunc parser val = parseValueFunc parser val
+sqLiteParseValueFunc :: ValueWrap SqLite -> String
+sqLiteParseValueFunc (ValueWrap (BoolVal True))  = "1"
+sqLiteParseValueFunc (ValueWrap (BoolVal False)) = "0"
+sqLiteParseValueFunc val = parseValueFunc sqLiteParser val
 
 -- | Create the SqLite function parser.
 sqLiteExprFunc :: ExprWrap SqLite -> String
 sqLiteExprFunc (ExprWrap CurrentDate) = "Date('now')"
-sqLiteExprFunc e = parseExprFunc sqLiteQueryParser sqLiteStmtParser e
-
--- | Create the SqLite table manipulations parser.
-sqLiteTableParser :: T.TableParser SqLite
-sqLiteTableParser =
-    getTableParser sqLiteQueryParser sqLiteTableParser
-        & T.parseDataType .~ sqLiteDataTypeFunc
+sqLiteExprFunc e = parseExprFunc sqLiteParser e
 
 -- | Create the SqLite parser.
 sqLiteParser :: Parser SqLite
-sqLiteParser = getParser sqLiteStmtParser
-    
--- | Create the SqLite query parser.
-sqLiteQueryParser :: QueryParser SqLite
-sqLiteQueryParser =
-    getQueryParser sqLiteQueryParser sqLiteTableParser
-        & parseExpr .~ sqLiteExprFunc
-        & parseValue .~ sqLiteParseValueFunc sqLiteQueryParser
+sqLiteParser =
+    Parser
+      (parseStmtFunc sqLiteParser)
+      sqLiteExprFunc
+      (parseTableFunc sqLiteParser)
+      (parseTableConstFunc sqLiteParser)
+      (parseTableConstTypeFunc sqLiteParser)
+      (parseFkFunc sqLiteParser)
+      parseMatchFunc
+      (parseOnActionFunc sqLiteParser)
+      parseActionFunc
+      parseConstTimingFunc
+      (parseViewFunc sqLiteParser)
+      (parseColCreateFunc sqLiteParser)
+      sqLiteDataTypeFunc
+      (parseColConstFunc sqLiteParser)
+      (parseColConstTypeFunc sqLiteParser)
+      (parseCreateFunc sqLiteParser)
+      (parseDropFunc sqLiteParser)
+      (parseTableNameFunc sqLiteParser)
+      (parseTableRefFunc sqLiteParser)
+      (parseTableRefAsFunc sqLiteParser)
+      (parseColFunc sqLiteParser)
+      (parseColDefFunc sqLiteParser)
+      (parseColRefDefFunc sqLiteParser)
+      (parseColRefFunc sqLiteParser)
+      sqLiteParseValueFunc
+      (parseSelectFunc sqLiteParser)
+      parseCombinationFunc
+      (parseSelectTypeFunc sqLiteParser)
+      (parseSelectionFunc sqLiteParser)
+      (parseFromFunc sqLiteParser)
+      (parseJoinFunc sqLiteParser)
+      (parseJoinClauseFunc sqLiteParser)
+      parseJoinTColFunc
+      parseJoinTTableFunc
+      (parseWhereFunc sqLiteParser)
+      (parseGroupByFunc sqLiteParser)
+      (parseHavingFunc sqLiteParser)
+      (parseOrderByFunc sqLiteParser)
+      (parseSortRefFunc sqLiteParser)
+      parseSortOrderFunc
+      parseSortNullFunc
+      (parseAssgnmtFunc sqLiteParser)
+      (parseInsertAssignFunc sqLiteParser)
+      (parseDeleteFunc sqLiteParser)
+      (parseInsertFunc sqLiteParser)
+      (parseUpdateFunc sqLiteParser)
+      quoteElemFunc
+      quoteValFunc
 
-sqLiteStmtParser :: StmtParser SqLite
-sqLiteStmtParser = getStmtParser sqLiteQueryParser sqLiteTableParser
-
--- Public.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 {-|
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
 parse :: ToStmt (a SqLite) (Statement SqLite) => a SqLite -> String
-parse = (sqLiteParser^.parseStmt).statement
+parse = _parseStmt sqLiteParser . statement

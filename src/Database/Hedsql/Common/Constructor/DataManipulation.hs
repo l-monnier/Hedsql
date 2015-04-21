@@ -17,26 +17,24 @@ module Database.Hedsql.Common.Constructor.DataManipulation
     ( assign
     , deleteFrom
     , insertInto
-    , insertIntoCols
     , update
     ) where
 
 --------------------------------------------------------------------------------
 -- IMPORTS
 --------------------------------------------------------------------------------
-    
+
+import Database.Hedsql.Common.AST  
 import Database.Hedsql.Common.Constructor.Columns
 import Database.Hedsql.Common.Constructor.Tables
-import Database.Hedsql.Common.DataStructure
 
---------------------------------------------------------------------------------
+------Database.Hedsql.Common.AST--------------------------------------
 -- PUBLIC
 --------------------------------------------------------------------------------
 
 -- | Create a column/value pair to be used in an UPDATE statement.
 assign ::
-    (
-       ToCols    a [Column c d]
+    (  ToCols    a [Column c d]
     ,  ToColRefs b [ColRef c d]
     )
     => a -- ^ Column or name of the column.
@@ -54,33 +52,16 @@ deleteFrom t = Delete (table t) Nothing
 {-|
 Create an INSERT INTO statement.
 
-The values to insert are a list of list of values because you may insert more
-than one row in the database.
+The values to insert are a list of list of assignments because you may insert
+more than one row in the database.
 -}
 insertInto ::
-    ( ToTables a [Table c]
+    ( ToTables a [Table e]
     )
-    => a               -- ^ Table or name of the table to insert the data into.
-    -> [[ValueWrap c]] -- ^ Values to insert.
-    -> Insert c
-insertInto t = Insert (table t) Nothing
-
-{-|
-Create an INSERT INTO statement where the columns are specified.
-
-The values to insert are a list of list of values because you may insert more
-than one row in the database.
--}
-insertIntoCols ::
-    (
-      ToTables a [Table e]
-    , ToCols   b [Column d e]
-    )
-    => a               -- ^ Table or name of the table to insert the data into.
-    -> [b]             -- ^ Columns or names of the columns.
-    -> [[ValueWrap e]] -- ^ Values to insert.
+    => a              -- ^ Table or name of the table to insert the data into.
+    -> [Assignment e] -- ^ Values to insert.
     -> Insert e
-insertIntoCols t cs = Insert (table t) (Just $ map (ColWrap . toCol) cs)
+insertInto = Insert . table
 
 -- | Create an UPDATE statement.
 update ::

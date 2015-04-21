@@ -24,9 +24,9 @@ module Database.Hedsql.Common.Constructor.Composition
 --------------------------------------------------------------------------------
 
 import Database.Hedsql.Common.Constructor.TablesManipulation
-import Database.Hedsql.Common.DataStructure hiding (Add)
+import Database.Hedsql.Common.AST hiding (Add)
 
-import Control.Lens (ASetter, (^.), set)
+import Control.Lens (ASetter, set)
 
 --------------------------------------------------------------------------------
 -- PRIVATE
@@ -85,35 +85,40 @@ instance Add GroupBy Having where
 
 -- | Add a LIMIT to an ORDER BY part.
 instance Add OrderBy Limit where
-    addElem = setMaybe partOrderByLimit
+    addElem = setMaybe orderByLimit
 
 -- | Add an OFFSET to an ORDER BY part.
 instance Add OrderBy Offset where
-    addElem = setMaybe partOrderByOffset
+    addElem = setMaybe orderByOffset
 
 -- | Add a FROM part to a SELECT query.
 instance Add (Select a) From where
-    addElem s f = set (selectBody . fromClause) (Just f) s
-
+    addElem query f = setSelect selectFrom (Just f) query
+    
 -- | Add a GROUP BY part to a SELECT query.
 instance Add (Select a) GroupBy where
-    addElem s g = set (selectBody . groupByClause) (Just g) s
+    addElem query g = setSelect selectGroupBy (Just g) query
 
 -- | Add an ORDER BY part to a SELECT query.
 instance Add (Select a) OrderBy where
-    addElem s o = set (selectBody . orderByClause) (Just o) s
+    addElem query o = setSelect selectOrderBy (Just o) query
 
 -- | Add a WHERE part to a SELECT query.
 instance Add (Select a) Where where
-    addElem s w = set (selectBody . whereClause) (Just w) s
+    addElem query w = setSelect selectWhere (Just w) query
 
 -- | Add a table constraint to a CREATE TABLE statement.
+instance Add Create TableConstraint where
+    addElem (CreateTable c t) el = CreateTable c $ set tableConsts [el] t
+    addElem c _                  = c
+
+-- | Add a table constraint to a table.
 instance Add Table TableConstraint where
     addElem target el = set tableConsts [el] target
 
 -- | Add a WHERE part to an UPDATE query.
 instance Add Update Where where
-    addElem = setMaybe updateWherePart
+    addElem = setMaybe updateWhere
 
 {-|
 Coerce a type to another type which can then be used by an Add instance.

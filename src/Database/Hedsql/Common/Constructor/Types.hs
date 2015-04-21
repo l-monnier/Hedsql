@@ -42,7 +42,7 @@ module Database.Hedsql.Common.Constructor.Types
 -- IMPORTS
 --------------------------------------------------------------------------------
 
-import Database.Hedsql.Common.DataStructure
+import Database.Hedsql.Common.AST
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -58,11 +58,11 @@ boolean :: DataType Bool a
 boolean = Bool
 
 -- | Create a BIGINT.
-bigInt :: DataType Numeric a
+bigInt :: DataType Int a
 bigInt = BigInt
 
 -- | Create a CHAR.
-char :: Int -> DataType Text a
+char :: Int -> DataType String a
 char = Char
 
 -- | Create a DATE.
@@ -70,13 +70,13 @@ date :: DataType a Time
 date = Date
 
 -- | Create an INTEGER.
-integer :: DataType Numeric a
+integer :: DataType Int a
 integer = Integer
 
 -- | Create a SMALLINT.
-smallInt :: DataType Numeric a
+smallInt :: DataType Int a
 smallInt = SmallInt
 
 -- | Create a VARCHAR.
-varchar :: Int -> DataType Text a
+varchar :: Int -> DataType String a
 varchar = Varchar

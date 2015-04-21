@@ -36,10 +36,10 @@ module Database.Hedsql.Common.Constructor.Columns
 -- IMPORTS
 --------------------------------------------------------------------------------
 
+import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor.Tables
 import Database.Hedsql.Common.Constructor.Types
 import Database.Hedsql.Common.Constructor.Values()
-import Database.Hedsql.Common.DataStructure
 
 import Control.Lens ((^.), view, set)
 

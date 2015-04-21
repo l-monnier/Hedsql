@@ -18,7 +18,7 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     ) where
     
 import Database.Hedsql.Common.Constructor.Select
-import Database.Hedsql.Common.DataStructure
+import Database.Hedsql.Common.AST
 import Database.Hedsql.Drivers.PostgreSQL.Driver
 
 import Control.Lens (set)
@@ -38,13 +38,21 @@ lateral ::
        SelectWrap PostgreSQL -- ^ Select query of the lateral clause.
     -> String                -- ^ Alias of the lateral clause.
     -> TableRef PostgreSQL   -- ^ Lateral table reference.
-lateral s a = LateralTableRef s $ TableRefAs a []
+lateral s a = LateralRef s $ TableRefAs a []
 
--- | Create a SELECT DISTINCT ON query.
+{-|
+Create a SELECT DISTINCT ON query.
+
+This function is normally meant to be used for building a select query from
+scratch, providing the ON clause and selected columns as arguments.
+However, it is possible to apply it on an existing select query.
+If that query is a single query, it will become a SELECT DISTINCT ON one.
+If that query is a combination of select queries (UNION, EXCEPT, etc.) then
+all the queries will become SELECT DISTINCT ON ones.
+-}
 selectDistinctOn ::
        SelectConstr a (Select c PostgreSQL)
     => [ColRefWrap PostgreSQL]              -- ^ Distinct expression.
     -> a                                    -- ^ Select clause.
     -> Select c PostgreSQL                  -- ^ Select query.
-selectDistinctOn distinctExpr =
-    set (selectBody . selectType) (Just $ DistinctOn distinctExpr) . select 
+selectDistinctOn dExpr = setSelect selectType (DistinctOn dExpr) . select

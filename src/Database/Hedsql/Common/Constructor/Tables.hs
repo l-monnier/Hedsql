@@ -31,7 +31,7 @@ module Database.Hedsql.Common.Constructor.Tables
 --------------------------------------------------------------------------------
 
 import Database.Hedsql.Common.Constructor.Types
-import Database.Hedsql.Common.DataStructure
+import Database.Hedsql.Common.AST
 
 --------------------------------------------------------------------------------
 -- Public
@@ -43,7 +43,7 @@ class ToTables a b | a -> b where
 
 -- | Create a table from its name.
 instance ToTables (SqlString a) [Table a] where
-    toTables name = [Table False name [] []]
+    toTables name = [Table name [] []]
 
 -- | Create a table from itself.
 instance ToTables (Table a) [Table a] where
@@ -57,21 +57,21 @@ Else, create a table using the name of this table reference.
 instance ToTables (TableRef a) [Table a] where
     toTables ref =
         case ref of
-            TableTableRef t _ -> [t]
-            _                 -> [Table False (getTableRefName ref) [] []]
+            TableRef t _ -> [t]
+            _            -> [Table (getTableRefName ref) [] []]
 
 -- | Coerce a given type to a list of TableRef.
 class ToTableRefs a b | a -> b where
     toTablesRef :: a -> b
 
 instance ToTableRefs (Join a) [TableRef a] where
-    toTablesRef join = [TableJoinRef join Nothing]
+    toTablesRef join = [JoinRef join Nothing]
 
 instance ToTableRefs (SqlString a) [TableRef a] where
-    toTablesRef name = [TableTableRef (toTable name) Nothing]
+    toTablesRef name = [TableRef (toTable name) Nothing]
 
 instance ToTableRefs (Table a) [TableRef a] where
-    toTablesRef name = [TableTableRef name Nothing]
+    toTablesRef name = [TableRef name Nothing]
 
 instance ToTableRefs (TableRef a) [TableRef a] where
     toTablesRef ref = [ref]
@@ -92,10 +92,10 @@ alias t name =
     where
         al  = TableRefAs name []
         ref = tableRef t
-        setAlias (LateralTableRef a _) = LateralTableRef a al
-        setAlias (SelectTableRef  a _) = SelectTableRef  a al
-        setAlias (TableJoinRef    a _) = TableJoinRef    a (Just al)
-        setAlias (TableTableRef   a _) = TableTableRef   a (Just al)
+        setAlias (LateralRef a _) = LateralRef a al
+        setAlias (SelectRef  a _) = SelectRef  a al
+        setAlias (JoinRef    a _) = JoinRef    a (Just al)
+        setAlias (TableRef   a _) = TableRef   a (Just al)
 
 -- | Create a table which can then be used as so in a query.
 table ::

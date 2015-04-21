@@ -29,8 +29,8 @@ module Database.Hedsql.Common.Constructor.Wrapper
 -- IMPORTS
 --------------------------------------------------------------------------------
 
+import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor.Columns
-import Database.Hedsql.Common.DataStructure
 
 --------------------------------------------------------------------------------
 -- PUBLIC

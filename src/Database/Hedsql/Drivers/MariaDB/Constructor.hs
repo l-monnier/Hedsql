@@ -14,7 +14,7 @@ module Database.Hedsql.Drivers.MariaDB.Constructor
     , foundRows
     ) where
     
-import Database.Hedsql.Common.DataStructure
+import Database.Hedsql.Common.AST
 import Database.Hedsql.Drivers.MariaDB.Driver
 
 -- Public.
@@ -24,5 +24,5 @@ calcFoundRows :: Expression MariaDB Void
 calcFoundRows = CalcFoundRows
 
 -- | FOUND_ROWS function.
-foundRows :: Expression MariaDB Numeric
+foundRows :: Expression MariaDB Int
 foundRows = FoundRows

@@ -15,18 +15,22 @@ PostgreSQL parser implementation.
 module Database.Hedsql.Drivers.PostgreSQL.Parser
     ( parse
     ) where
-    
-import Database.Hedsql.Common.Constructor.Statements
-import Database.Hedsql.Common.DataStructure
+
+--------------------------------------------------------------------------------
+-- IMPORTS
+--------------------------------------------------------------------------------
+   
+import Database.Hedsql.Common.AST
+import Database.Hedsql.Common.Constructor.Statements 
 import Database.Hedsql.Common.Parser
 import Database.Hedsql.Drivers.PostgreSQL.Driver
-
-import qualified Database.Hedsql.Common.Parser.TableManipulations as T
 
 import Control.Lens
 import Data.List (intercalate)
 
--- Private.
+--------------------------------------------------------------------------------
+-- PRIVATE
+--------------------------------------------------------------------------------
 
 {-|
 Return True if one of the provided constraint is a PRIMARY KEY.
@@ -42,24 +46,10 @@ hasAutoIncrement =
 -- | Create the PostgreSQL parser.
 postgreSQLParser :: Parser PostgreSQL
 postgreSQLParser =
-    getParser $ getStmtParser postgreSQLQueryParser postgreSQLTableParser
-
--- | Create the PostgreSQL query parser.
-postgreSQLQueryParser :: QueryParser PostgreSQL
-postgreSQLQueryParser = 
-    getQueryParser
-        postgreSQLQueryParser
-        postgreSQLTableParser
-
--- | Create the PostgreSQL table manipulations parser.
-postgreSQLTableParser :: T.TableParser PostgreSQL
-postgreSQLTableParser =
-    getTableParser postgreSQLQueryParser postgreSQLTableParser
-        & T.parseColConstType .~ colConstFunc
-        & T.parseColCreate    .~ colCreateFunc
-    where
-        colConstFunc  = parsePostgreSQLColConstTypeFunc postgreSQLTableParser
-        colCreateFunc = parsePostgreSqlColCreateFunc    postgreSQLTableParser
+    getParser postgreSQLParser
+        { _parseColConstType = parsePostgreSQLColConstTypeFunc postgreSQLParser
+        , _parseColCreate    = parsePostgreSqlColCreateFunc    postgreSQLParser
+        }
 
 {-|
 The AUTOINCREMENT constraint is not a constraint in PostgreSQL.
@@ -68,42 +58,43 @@ Instead, the "serial" data type is used.
 We must therefore remove the AUTOINCREMENT constraint when parsing
 a PRIMARY KEY column constraint.
 -}
-parsePostgreSQLColConstTypeFunc ::
-    T.TableParser a -> ColConstraintType a -> String
+parsePostgreSQLColConstTypeFunc :: Parser a -> ColConstraintType a -> String
 parsePostgreSQLColConstTypeFunc parser constraint =
     case constraint of
         (Primary _) -> "PRIMARY KEY"
-        _           -> T.parseColConstTypeFunc parser constraint
+        _           -> parseColConstTypeFunc parser constraint
 
 {- |
     Custom function for PostgreSQL for the creation of a table.
     The difference with the default implementation is that a PRIMARY KEY of
     type Integer with an AUTOINCREMENT constraints get translated as a "serial".
 -}
-parsePostgreSqlColCreateFunc :: T.TableParser a -> ColWrap a -> String
+parsePostgreSqlColCreateFunc :: Parser a -> ColWrap a -> String
 parsePostgreSqlColCreateFunc parser (ColWrap col) =
-        parseCols (DataTypeWrap $ col^.colDataType) (col^.colConstraints)        
+        parseCols (DataTypeWrap $ col^.colType) (col^.colConstraints)        
     where
         parseCols (DataTypeWrap Integer) colConsts@(_:_) =
             if hasAutoIncrement colConsts
             then cName ++ " serial"  ++ consts colConsts
             else cName ++ " integer" ++ consts colConsts 
-        parseCols colType colConsts = concat
+        parseCols cType colConsts = concat
             [ cName
-            , " " ++ (parser^.T.parseDataType) colType
+            , " " ++ _parseDataType parser cType
             , consts colConsts
             ]
         
-        cName = parser^.T.quoteElem $ col^.colName
+        cName = _quoteElem parser $ col^.colName
         
         consts [] = ""
-        consts cs = " " ++ intercalate ", " (map (parser ^. T.parseColConst) cs) 
+        consts cs = " " ++ intercalate ", " (map (_parseColConst parser) cs) 
 
--- Public.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 {-|
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
 parse :: ToStmt (a PostgreSQL) (Statement PostgreSQL) => a PostgreSQL -> String
-parse = (postgreSQLParser^.parseStmt).statement  
+parse = _parseStmt postgreSQLParser . statement

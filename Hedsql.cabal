@@ -31,7 +31,6 @@ library
                     Database.Hedsql.Common.Constructor,
                     Database.Hedsql.Common.Constructor.Columns,
                     Database.Hedsql.Common.Constructor.Composition,
-                    Database.Hedsql.Common.Constructor.Conditions,
                     Database.Hedsql.Common.Constructor.DataManipulation,
                     Database.Hedsql.Common.Constructor.Functions,
                     Database.Hedsql.Common.Constructor.Select,
@@ -41,24 +40,14 @@ library
                     Database.Hedsql.Common.Constructor.Types,
                     Database.Hedsql.Common.Constructor.Values,
                     Database.Hedsql.Common.Constructor.Wrapper,
-                    Database.Hedsql.Common.DataStructure,
-                    Database.Hedsql.Common.DataStructure.Delete,
-                    Database.Hedsql.Common.DataStructure.Drop,
-                    Database.Hedsql.Common.DataStructure.Insert,
-                    Database.Hedsql.Common.DataStructure.Inspect,
-                    Database.Hedsql.Common.DataStructure.Select,
-                    Database.Hedsql.Common.DataStructure.Update,
-                    Database.Hedsql.Common.Parser,
-                    Database.Hedsql.Common.Parser.Interface,
-                    Database.Hedsql.Common.Parser.Queries,
-                    Database.Hedsql.Common.Parser.Quoter,
-                    Database.Hedsql.Common.Parser.TableManipulations,
                     Database.Hedsql.Drivers.MariaDB.Driver,
                     Database.Hedsql.Drivers.MariaDB.Parser,
                     Database.Hedsql.Drivers.PostgreSQL.Driver,
                     Database.Hedsql.Drivers.PostgreSQL.Parser,
                     Database.Hedsql.Drivers.SqLite.Driver,
-                    Database.Hedsql.Drivers.SqLite.Parser
+                    Database.Hedsql.Drivers.SqLite.Parser,
+                    Database.Hedsql.Common.AST,
+                    Database.Hedsql.Common.Parser
 
 test-suite tests
   type:            exitcode-stdio-1.0

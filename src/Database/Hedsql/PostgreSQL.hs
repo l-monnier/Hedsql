@@ -26,8 +26,8 @@ You will then be able to write queries such as:
 Such queries cannot be parsed by another parser than the PostgreSQL one.
 -}
 module Database.Hedsql.PostgreSQL (module P) where
-
-import Database.Hedsql.Drivers.PostgreSQL.Driver as P
-import Database.Hedsql.Drivers.PostgreSQL.Parser as P
-import Database.Hedsql.Common.Constructor as P
-import Database.Hedsql.Common.DataStructure as P
+import Database.Hedsql.Drivers.PostgreSQL.Constructor as P
+import Database.Hedsql.Drivers.PostgreSQL.Driver      as P
+import Database.Hedsql.Drivers.PostgreSQL.Parser      as P
+import Database.Hedsql.Common.Constructor             as P
+import Database.Hedsql.Common.AST                     as P

@@ -72,11 +72,10 @@ module Database.Hedsql.Common.Constructor.Select
 --------------------------------------------------------------------------------
     
 import Database.Hedsql.Common.Constructor.Columns
-import Database.Hedsql.Common.Constructor.Conditions
 import Database.Hedsql.Common.Constructor.Functions()
 import Database.Hedsql.Common.Constructor.Tables
 import Database.Hedsql.Common.Constructor.Types
-import Database.Hedsql.Common.DataStructure
+import Database.Hedsql.Common.AST
 
 import Control.Lens hiding (coerce, from)
 import Unsafe.Coerce
@@ -84,16 +83,6 @@ import Unsafe.Coerce
 --------------------------------------------------------------------------------
 -- PRIVATE
 --------------------------------------------------------------------------------
-
--- | Coerce a type to a CombinedQuery type.
-class ToCombined a b where
-    toCombined :: a c -> b c
-
-instance ToCombined CombinedQuery CombinedQuery where
-    toCombined = id
- 
-instance ToCombined SelectWrap CombinedQuery where
-    toCombined = Single
 
 -- | Coerce a type to a list of JoinClause type.
 class ToJoinClauses a b | a -> b where
@@ -174,7 +163,7 @@ columnJoin ::
    -> c
    -> Join        d
 columnJoin joinType tableRef1 tableRef2 clause =
-    JoinColumn
+    JoinCol
          joinType
         (tableRef tableRef1)
         (tableRef tableRef2)
@@ -217,34 +206,33 @@ toJoinClause = head.toJoinClauses
 
 type SqlString' b a = String
 
-emptyBody :: SelectBody a
-emptyBody =
-    SelectBody
-        Nothing
-        Nothing
-        Nothing
-        Nothing
-        Nothing
+-- | Create a Select query with only a column selection clause.
+simpleSelect :: Selection b a -> Select b a
+simpleSelect selection =
+    Single $ SelectQ All selection Nothing Nothing Nothing Nothing
 
 class SelectConstr a b | a -> b where
     -- | Create a SELECT query.
     select :: a -> b
+
+instance SelectConstr (Select b a) (Select b a) where
+    select = id
     
 instance SelectConstr (SqlString' b a) (Select [Undefined] a) where
-    select s = USelect (ColRefWrap $ colRef s) emptyBody
+    select c = simpleSelect $ USelection $ ColRefWrap $ colRef c
 
 instance SelectConstr [SqlString' b a] (Select [[Undefined]] a) where
-    select ss = UsSelect (map (ColRefWrap . colRef) ss) emptyBody
+    select c = simpleSelect $ UsSelection $ map (ColRefWrap . colRef) c
 
 instance SelectConstr (ColRefWrap a) (Select [Undefined] a) where
-    select c = USelect c emptyBody
+    select = simpleSelect . USelection
 
 instance SelectConstr [ColRefWrap a] (Select [[Undefined]] a) where
-    select cs = UsSelect cs emptyBody
+    select = simpleSelect . UsSelection
 
 instance SelectConstr (Column b a) (Select [b] a) where
     select c =
-        TSelect (colRef column) emptyBody
+        simpleSelect $ TSelection (colRef column)
         where
             -- Unsafe coercion to the correct phantom types parameter.
             column :: Column [b] a
@@ -252,21 +240,23 @@ instance SelectConstr (Column b a) (Select [b] a) where
 
 instance SelectConstr [Column b a] (Select [[b]] a) where
     select cs =
-        TsSelect (colRefs columns) emptyBody
+        simpleSelect $ TsSelection (colRefs columns)
         where
             -- Unsafe coercion to the correct phantom types parameter.
             columns :: [Column [[b]] a]
             columns = unsafeCoerce cs
 
 instance SelectConstr (ColWrap a) (Select [Undefined] a) where
-    select (ColWrap c) = USelect (ColRefWrap $ colRef c) emptyBody
+    select (ColWrap c) = simpleSelect $ USelection $ ColRefWrap $ colRef c
 
 instance SelectConstr [ColWrap a] (Select [[Undefined]] a) where
     select cs =
-        UsSelect (map (\(ColWrap c) -> ColRefWrap $ colRef c) cs) emptyBody
+        simpleSelect $ UsSelection $ map toColRef cs
+        where
+            toColRef (ColWrap c) = ColRefWrap $ colRef c
 
 instance SelectConstr (ColRef b a) (Select [b] a) where
-    select c = TSelect cRef emptyBody
+    select c = simpleSelect $ TSelection cRef
         where
             -- Unsafe coercion to the correct phantom types parameter.
             cRef :: ColRef [b] a
@@ -274,7 +264,7 @@ instance SelectConstr (ColRef b a) (Select [b] a) where
 
 instance SelectConstr [ColRef b a] (Select [[b]] a) where
     select cs =
-        TsSelect cRefs emptyBody
+        simpleSelect $ TsSelection cRefs
         where
             -- Unsafe coercion to the correct phantom types parameter.
             cRefs :: [ColRef [[b]] a]
@@ -282,15 +272,24 @@ instance SelectConstr [ColRef b a] (Select [[b]] a) where
 
 instance SelectConstr (Expression b a) (Select [b] a) where
     select c =
-        TSelect (colRef cRef) emptyBody
+        simpleSelect $ TSelection (colRef cRef)
         where
             -- Unsafe coercion to the correct phantom types parameter.
             cRef :: Expression [b] a
             cRef = unsafeCoerce c
 
--- | Create a SELECT DISTINCT query.
+{-|
+Create a SELECT DISTINCT query.
+
+This function is normally meant to be used for building a select query from
+scratch, providing the selected columns as argument.
+However, it is possible to apply it on an existing select query.
+If that query is a single query, it will become a select distinct one.
+If that query is a combination of select queries (UNION, EXCEPT, etc.) then
+all the queries will become select distinct ones.
+-}
 selectDistinct :: SelectConstr a (Select c b) => a -> Select c b
-selectDistinct = set (selectBody . selectType) (Just Distinct) . select
+selectDistinct = setSelect selectType Distinct . select
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
@@ -435,15 +434,15 @@ subQuery ::
        Select  b a -- ^ Sub-query.
     -> String      -- ^ Alias of the sub-query.
     -> TableRef a  -- ^ Table reference.
-subQuery sub name = SelectTableRef (SelectWrap sub) $ TableRefAs name []
+subQuery sub name = SelectRef (SelectWrap sub) $ TableRefAs name []
 
 ----------------------------------------
 -- WHERE
 ----------------------------------------
 
 -- | Create a WHERE clause for a SELECT query.
-where_ :: ToConditions a [Expression Bool b] => a -> Where b
-where_ = Where . condition
+where_ :: Expression Bool b -> Where b
+where_ = Where
 
 ----------------------------------------
 -- ORDER BY
@@ -507,8 +506,21 @@ groupBy :: ToColRefWraps a [ColRefWrap b] => a -> GroupBy b
 groupBy cs = GroupBy (colRefWraps cs) Nothing
 
 -- | Add a HAVING clause to a GROUP BY clause.
-having :: ToConditions a [Expression Bool b] => a -> Having b
-having = Having . condition
+class HavingConstr  a b | a -> b where
+    having :: a -> b
+
+{-|
+Instance for regular predicates – which could also be used in a WHERE clause.
+-}
+instance HavingConstr (Expression Bool a) (Having a) where
+    having = HavingPred
+
+{-|
+Instance for predicates containing an aggregate function (COUNT, SUM, etc.)
+– which couldn't be used in a WHERE clause.
+-}
+instance HavingConstr (Expression AggrPred a) (Having a) where
+    having = HavingAggrPred
 
 ----------------------------------------
 -- LIMIT
@@ -526,67 +538,55 @@ offset = Offset
 -- Combined queries
 ----------------------------------------
 
--- | Create a combined query such as an INTERSECT, EXCEPT, etc.
+{-|
+Combine two SELECT queries using the provided combination clause
+(UNION, EXCEPT, etc.).
+-}
 combinedQuery ::
-    ToCombined b CombinedQuery => b a -> CombinedQuery a
-combinedQuery = toCombined
+       Combination a
+    -> Select b a
+    -> Select b a
+    -> Select b a
+combinedQuery cType c1 c2 = Combined cType [c1, c2]
 
 -- | Apply an EXCEPT to two queries.
 except ::
-    ( ToCombined a CombinedQuery
-    , ToCombined b CombinedQuery
-    )
-    => a c
-    -> b c
-    -> CombinedQuery c
-except c1 c2 = Except [combinedQuery c1, combinedQuery c2]
+       Select b a
+    -> Select b a
+    -> Select b a
+except = combinedQuery Except
 
 -- | Apply an EXCEPT ALL to two queries.
 exceptAll ::
-    ( ToCombined a CombinedQuery
-    , ToCombined b CombinedQuery
-    )
-    => a c
-    -> b c
-    -> CombinedQuery c
-exceptAll c1 c2 = ExceptAll [combinedQuery c1, combinedQuery c2]
+       Select b a
+    -> Select b a
+    -> Select b a
+exceptAll = combinedQuery ExceptAll
 
 -- | Apply an INTERSECT to two queries.
 intersect ::
-    ( ToCombined a CombinedQuery
-    , ToCombined b CombinedQuery
-    )
-    => a c
-    -> b c
-    -> CombinedQuery c
-intersect c1 c2 = Intersect [combinedQuery c1, combinedQuery c2]
+       Select b a
+    -> Select b a
+    -> Select b a
+intersect = combinedQuery Intersect
 
 -- | Apply an INTERSECT ALL to two queries.
 intersectAll ::
-    ( ToCombined a CombinedQuery
-    , ToCombined b CombinedQuery
-    )
-    => a c
-    -> b c
-    -> CombinedQuery c
-intersectAll c1 c2 = IntersectAll [combinedQuery c1, combinedQuery c2]
+       Select b a
+    -> Select b a
+    -> Select b a
+intersectAll = combinedQuery IntersectAll
 
 -- | Create an UNION operation between two queries.
 union ::
-    ( ToCombined a CombinedQuery
-    , ToCombined b CombinedQuery
-    )
-    => a c
-    -> b c
-    -> CombinedQuery c
-union c1 c2 = Union [combinedQuery c1, combinedQuery c2]
+       Select b a
+    -> Select b a
+    -> Select b a
+union = combinedQuery Union
 
 -- | Create an UNION ALL operation between two queries.
 unionAll ::
-    ( ToCombined a CombinedQuery
-    , ToCombined b CombinedQuery
-    )
-    => a c
-    -> b c
-    -> CombinedQuery c
-unionAll c1 c2 = UnionAll [combinedQuery c1, combinedQuery c2]
+       Select b a
+    -> Select b a
+    -> Select b a
+unionAll = combinedQuery UnionAll

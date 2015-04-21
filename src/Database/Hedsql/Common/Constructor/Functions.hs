@@ -73,8 +73,7 @@ module Database.Hedsql.Common.Constructor.Functions
 --------------------------------------------------------------------------------
     
 import Database.Hedsql.Common.Constructor.Columns
-import Database.Hedsql.Common.Constructor.Conditions
-import Database.Hedsql.Common.DataStructure
+import Database.Hedsql.Common.AST
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -82,42 +81,41 @@ import Database.Hedsql.Common.DataStructure
 
 -- | "+" operator.
 (/+) ::
-    (
-      ToColRefs a [ColRef Numeric c]
-    , ToColRefs b [ColRef Numeric c]
+    ( Num d
+    , ToColRefs a [ColRef d c]
+    , ToColRefs b [ColRef d c]
     )
     => a
     -> b
-    -> Expression Numeric c
+    -> Expression d c
 (/+) left right = Add (colRef left) (colRef right)
 
 -- | "-" operator.
 (/-) ::
-    (
-      ToColRefs a [ColRef Numeric c]
-    , ToColRefs b [ColRef Numeric c]
+    ( Num d
+    , ToColRefs a [ColRef d c]
+    , ToColRefs b [ColRef d c]
     )
     => a
     -> b
-    -> Expression Numeric c
+    -> Expression d c
 (/-) left right = Substract (colRef left) (colRef right)
 
 -- | "*" operator.
 (/*) ::
-    (
-      ToColRefs a [ColRef Numeric c]
-    , ToColRefs b [ColRef Numeric c]
+    ( Num d
+    , ToColRefs a [ColRef d c]
+    , ToColRefs b [ColRef d c]
     )
     => a
     -> b
-    -> Expression Numeric c
+    -> Expression d c
 (/*) left right = Multiply (colRef left) (colRef right)
 
 -- | Equality operator ("=" in SQL).
 infix 7 /==
 (/==) ::
-    (
-      ToColRefs a [ColRef c d]
+    ( ToColRefs a [ColRef c d]
     , ToColRefs b [ColRef c d]
     )
     => a
@@ -128,8 +126,7 @@ infix 7 /==
 -- | Greater than operator (">").
 infix 7 />
 (/>) ::
-    (
-      ToColRefs a [ColRef c d]
+    ( ToColRefs a [ColRef c d]
     , ToColRefs b [ColRef c d]
     )
     => a
@@ -140,8 +137,7 @@ infix 7 />
 -- | Greater than or equal to operator (">=").
 infix 7 />=
 (/>=) ::
-    (
-      ToColRefs a [ColRef c d]
+    ( ToColRefs a [ColRef c d]
     , ToColRefs b [ColRef c d]
     )
     => a
@@ -152,8 +148,7 @@ infix 7 />=
 -- | Smaller than operator ("<").
 infix 7 /<
 (/<) ::
-    (
-      ToColRefs a [ColRef c d]
+    ( ToColRefs a [ColRef c d]
     , ToColRefs b [ColRef c d]
     )
     => a
@@ -177,8 +172,7 @@ infix 7 /<=
 -- | Unequality operator ("<>").
 infix 7 /<>
 (/<>) ::
-    (
-      ToColRefs a [ColRef c d]
+    ( ToColRefs a [ColRef c d]
     , ToColRefs b [ColRef c d]
     )
     => a
@@ -187,12 +181,12 @@ infix 7 /<>
 (/<>) colRef1 colRef2 = NotEqual (colRef colRef1) (colRef colRef2)
 
 -- | Join two predicates with an AND.
-and_ :: ToConditions a [Expression Bool b] => a -> a -> Expression Bool b
-and_ condition1 condition2 = And [condition condition1, condition condition2]
+and_ :: Expression Bool b -> Expression Bool b -> Expression Bool b
+and_ condition1 condition2 = And [condition1, condition2]
 
 -- | Join a list of predicates with AND which will be enclosed in a parenthesis.
-ands :: ToConditions a [Expression Bool b] => [a] -> Expression Bool b
-ands = And . map condition
+ands :: [Expression Bool b] -> Expression Bool b
+ands = And 
 
 -- | BETWEEN condition.
 between ::
@@ -208,7 +202,7 @@ between ::
 between ex lower higher = Between (colRef ex) (colRef lower) (colRef higher)
 
 -- | Create a COUNT function.
-count :: ToColRefs a [ColRef c b] => a -> Expression Numeric b 
+count :: ToColRefs a [ColRef c b] => a -> Expression Int b 
 count = Count . colRef
 
 {- |
@@ -278,8 +272,8 @@ isUnknown = IsUnknown . colRef
 
 -- | Create a LIKE operator.
 like ::
-    (  ToColRefs a [ColRef Text c]
-    ,  ToColRefs b [ColRef Text c]
+    (  ToColRefs a [ColRef String c]
+    ,  ToColRefs b [ColRef String c]
     )
     => a
     -> b
@@ -287,11 +281,11 @@ like ::
 like colRef1 colRef2 = Like (colRef colRef1) (colRef colRef2)
 
 -- | Create a MAX function.
-max_ :: ToColRefs a [ColRef Numeric b] => a -> Expression Numeric b
+max_ :: Num c => ToColRefs a [ColRef c b] => a -> Expression c b
 max_ = Max . colRef
 
 -- | Create a MIN function.
-min_ :: ToColRefs a [ColRef Numeric b] => a -> Expression Numeric b
+min_ :: Num c => ToColRefs a [ColRef c b] => a -> Expression c b
 min_ = Min . colRef
 
 -- | NOT BETWEEN condition.
@@ -309,9 +303,9 @@ notBetween ex lower higher =
     NotBetween (colRef ex) (colRef lower) (colRef higher)
 
 -- | Create a random() function.
-random :: Expression Numeric a
+random :: Num b => Expression b a
 random = Random
    
 -- | Create a SUM function.
-sum_ :: ToColRefs a [ColRef Numeric b] => a -> Expression Numeric b
+sum_ :: Num c => ToColRefs a [ColRef c b] => a -> Expression c b
 sum_ = Sum . colRef

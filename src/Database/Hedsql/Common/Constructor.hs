@@ -104,7 +104,6 @@ module Database.Hedsql.Common.Constructor (module C) where
 
 import Database.Hedsql.Common.Constructor.Columns            as C
 import Database.Hedsql.Common.Constructor.Composition        as C
-import Database.Hedsql.Common.Constructor.Conditions         as C
 import Database.Hedsql.Common.Constructor.DataManipulation   as C
 import Database.Hedsql.Common.Constructor.Functions          as C
 import Database.Hedsql.Common.Constructor.Select             as C

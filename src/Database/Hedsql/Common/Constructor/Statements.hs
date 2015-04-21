@@ -20,30 +20,21 @@ module Database.Hedsql.Common.Constructor.Statements
     , statements
     ) where
 
-import Database.Hedsql.Common.DataStructure
+import Database.Hedsql.Common.AST
 
 -- private functions.
 
 class ToStmt a b | a -> b where
     toStmt :: a -> b
 
-instance ToStmt (Table a) (Statement a) where
-    toStmt = CreateTableStmt
-
-instance ToStmt (CombinedQuery a) (Statement a) where
-    toStmt = CombinedQueryStmt
-
-instance ToStmt (CreateView a) (Statement a) where
-    toStmt = CreateViewStmt
+instance ToStmt (Create a) (Statement a) where
+    toStmt = CreateStmt
 
 instance ToStmt (Delete a) (Statement a) where
     toStmt = DeleteStmt
 
-instance ToStmt (DropTable a) (Statement a) where
-    toStmt = DropTableStmt
-
-instance ToStmt (DropView a) (Statement a) where
-    toStmt = DropViewStmt
+instance ToStmt (Drop a) (Statement a) where
+    toStmt = DropStmt
 
 instance ToStmt (Insert a) (Statement a) where
     toStmt = InsertStmt
@@ -63,5 +54,6 @@ instance ToStmt (Update a) (Statement a) where
 statement :: ToStmt a (Statement b) => a -> Statement b
 statement = toStmt
 
+-- | Create many statements from a list.
 statements :: ToStmt a (Statement b) => [a] -> [Statement b]
 statements = map statement

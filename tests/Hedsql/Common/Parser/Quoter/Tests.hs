@@ -1,12 +1,14 @@
 module Hedsql.Common.Parser.Quoter.Tests where
 
-import Database.Hedsql.Common.Parser.Quoter
-
-import Control.Lens
+import Database.Hedsql.Common.Parser
 
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit hiding (Test)
+
+-- | Create the default parser.
+parser :: Parser a
+parser = getParser parser
 
 -- | Gather all tests.
 tests :: Test
@@ -24,7 +26,7 @@ testBasicQuoteElem = testCase "Quote basic element" assertGoodQuote
         assertGoodQuote = assertEqual
             "Basic element not correctly quoted"
             "\"test\""
-            (genQuoter^.quoteElem $ "test")
+            (_quoteElem parser "test")
 
 testBasicQuoteVal :: Test
 testBasicQuoteVal = testCase "Quote basic value" assertGoodQuote
@@ -33,7 +35,7 @@ testBasicQuoteVal = testCase "Quote basic value" assertGoodQuote
         assertGoodQuote = assertEqual
             "Basic value not correctly quoted"
             "'test'"
-            (genQuoter^.quoteVal $ "test")
+            (_quoteVal parser "test")
 
 testQuotedQuoteElem :: Test
 testQuotedQuoteElem = testCase "Quote a quoted element" assertGoodQuote
@@ -42,7 +44,7 @@ testQuotedQuoteElem = testCase "Quote a quoted element" assertGoodQuote
         assertGoodQuote = assertEqual
             "Quoted element not correctly quoted"
             "\"\"\"test\"\"\""
-            (genQuoter^.quoteElem $ "\"test\"")
+            (_quoteElem parser "\"test\"")
             
 testQuotedQuoteVal :: Test
 testQuotedQuoteVal = testCase "Quote quoted value" assertGoodQuote
@@ -51,5 +53,5 @@ testQuotedQuoteVal = testCase "Quote quoted value" assertGoodQuote
         assertGoodQuote = assertEqual
             "Quoted value not correctly quoted"
             "'''test'''"
-            (genQuoter^.quoteVal $ "'test'")
+            (_quoteVal parser "'test'")
                      
