@@ -1,7 +1,7 @@
 name:           Hedsql
 version:        0.1
 cabal-version:  >=1.6
-build-type:     Simple
+build-type:     Custom
 author:         Leonard Monnier
 stability:      alpha
 maintainer:     Leonard Monnier <leonard.monnier@gmail.com>
@@ -23,24 +23,13 @@ library
                     Database.Hedsql.MariaDB,
                     Database.Hedsql.PostgreSQL,
                     Database.Hedsql.SqLite
+                    Database.Hedsql.Ext
   build-depends:    
                     base,
                     lens,
                     template-haskell,
                     fclabels
   other-modules:    
-                    Database.Hedsql.Common.Constructor,
-                    Database.Hedsql.Common.Constructor.Columns,
-                    Database.Hedsql.Common.Constructor.Composition,
-                    Database.Hedsql.Common.Constructor.DataManipulation,
-                    Database.Hedsql.Common.Constructor.Functions,
-                    Database.Hedsql.Common.Constructor.Select,
-                    Database.Hedsql.Common.Constructor.Statements,
-                    Database.Hedsql.Common.Constructor.Tables,
-                    Database.Hedsql.Common.Constructor.TablesManipulation,
-                    Database.Hedsql.Common.Constructor.Types,
-                    Database.Hedsql.Common.Constructor.Values,
-                    Database.Hedsql.Common.Constructor.Wrapper,
                     Database.Hedsql.Drivers.MariaDB.Driver,
                     Database.Hedsql.Drivers.MariaDB.Parser,
                     Database.Hedsql.Drivers.PostgreSQL.Driver,
@@ -48,7 +37,8 @@ library
                     Database.Hedsql.Drivers.SqLite.Driver,
                     Database.Hedsql.Drivers.SqLite.Parser,
                     Database.Hedsql.Common.AST,
-                    Database.Hedsql.Common.Parser
+                    Database.Hedsql.Common.Parser,
+                    Database.Hedsql.Common.Constructor
 
 test-suite tests
   type:            exitcode-stdio-1.0

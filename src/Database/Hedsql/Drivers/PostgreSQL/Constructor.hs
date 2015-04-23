@@ -17,7 +17,7 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     , selectDistinctOn
     ) where
     
-import Database.Hedsql.Common.Constructor.Select
+import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Drivers.PostgreSQL.Driver
 

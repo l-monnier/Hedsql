@@ -21,7 +21,7 @@ module Database.Hedsql.Drivers.SqLite.Parser
 --------------------------------------------------------------------------------
 
 import Database.Hedsql.Common.AST
-import Database.Hedsql.Common.Constructor.Statements
+import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.Parser
 import Database.Hedsql.Drivers.SqLite.Driver
 

@@ -19,7 +19,7 @@ module Database.Hedsql.Drivers.MariaDB.Parser
 -- IMPORTS
 --------------------------------------------------------------------------------
 
-import Database.Hedsql.Common.Constructor.Statements
+import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Parser
 import Database.Hedsql.Drivers.MariaDB.Driver
