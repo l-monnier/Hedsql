@@ -16,17 +16,7 @@ Constructor functions for SQL SELECT queries.
 
 They provide a flexible and natural way to create the various SQL data types.
 
-*Pre-requisites
-
-** Hiding prelude functions
-
-To stay close to SQL, some functions are using the same name as in the prelude.
-If this happens, you can or use a qualified name or hide them during the 
-import of the Prelude or Hedsql.
-
-> import Prelude hiding (and, or, null)
-
-*Building a query
+=Building a query
 
 The idea is to provide a limited set of functions with similar or close
 naming to SQL.
@@ -36,19 +26,35 @@ For example, when using the 'select' function, you will not provide a FROM
 clause but only the arguments specific to the 'select' clause which are the
 columns.
 
-> select [col1, col2]
+@
+mySelect :: Select [[Undefined]] a
+mySelect =
+    select [firstName, age]
+    where
+        firstName = col "firstName" $ varchar 256
+        age = col "age" $ integer   
+@
 
 The additional FROM clause can be added using the '/++' function of the
 'Add' class.
 With our previous example, you could add a FROM part as so:
-> select [col1", col2] /++ from table1
+
+@
+mySelect :: Select [[Undefined]] a
+mySelect =
+    select [firstName, age] /++ people
+    where
+        firstName = col "firstName" $ varchar 256
+        age = col "age" $ integer
+        people = table "People"
+@
 
 Thanks to type classes, those functions are polymorphic.
 It is therefore possible to pass different type of argument to the same
 functions. Let's take a look at the 'select' function:
 
-> select $ column "col1" $ varchar 256
-> select [column "col1" $ varchar 256, column "col2" integer]
+> select $ col "col1" $ varchar 256
+> select [col "col1" $ varchar 256, column "col2" integer]
 
 Both above examples are valid.
 We can first see that it is possible to pass a single argument or a list to
@@ -56,18 +62,29 @@ the 'select' function.
 It would also be possible to pass arguments of type 'Sring' using the extension
 module.
 
-*Naming
+==Type signature
+The signatures of the returned types are composed of one to two phantom types.
+The first one is the type of the element in SQL. The second one is the SQL
+vendor. For exampl, the following type:
+> Select [Int] SqLite
+means that it is a SELECT query returning one column of integers and is a
+SQLite statement. Such statement could therefore be parsed only by the SqLite
+parser.
+
+=Naming
 
 Most functions have the same name as their SQL functions counterpart.
 However, since some words are reserved in Haskell, an underscore is added at
 the end in some cases (as does Esqueletto):
 - WHERE becomes 'where_'
+- AND becomes 'and_'
 - AS becomes 'as_'
 - IN becomes 'in_'
+- OR becomes 'or_'
 
-*Special cases
+=Special cases
 
-**ORDER BY
+==ORDER BY
 
 Limit and offset have to be added to the 'OrderBy' clause and are not part of a
 clause on their own.
@@ -95,34 +112,21 @@ module Database.Hedsql.Common.Constructor
       related function itself.
       The reverse is not true: you cannot use a 'TableRef' in a CREATE or DROP
       statement. If you want to do this, you can use the 'Database.Hedsql.Ext'
-      module. It comes of course at the cost of less type safety.
+      module. It comes of course at the cost of lesser type safety.
       -}
-      ToTables
-    , toTables
+      ToTable
     , table
-    , tables
-    , ToTableRefs
-    , toTablesRef
+    , ToTableRef
     , alias
     , tableRef
-    , tableRefs
     
       -- * Column and column reference
-    , ToCols
+    , ToCol
     , col
-    , cols
     , toCol
-    , toCols
-    , ToColRefs
-    , toColRefs
-    , ToColRefWraps
-    , toColRefWraps
+    , ToColRef
     , colRef
-    , colRefs
-    , mkColRefWrap
-    , mkColRefWraps
     , colRefWrap
-    , colRefWraps
     , (/.)
     , as_
 
@@ -149,7 +153,6 @@ module Database.Hedsql.Common.Constructor
       
       -- * Wrapper
     , wrap
-    , wrapColRef
     
       -- * Composition
     , (/++)
@@ -191,8 +194,8 @@ module Database.Hedsql.Common.Constructor
     
       -- ** FROM clause
     , from
-    , ToJoinClauses
-    , toJoinClauses
+    , ToJoinClause
+    , joinClause
     , crossJoin
     , fullJoin
     , innerJoin
@@ -208,7 +211,7 @@ module Database.Hedsql.Common.Constructor
     , where_
     
     -- ** GROUP BY clause
-    , ToSortRefs
+    , ToSortRef
     , groupBy
     , having
     
@@ -216,9 +219,7 @@ module Database.Hedsql.Common.Constructor
     , orderBy
     , asc
     , desc
-    , toSortRefs
     , sortRef
-    , sortRefs
     , nullsFirst
     , nullsLast
     
@@ -236,8 +237,7 @@ module Database.Hedsql.Common.Constructor
     , unionAll
     
     -- * INSERT
-    -- TODO: change to insert?
-    , insertInto
+    , insert
     
     -- * UPDATE
     , update
@@ -246,9 +246,8 @@ module Database.Hedsql.Common.Constructor
     , deleteFrom
     
     -- * Values
-    , ToSqlValues
+    , ToSqlValue
     , value
-    , values
     , boolVal
     , numVal
     , intVal
@@ -291,7 +290,8 @@ module Database.Hedsql.Common.Constructor
       -- ** Logic
     , and_
     , ands
-    -- TODO: add or_ and ors.
+    , or_
+    , ors
     
     -- ** Conditions
     , isFalse
@@ -326,7 +326,10 @@ module Database.Hedsql.Common.Constructor
     -}
     , ToStmt
     , statement
-    , statements
+    
+    -- * Utility functions
+    , ToList
+    , toList
     ) where
  
 --------------------------------------------------------------------------------
@@ -342,41 +345,16 @@ import Unsafe.Coerce
 -- Table
 --------------------------------------------------------------------------------
 
--- TODO: use Applicative for the list coercion.
--- TODO: it would probably better to coerce to a single value here!
-
--- | Coerce a given type to a list of tables.
-class ToTables a b | a -> b where
-    toTables :: a -> b
+-- | Convert a value to a 'Table' which can then be used as so in a query.
+class ToTable a b | a -> b where
+    table :: a -> b
 
 -- | Create a table from itself.
-instance ToTables (Table a) [Table a] where
-    toTables t = [t]
-
--- | Create a table which can then be used as so in a query.
-table ::
-       ToTables a [Table b]
-    => a -- ^ The table itself or its name as a string.
-    -> Table b
-table = head.toTables
-
--- | Create many tables which can then be used as so in a query.
-tables ::
-       ToTables a [Table b]
-    => [a] -- ^ The tables themselves or their name as a string.
-    -> [Table b]
-tables = map table 
-
--- | Create a table reference which can then be used in a query.
-tableRef :: ToTableRefs a [TableRef b] => a -> TableRef b
-tableRef = head.toTablesRef
-
--- | Create many table reference which can then be used in a query.
-tableRefs :: ToTableRefs a [TableRef b] => a -> [TableRef b]
-tableRefs = toTablesRef
+instance ToTable (Table a) (Table a) where
+    table = id
 
 -- | Create a table reference alias using AS.
-alias :: ToTableRefs a [TableRef b] => a -> String -> TableRef b
+alias :: ToTableRef a (TableRef b) => a -> String -> TableRef b
 alias t name =
     setAlias ref
     where
@@ -387,42 +365,32 @@ alias t name =
         setAlias (JoinRef    a _) = JoinRef    a (Just al)
         setAlias (TableRef   a _) = TableRef   a (Just al)
 
--- | Coerce a given type to a list of TableRef.
-class ToTableRefs a b | a -> b where
-    toTablesRef :: a -> b
+{-|
+Convert a value to a table reference ('TableRef')
+which can then be used in a query.
+-}
+class ToTableRef a b | a -> b where
+    tableRef :: a -> b
 
-instance ToTableRefs (Join a) [TableRef a] where
-    toTablesRef join = [JoinRef join Nothing]
+instance ToTableRef (Join a) (TableRef a) where
+    tableRef join = JoinRef join Nothing
 
-instance ToTableRefs (Table a) [TableRef a] where
-    toTablesRef name = [TableRef name Nothing]
-
-instance ToTableRefs (TableRef a) [TableRef a] where
-    toTablesRef ref = [ref]
+instance ToTableRef (Table a) (TableRef a) where
+    tableRef name = TableRef name Nothing
     
-instance ToTableRefs [Table a] [TableRef a] where
-    toTablesRef = map (head.toTablesRef)
-    
-instance ToTableRefs [TableRef a] [TableRef a] where
-    toTablesRef = id
+instance ToTableRef (TableRef a) (TableRef a) where
+    tableRef = id
 
 --------------------------------------------------------------------------------
 -- Column and column reference
 --------------------------------------------------------------------------------
 
 -- | Coerce a given type to a list of 'Column'.
-class ToCols a b | a -> b where
-    toCols :: a -> b
+class ToCol a b | a -> b where
+    toCol :: a -> b
 
-instance ToCols (Column a b) [Column a b] where
-    toCols c = [c]
-    
-instance ToCols [Column a b] [Column a b] where
-    toCols = map (head.toCols)
-
--- | Convert a given type to a column.
-toCol :: ToCols a [Column b c] => a -> Column b c
-toCol = head.toCols
+instance ToCol (Column b a) (Column b a) where
+    toCol = id
 
 -- | Create one column which can then be used in a query or a statement.
 col ::
@@ -430,54 +398,40 @@ col ::
     -> DataType b a -- ^ Data type of the column.
     -> Column   b a
 col name d = Column name d []
-    
+
 {-|
-Create a list of columns based on a list which can then be used in
-a query or a statement.
+Coerce a given type to a list of 'ColRef', a column reference which can be used
+in SELECT clause.
 -}
--- TODO: check if it is used at all...
-cols :: [(String, DataType b a)] -> [Column b a]
-cols = map (uncurry col)
+class ToColRef a b | a -> b where
+    colRef :: a -> b
 
--- | Coerce a given type to a list of 'ColRef'.
-class ToColRefs a b | a -> b where
-    toColRefs :: a -> b
-    
-instance ToColRefs (ColRef b a) [ColRef b a] where
-    toColRefs ref = [ref]
+instance ToColRef (ColRef b a) (ColRef b a) where
+    colRef = id
 
-instance ToColRefs [ColRef b a] [ColRef b a] where
-    toColRefs = id
+instance ToColRef (ColRefWrap a) (ColRef Undefined a) where
+    -- The unsafeCoerce allows to have a ColRef of undefined type returned.
+    colRef (ColRefWrap ref) = unsafeCoerce ref
 
-instance ToColRefs (Column b a) [ColRef b a] where
-    toColRefs a =
-        [ColRef (ColExpr $ ColDef a Nothing) Nothing]
-    
-instance ToColRefs [Column b a] [ColRef b a] where
-    toColRefs = map (head.toColRefs)
+instance ToColRef (Column b a) (ColRef b a) where
+    colRef a = ColRef (ColExpr $ ColDef a Nothing) Nothing
 
-instance ToColRefs (Expression b a) [ColRef b a] where
-    toColRefs e = [ColRef e Nothing]
+instance ToColRef (Expression b a) (ColRef b a) where
+    colRef e = ColRef e Nothing
 
-instance ToColRefs [Expression b a] [ColRef b a] where
-    toColRefs = map (head.toColRefs)
+instance ToColRef (Value b a) (ColRef b a) where
+    colRef val = ColRef (Value val) Nothing
 
-instance ToColRefs (Value b a) [ColRef b a] where
-    toColRefs val = [ColRef (Value val) Nothing]
+instance ToColRef [Value b a] (ColRef [b] a) where
+    colRef xs = ColRef (Values $ map value xs) Nothing
 
-instance ToColRefs [Value b a] [ColRef [b] a] where
-    toColRefs vals = [ColRef (Values vals) Nothing]
-
-instance ToColRefs (Select b a) [ColRef b a] where
-    toColRefs query = [ColRef (SelectExpr query) Nothing]
-
-instance ToColRefs [Select b a] [ColRef b a] where
-    toColRefs = map (head.toColRefs)
+instance ToColRef (Select b a) (ColRef b a) where
+    colRef query = ColRef (SelectExpr query) Nothing
 
 -- | Create a column reference with a qualified name.
 (/.) ::
-    (  ToTableRefs a [TableRef c]
-    ,  ToColRefs   b [ColRef d c]
+    (  ToTableRef a (TableRef c)
+    ,  ToColRef   b (ColRef d c)
     )
     => a
     -> b
@@ -494,86 +448,28 @@ instance ToColRefs [Select b a] [ColRef b a] where
         cRef = colRef cName
 
 -- | Create a column reference label using AS.
-as_ :: ToColRefs a [ColRef b c] => a -> String -> ColRef b c
+as_ :: ToColRef a (ColRef b c) => a -> String -> ColRef b c
 as_ cRef name = set colRefLabel (Just name) (colRef cRef)
 
--- | Create a column reference which can be used in SELECT clause.
-colRef :: ToColRefs a [ColRef b c] => a -> ColRef b c
-colRef = head.toColRefs
-
--- | Creates many column references which can then be used in SELECT clause.
-colRefs :: ToColRefs a [ColRef b c] => a -> [ColRef b c]
-colRefs = toColRefs
-
 {-|
-Coerce a type to a list of 'ColRefWrap'. This is used to wrap the columns
-of different types into one single type. Then such standardised type can
+Coerce a type to a 'ColRefWrap'. This is used to wrap the columns
+of different types into one single type. Then such standardized type can
 be used in lists.
 -}
-class ToColRefWraps a b | a -> b where
-    toColRefWraps :: a -> b
-
-instance ToColRefWraps (ColRef b a) [ColRefWrap a] where
-    toColRefWraps = mkColRefWraps
-
-instance ToColRefWraps [ColRef b a] [ColRefWrap a] where
-    toColRefWraps = mkColRefWrap
-
-instance ToColRefWraps (Column b a) [ColRefWrap a] where
-    toColRefWraps = mkColRefWraps
-
-instance ToColRefWraps [Column b a] [ColRefWrap a] where
-    toColRefWraps = mkColRefWrap
-
-instance ToColRefWraps (Expression b a) [ColRefWrap a] where
-    toColRefWraps = mkColRefWraps
-
-instance ToColRefWraps [Expression b a] [ColRefWrap a] where
-    toColRefWraps = mkColRefWrap
-
-instance ToColRefWraps (Value b a) [ColRefWrap a] where
-    toColRefWraps = mkColRefWraps
-
-instance ToColRefWraps [Value b a] [ColRefWrap a] where
-    toColRefWraps = mkColRefWrap
-
-instance ToColRefWraps (Select b a) [ColRefWrap a] where
-    toColRefWraps = mkColRefWraps
-
-instance ToColRefWraps [Select b a] [ColRefWrap a] where
-    toColRefWraps = mkColRefWrap
-
-instance ToColRefWraps (ColRefWrap a) [ColRefWrap a] where
-    toColRefWraps a = [a]
-
-instance ToColRefWraps [ColRefWrap a] [ColRefWrap a] where
-    toColRefWraps = id
-
-mkColRefWrap :: ToColRefs a [ColRef c b] => a -> [ColRefWrap b]
-mkColRefWrap = map ColRefWrap . colRefs
-
-mkColRefWraps :: ToColRefs a [ColRef c b] => a -> [ColRefWrap b]
-mkColRefWraps c = [ColRefWrap $ colRef c]
-
--- | Create a column reference wrapper for heteregeneous lists.
-colRefWrap :: ToColRefWraps a [ColRefWrap b] => a -> ColRefWrap b
-colRefWrap = head . toColRefWraps
-
--- | Creates many column references for heteregeneous lists.
-colRefWraps :: ToColRefWraps a [ColRefWrap b] => a -> [ColRefWrap b]
-colRefWraps = toColRefWraps
+colRefWrap :: ToColRef a (ColRef c b) => a -> ColRefWrap b
+colRefWrap = wrap . colRef
 
 {-|
 Create a SQL expression which can then be used in condition or column reference.
 -}
-expr :: ToColRefs a [ColRef b c] => a -> Expression b c
-expr = head . exprs
+expr :: ToColRef a (ColRef b c) => a -> Expression b c
+expr = view colRefExpr . colRef
 
 {-|
 Create SQL expressions which can then be used in condition or column references.
 -}
-exprs :: ToColRefs a [ColRef b c] => a -> [Expression b c]
-exprs = map (view colRefExpr) . colRefs
+exprs :: ToColRef a (ColRef b c) => [a] -> [Expression b c]
+exprs = map expr
 
 --------------------------------------------------------------------------------
 -- Types
@@ -609,8 +505,8 @@ varchar = Varchar
 
 -- | Create a column/value pair to be used in an INSERT or UPDATE statement.
 assign ::
-    (  ToCols    a [Column c d]
-    ,  ToColRefs b [ColRef c d]
+    (  ToCol   a (Column c d)
+    ,  ToColRef b (ColRef c d)
     )
     => a -- ^ Column or name of the column.
     -> b -- ^ Value for this column. It can also be an expression.
@@ -627,7 +523,7 @@ For example:
 > myWrap :: Column a b -> ColWrap a
 > myWrap = wrap
 
-This technic allows to build heteregeneous list of elements in a standardized
+This technique allows to build heterogeneous list of elements in a standardized
 way with always the same function call.
 -}
 class Wrapper a d | a -> d where
@@ -644,11 +540,6 @@ instance Wrapper Select SelectWrap where
     
 instance Wrapper Value ValueWrap where
     wrap = ValueWrap
-
--- TODO: check this, it is probably a duplicate.
--- | Create a column reference and wrap it, so it can be used in lists.
-wrapColRef :: ToColRefs a [ColRef b c] => a -> ColRefWrap c    
-wrapColRef = ColRefWrap . colRef
 
 --------------------------------------------------------------------------------
 -- Composition
@@ -814,7 +705,7 @@ it as follow:
 > selectQuery /++ orderByClause
 -}
 (/++) :: (Add a d, ToAddable b (d c)) => a c -> b -> a c
-(/++) target element = addElem target (toConvertible element)
+(/++) target = addElem target . toConvertible
 
 --------------------------------------------------------------------------------
 -- PRIVATE
@@ -844,11 +735,11 @@ colConstraint :: String -> ColConstraintType a -> ColConstraint a
 colConstraint name = ColConstraint (maybeString name)
 
 -- | Create a CREATE TABLE statement.
-createTable :: ToTables a [Table b] => a -> [ColWrap b] -> Create b
+createTable :: ToTable a (Table b) => a -> [ColWrap b] -> Create b
 createTable t c = CreateTable False $ table t & tableCols .~ c
 
 -- | Create a CREATE TABLE IF NOT EXIST statement.
-createTableIfNotExist :: ToTables a [Table b] => a -> [ColWrap b] -> Create b
+createTableIfNotExist :: ToTable a (Table b) => a -> [ColWrap b] -> Create b
 createTableIfNotExist t c = CreateTable True (table t & tableCols .~ c)
 
 -- | Create a CREATE VIEW statement.
@@ -864,18 +755,18 @@ createViewIfNotExist ::
 createViewIfNotExist = CreateView True
 
 -- | Create a DEFAULT value constraint.
-defaultValue :: ToColRefs a [ColRef b c] => a -> ColConstraintType c
+defaultValue :: ToColRef a (ColRef b c) => a -> ColConstraintType c
 defaultValue e = Default $ expr e
 
 -- | Create a DROP TABLE statement.
 dropTable ::
-       (ToTables a [Table b])
+       (ToTable a (Table b))
     => a      -- ^ Table to drop. 
     -> Drop b
 dropTable = DropTable False . table
 
 dropTableIfExists ::
-       ToTables a [Table b]
+       ToTable a (Table b)
     => a      -- ^ Table to drop. 
     -> Drop b
 dropTableIfExists = DropTable True . table
@@ -894,14 +785,17 @@ dropViewIfExists = DropView True
 
 -- | Create a FOREIGN KEY constraint.
 foreignKey ::
-    ( ToTables a [Table d]
-    , ToCols   b [Column c d]
+    ( ToList b [e]
+    , ToTable a (Table d)
+    , ToCol e (Column c d)
     )
     => a -- ^ Table.
     -> b -- ^ Columns.
     -> ColConstraintType d
 foreignKey t c =
-    Reference $ ForeignKey (table t) (map ColWrap $ toCols c) Nothing Nothing
+    Reference $ ForeignKey (table t) cols Nothing Nothing
+    where
+        cols = map (ColWrap . toCol) $ toList c
 
 -- | Create a NOT NULL constraint.
 notNull :: ColConstraintType a
@@ -918,8 +812,8 @@ primary ::
 primary = Primary
 
 -- | Create a PRIMARY KEY constraint to be used in a table constraint.
-primaryT :: ToCols a [Column b c] => a -> TableConstraintType c
-primaryT c = TCPrimaryKey $ map ColWrap $ toCols c
+primaryT :: (ToList a [d], ToCol d (Column b c)) => a -> TableConstraintType c
+primaryT = TCPrimaryKey . map (ColWrap . toCol) . toList
 
 -- | Create a table constraint.
 tableConstraint :: String -> TableConstraintType a -> TableConstraint a
@@ -942,84 +836,63 @@ uniqueT cs = TCUnique cs
 list :: a -> [a]
 list a = [a]
 
--- | Coerce a type to a list of JoinClause type.
-class ToJoinClauses a b | a -> b where
-    toJoinClauses :: a -> b
+-- | Coerce a type to a list of JoinClause type such as ON or USING.
+class ToJoinClause a b | a -> b where
+    joinClause :: a -> b
     
 -- | Create an ON join clause from a boolean function.
-instance ToJoinClauses (Expression Bool a) [JoinClause a] where
-    toJoinClauses = list . JoinClauseOn
+instance ToJoinClause (Expression Bool a) (JoinClause a) where
+    joinClause = JoinClauseOn
 
 -- | Create an USING join clause from a column.
-instance ToJoinClauses (Column b a) [JoinClause a] where
-    toJoinClauses c = list $ JoinClauseUsing [ColWrap c]
+instance ToJoinClause (Column b a) (JoinClause a) where
+    joinClause = JoinClauseUsing . list . ColWrap
 
--- | Create an USING join clause from a list of columns.
-instance ToJoinClauses [Column b a] [JoinClause a] where
-    toJoinClauses = list . JoinClauseUsing . map ColWrap
+{-|
+Convert a value to a sorting reference: a reference which can be used in an
+ORDER BY clause.
+-}
+class ToSortRef a b | a -> b where
+    sortRef :: a -> b
 
--- | Coerce a type to a list of SortRef types.
-class ToSortRefs a b | a -> b where
-    toSortRefs :: a -> b
+instance ToSortRef (Column b a) (SortRef a) where
+    sortRef c = SortRef (ColRefWrap $ colRef c) Nothing Nothing
 
-instance ToSortRefs (Column b a) [SortRef a] where
-    toSortRefs c = [SortRef (ColRefWrap $ colRef c) Nothing Nothing]
+instance ToSortRef (ColWrap a) (SortRef a) where
+    sortRef (ColWrap c) = SortRef (ColRefWrap $ colRef c) Nothing Nothing
 
-instance ToSortRefs [Column b a] [SortRef a] where
-    toSortRefs = map (\c -> SortRef (ColRefWrap $ colRef c) Nothing Nothing)
+instance ToSortRef (ColRef b a) (SortRef a) where
+    sortRef ref = SortRef (ColRefWrap ref) Nothing Nothing
 
-instance ToSortRefs (ColWrap a) [SortRef a] where
-    toSortRefs (ColWrap c) = [SortRef (ColRefWrap $ colRef c) Nothing Nothing]
+instance ToSortRef (ColRefWrap a) (SortRef a) where
+    sortRef ref = SortRef ref Nothing Nothing
 
-instance ToSortRefs [ColWrap a] [SortRef a] where
-    toSortRefs =
-        map (\(ColWrap c) -> SortRef (ColRefWrap $ colRef c) Nothing Nothing)
-
-instance ToSortRefs (ColRef b a) [SortRef a] where
-    toSortRefs ref = [SortRef (ColRefWrap ref) Nothing Nothing]
-
-instance ToSortRefs [ColRef b a] [SortRef a] where
-    toSortRefs = map (\ref -> SortRef (ColRefWrap ref) Nothing Nothing)
-
-instance ToSortRefs (ColRefWrap a) [SortRef a] where
-    toSortRefs ref = [SortRef ref Nothing Nothing]
-
-instance ToSortRefs [ColRefWrap a] [SortRef a] where
-    toSortRefs = map (\ref -> SortRef ref Nothing Nothing)
-
-instance ToSortRefs (SortRef a) [SortRef a] where
-    toSortRefs = list
-
-instance ToSortRefs [SortRef a] [SortRef a] where
-    toSortRefs = id
+instance ToSortRef (SortRef a) (SortRef a) where
+    sortRef = id
 
 -- | Create a join on columns with a USING or ON clause.
 columnJoin ::
    (
-      ToTableRefs   a [TableRef   d]
-   ,  ToTableRefs   b [TableRef   d]
-   ,  ToJoinClauses c [JoinClause d]
+      ToTableRef   a (TableRef d)
+   ,  ToTableRef   b (TableRef d)
+   ,  ToJoinClause c (JoinClause d)
    )
    => JoinTypeCol d
    -> a
    -> b
    -> c
-   -> Join        d
+   -> Join d
 columnJoin joinType tableRef1 tableRef2 clause =
     JoinCol
          joinType
         (tableRef tableRef1)
         (tableRef tableRef2)
         (joinClause clause)
-
--- | Create a JOIN clause such as ON or USING.
-joinClause :: ToJoinClauses a [JoinClause b] => a -> JoinClause b
-joinClause = toJoinClause
  
 -- | Create a join on tables (CROSS or NATURAL join).
 tableJoin ::
-    (  ToTableRefs   a [TableRef c]
-    ,  ToTableRefs   b [TableRef c]
+    (  ToTableRef   a (TableRef c)
+    ,  ToTableRef   b (TableRef c)
     )
     => JoinTypeTable c
     -> a
@@ -1030,10 +903,6 @@ tableJoin joinType tableRef1 tableRef2 =
         joinType
         (tableRef tableRef1)
         (tableRef tableRef2)
-
--- | Convert a type to a join clause.
-toJoinClause :: ToJoinClauses a [JoinClause b] => a -> JoinClause b
-toJoinClause = head.toJoinClauses
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -1048,6 +917,15 @@ simpleSelect :: Selection b a -> Select b a
 simpleSelect selection =
     Single $ SelectQ All selection Nothing Nothing Nothing Nothing
 
+{-|
+Allow the creation of SELECT queries with correct types.
+
+A SELECT query returning only one column will have type:
+> Select [b] a
+
+A SELECT query returning many columns will have type:
+> Select [[b]] a
+-}
 class SelectConstr a b | a -> b where
     -- | Create a SELECT query.
     select :: a -> b
@@ -1071,7 +949,7 @@ instance SelectConstr (Column b a) (Select [b] a) where
 
 instance SelectConstr [Column b a] (Select [[b]] a) where
     select cs =
-        simpleSelect $ TsSelection (colRefs columns)
+        simpleSelect $ TsSelection $ map colRef columns
         where
             -- Unsafe coercion to the correct phantom types parameter.
             columns :: [Column [[b]] a]
@@ -1124,8 +1002,8 @@ selectDistinct = setSelect selectType Distinct . select
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
-    ( ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+    ( ToColRef a (ColRef c d)
+    , ToColRef b (ColRef c d)
     )
     => a
     -> b
@@ -1135,8 +1013,8 @@ isDistinctFrom colRef1 colRef2 =
 
 -- | Create a IS NOT DISTINCT FROM operator.
 isNotDistinctFrom ::
-    ( ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+    ( ToColRef a (ColRef c d)
+    , ToColRef b (ColRef c d)
     )
     => a
     -> b
@@ -1153,13 +1031,13 @@ isNotDistinctFrom colRef1 colRef2 =
 ----------------------------------------
 
 -- | Add a FROM clause to a SELECT query.
-from :: ToTableRefs a [TableRef b] => a -> From b
-from = From . tableRefs
+from :: (ToList a [b], ToTableRef b (TableRef c)) => a -> From c
+from = From . map tableRef . toList
 
 -- | Create a CROSS JOIN.
 crossJoin ::
-    (  ToTableRefs a [TableRef c]
-    ,  ToTableRefs b [TableRef c]
+    (  ToTableRef a (TableRef c)
+    ,  ToTableRef b (TableRef c)
     )
     => a
     -> b
@@ -1168,9 +1046,9 @@ crossJoin = tableJoin CrossJoin
 
 -- | Create a FULL JOIN.
 fullJoin ::
-    ( ToTableRefs   a [TableRef   d]
-    , ToTableRefs   b [TableRef   d]
-    , ToJoinClauses c [JoinClause d]
+    ( ToTableRef   a (TableRef d)
+    , ToTableRef   b (TableRef d)
+    , ToJoinClause c (JoinClause d)
     )
     => a      -- ^ First table reference.
     -> b      -- ^ Second table reference.
@@ -1186,9 +1064,9 @@ If the join clause is a column, a string or a list of columns or strings, it
 will be an USING clause.
 -} 
 innerJoin ::
-    ( ToTableRefs   a [TableRef   d]
-    , ToTableRefs   b [TableRef   d]
-    , ToJoinClauses c [JoinClause d]
+    ( ToTableRef   a (TableRef d)
+    , ToTableRef   b (TableRef d)
+    , ToJoinClause c (JoinClause d)
     )
     => a      -- ^ First table reference.
     -> b      -- ^ Second table reference.
@@ -1198,9 +1076,9 @@ innerJoin = columnJoin InnerJoin
 
 -- | Create a LEFT JOIN.
 leftJoin ::
-    ( ToTableRefs   a [TableRef   d]
-    , ToTableRefs   b [TableRef   d]
-    , ToJoinClauses c [JoinClause d]
+    ( ToTableRef   a (TableRef d)
+    , ToTableRef   b (TableRef d)
+    , ToJoinClause c (JoinClause d)
     )
     => a -- ^ First table reference.
     -> b -- ^ Second table reference.
@@ -1210,8 +1088,8 @@ leftJoin = columnJoin LeftJoin
 
 -- | Create a NATURAL FULL JOIN.
 naturalFullJoin ::
-    (  ToTableRefs a [TableRef c]
-    ,  ToTableRefs b [TableRef c]
+    (  ToTableRef a (TableRef c)
+    ,  ToTableRef b (TableRef c)
     )
     => a
     -> b
@@ -1220,8 +1098,8 @@ naturalFullJoin = tableJoin NaturalFullJoin
 
 -- | Create a NATURAL LEFT JOIN.
 naturalLeftJoin ::
-    (  ToTableRefs a [TableRef c]
-    ,  ToTableRefs b [TableRef c]
+    (  ToTableRef a (TableRef c)
+    ,  ToTableRef b (TableRef c)
     )
     => a
     -> b
@@ -1230,8 +1108,8 @@ naturalLeftJoin = tableJoin NaturalLeftJoin
 
 -- | Create a NATURAL INNER JOIN.
 naturalInnerJoin ::
-    (  ToTableRefs a [TableRef c]
-    ,  ToTableRefs b [TableRef c]
+    (  ToTableRef a (TableRef c)
+    ,  ToTableRef b (TableRef c)
     )
     => a
     -> b
@@ -1240,8 +1118,8 @@ naturalInnerJoin = tableJoin NaturalInnerJoin
 
 -- | Create a NATURAL RIGHT JOIN.
 naturalRightJoin ::
-    (  ToTableRefs a [TableRef c]
-    ,  ToTableRefs b [TableRef c]
+    (  ToTableRef a (TableRef c)
+    ,  ToTableRef b (TableRef c)
     )
     => a
     -> b
@@ -1250,9 +1128,9 @@ naturalRightJoin = tableJoin NaturalRightJoin
 
 -- | Create a RIGHT JOIN.
 rightJoin ::
-    ( ToTableRefs   a [TableRef d]
-    , ToTableRefs   b [TableRef d]
-    , ToJoinClauses c [JoinClause d]
+    ( ToTableRef   a (TableRef d)
+    , ToTableRef   b (TableRef d)
+    , ToJoinClause c (JoinClause d)
     )
     => a      -- ^ First table reference.
     -> b      -- ^ Second table reference.
@@ -1281,60 +1159,48 @@ where_ = Where
 
 -- | Add an ORDER BY clause to a query.
 orderBy ::
-       ToSortRefs a [SortRef b]
+    (  ToList a [b]
+    ,  ToSortRef b (SortRef c)
+    ) 
     => a          -- ^ Sorting references.
-    -> OrderBy b
-orderBy cs = OrderBy (sortRefs cs) Nothing Nothing
+    -> OrderBy c
+orderBy cs = OrderBy (map sortRef $ toList cs) Nothing Nothing
 
 {-|
 Add an ascending sorting order (ASC) to a sort reference
 (which can be a column reference).
 -}
-asc :: ToSortRefs a [SortRef b] => a -> SortRef b
+asc :: ToSortRef a (SortRef b) => a -> SortRef b
 asc ref =  set sortRefOrder (Just Asc) (sortRef ref)
 
 {-|
 Add a descending sorting order (DESC) to a sort reference
 (which can be a column reference).
 -}
-desc :: ToSortRefs a [SortRef b] => a -> SortRef b
+desc :: ToSortRef a (SortRef b) => a -> SortRef b
 desc ref =  set sortRefOrder (Just Desc) (sortRef ref)
-
-{-|
-Convert a value to a sorting reference: a reference which can be used in an
-ORDER BY clause.
--}
-sortRef :: ToSortRefs a [SortRef b] => a -> SortRef b
-sortRef = head.toSortRefs
-
-{-|
-Convert a value to a list of sorting reference:
-references which can be used in an ORDER BY clause.
--}
-sortRefs :: ToSortRefs a [SortRef b] => a -> [SortRef b]
-sortRefs = toSortRefs
 
 {-|
 Add a nulls first option (NULLS FIRST) to a sort reference
 (which can be a column reference).
 -}
-nullsFirst :: ToSortRefs a [SortRef b] => a -> SortRef b
-nullsFirst sRef =  set sortRefNulls (Just NullsFirst) (sortRef sRef)
+nullsFirst :: ToSortRef a (SortRef b) => a -> SortRef b
+nullsFirst sRef = set sortRefNulls (Just NullsFirst) (sortRef sRef)
 
 {-|
 Add a nulls last option (NULLS LAST) to a sort reference
 (which can be a column reference).
 -}
-nullsLast:: ToSortRefs a [SortRef b] => a -> SortRef b
-nullsLast sRef =  set sortRefNulls (Just NullsLast) (sortRef sRef)
+nullsLast:: ToSortRef a (SortRef b) => a -> SortRef b
+nullsLast sRef = set sortRefNulls (Just NullsLast) (sortRef sRef)
 
 ----------------------------------------
 -- GROUP BY
 ----------------------------------------
 
 -- | Create a GROUP BY clause.
-groupBy :: ToColRefWraps a [ColRefWrap b] => a -> GroupBy b
-groupBy cs = GroupBy (colRefWraps cs) Nothing
+groupBy :: (ToList a [b], ToColRef b (ColRef d c)) => a -> GroupBy c
+groupBy cs = GroupBy (map colRefWrap $ toList cs) Nothing
 
 -- | Add a HAVING clause to a GROUP BY clause.
 class HavingConstr  a b | a -> b where
@@ -1427,18 +1293,18 @@ unionAll = combinedQuery UnionAll
 --------------------------------------------------------------------------------
 
 {-|
-Create an INSERT INTO statement.
+Create an INSERT statement.
 
 The values to insert are a list of list of assignments because you may insert
 more than one row in the database.
 -}
-insertInto ::
-    ( ToTables a [Table e]
+insert ::
+    ( ToTable a (Table e)
     )
     => a              -- ^ Table or name of the table to insert the data into.
     -> [Assignment e] -- ^ Values to insert.
     -> Insert e
-insertInto = Insert . table
+insert = Insert . table
 
 --------------------------------------------------------------------------------
 -- UPDATE
@@ -1446,7 +1312,7 @@ insertInto = Insert . table
 
 -- | Create an UPDATE statement.
 update ::
-       ToTables a [Table b]
+       ToTable a (Table b)
     => a              -- ^ Table to update.
     -> [Assignment b] -- ^ Column/value assignments.
     -> Update b
@@ -1458,8 +1324,8 @@ update t assignments = Update (table t) assignments Nothing
 
 -- | Create a DELETE FROM statement.
 deleteFrom ::
-       ToTables a [Table b]
-    => a        -- ^ Table or name of the table to delete from.
+       ToTable a (Table b)
+    => a
     -> Delete b
 deleteFrom t = Delete (table t) Nothing
 
@@ -1483,46 +1349,23 @@ type SqlBool   a = Bool
 type SqlString a = String
 type SqlInt    a = Int
 
--- | Coerce a given type to a list of SqlValue.
-class ToSqlValues a b | a -> b where
-    toSqlValues :: a -> b
-
-instance ToSqlValues (Value a b) [Value a b] where
-    toSqlValues a = [a]
-
-instance ToSqlValues [Value a b] [Value a b] where
-    toSqlValues = id
-
-instance ToSqlValues (SqlBool a) [Value Bool a] where
-    toSqlValues a = [BoolVal a]
-
-instance ToSqlValues [SqlBool a] [Value Bool a] where
-    toSqlValues = map BoolVal
-    
-instance ToSqlValues (SqlString a) [Value String a] where
-    toSqlValues a = [StringVal a]
-
-instance ToSqlValues [SqlString a] [Value String a] where
-    toSqlValues = map StringVal
-
-instance ToSqlValues (SqlInt a) [Value Int a] where
-    toSqlValues a = [IntVal a]
-
-instance ToSqlValues [SqlInt a] [Value Int a] where
-    toSqlValues = map IntVal
-
 {-|
 Convert a primitive value so it can be used in SQL queries as values.
 -}
-value :: ToSqlValues a [Value b c] => a -> Value b c
-value = head.toSqlValues
+class ToSqlValue a b | a -> b where
+    value :: a -> b
+
+instance ToSqlValue (Value a b) (Value a b) where
+    value = id
+
+instance ToSqlValue (SqlBool a) (Value Bool a) where
+    value = BoolVal
     
-{-|
-Convert a list of primitive values so they can be used in SQL queries
-as values.
--}
-values :: ToSqlValues a [Value b c] => a -> [Value b c]
-values = toSqlValues
+instance ToSqlValue (SqlString a) (Value String a) where
+    value = StringVal
+
+instance ToSqlValue (SqlInt a) (Value Int a) where
+    value = IntVal
 
 -- | Create a boolean value.
 boolVal :: Bool -> Value Bool a
@@ -1579,8 +1422,8 @@ pString = PlaceString
 -- | "+" operator.
 (/+) ::
     ( Num d
-    , ToColRefs a [ColRef d c]
-    , ToColRefs b [ColRef d c]
+    , ToColRef a (ColRef d c)
+    , ToColRef b (ColRef d c)
     )
     => a
     -> b
@@ -1590,8 +1433,8 @@ pString = PlaceString
 -- | "-" operator.
 (/-) ::
     ( Num d
-    , ToColRefs a [ColRef d c]
-    , ToColRefs b [ColRef d c]
+    , ToColRef a (ColRef d c)
+    , ToColRef b (ColRef d c)
     )
     => a
     -> b
@@ -1601,8 +1444,8 @@ pString = PlaceString
 -- | "*" operator.
 (/*) ::
     ( Num d
-    , ToColRefs a [ColRef d c]
-    , ToColRefs b [ColRef d c]
+    , ToColRef a (ColRef d c)
+    , ToColRef b (ColRef d c)
     )
     => a
     -> b
@@ -1612,8 +1455,8 @@ pString = PlaceString
 -- | Equality operator ("=" in SQL).
 infix 7 /==
 (/==) ::
-    ( ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+    ( ToColRef a (ColRef c d)
+    , ToColRef b (ColRef c d)
     )
     => a
     -> b
@@ -1623,8 +1466,8 @@ infix 7 /==
 -- | Greater than operator (">").
 infix 7 />
 (/>) ::
-    ( ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+    ( ToColRef a (ColRef c d)
+    , ToColRef b (ColRef c d)
     )
     => a
     -> b
@@ -1634,8 +1477,8 @@ infix 7 />
 -- | Greater than or equal to operator (">=").
 infix 7 />=
 (/>=) ::
-    ( ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+    ( ToColRef a (ColRef c d)
+    , ToColRef b (ColRef c d)
     )
     => a
     -> b
@@ -1645,8 +1488,8 @@ infix 7 />=
 -- | Smaller than operator ("<").
 infix 7 /<
 (/<) ::
-    ( ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+    ( ToColRef a (ColRef c d)
+    , ToColRef b (ColRef c d)
     )
     => a
     -> b
@@ -1658,8 +1501,8 @@ infix 7 /<=
 (/<=) ::
     (
       SQLOrd c
-    , ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+    , ToColRef a (ColRef c d)
+    , ToColRef b (ColRef c d)
     )
     => a
     -> b
@@ -1669,8 +1512,8 @@ infix 7 /<=
 -- | Unequality operator ("<>").
 infix 7 /<>
 (/<>) ::
-    ( ToColRefs a [ColRef c d]
-    , ToColRefs b [ColRef c d]
+    ( ToColRef a (ColRef c d)
+    , ToColRef b (ColRef c d)
     )
     => a
     -> b
@@ -1683,11 +1526,19 @@ infix 7 /<>
 
 -- | Join two predicates with an AND.
 and_ :: Expression Bool b -> Expression Bool b -> Expression Bool b
-and_ condition1 condition2 = And [condition1, condition2]
+and_ c1 c2 = And [c1, c2]
 
 -- | Join a list of predicates with AND which will be enclosed in a parenthesis.
 ands :: [Expression Bool b] -> Expression Bool b
 ands = And 
+
+-- | Join two predicates with an OR.
+or_ :: Expression Bool b -> Expression Bool b -> Expression Bool b
+or_ c1 c2 = Or [c1, c2] 
+
+-- | Join a list of predicates with OR which will be enclosed in a parenthesis.
+ors :: [Expression Bool b] -> Expression Bool b
+ors = Or
 
 ---------------------------------------
 -- Conditions
@@ -1696,9 +1547,9 @@ ands = And
 -- | BETWEEN condition.
 between ::
     (
-      ToColRefs a [ColRef d e]
-    , ToColRefs b [ColRef d e]
-    , ToColRefs c [ColRef d e]
+      ToColRef a (ColRef d e)
+    , ToColRef b (ColRef d e)
+    , ToColRef c (ColRef d e)
     )
     => a                 -- ^ Expression to evaluate.
     -> b                 -- ^ Lower bound condition.
@@ -1709,9 +1560,9 @@ between ex lower higher = Between (colRef ex) (colRef lower) (colRef higher)
 -- | NOT BETWEEN condition.
 notBetween ::
     (
-      ToColRefs a [ColRef d e]
-    , ToColRefs b [ColRef d e]
-    , ToColRefs c [ColRef d e]
+      ToColRef a (ColRef d e)
+    , ToColRef b (ColRef d e)
+    , ToColRef c (ColRef d e)
     )
     => a                 -- ^ Expression to evaluate.
     -> b                 -- ^ Lower bound condition.
@@ -1721,14 +1572,14 @@ notBetween ex lower higher =
     NotBetween (colRef ex) (colRef lower) (colRef higher)
 
 -- | Create an EXISTS function.
-exists :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+exists :: ToColRef a (ColRef c b) => a -> Expression Bool b
 exists = Exists . colRef
 
 -- | Create an IN operator.
 in_ ::
     (
-      ToColRefs a [ColRef c   d]
-    , ToColRefs b [ColRef [c] d]
+      ToColRef a (ColRef c d)
+    , ToColRef b (ColRef [c] d)
     )
     => a
     -> b
@@ -1738,8 +1589,8 @@ in_ colRef1 colRef2 = In (colRef colRef1) (colRef colRef2)
 -- | Create a NOT IN operator.
 notIn ::
     (
-      ToColRefs a [ColRef c   d]
-    , ToColRefs b [ColRef [c] d]
+      ToColRef a (ColRef c d)
+    , ToColRef b (ColRef [c] d)
     )
     => a
     -> b
@@ -1747,41 +1598,41 @@ notIn ::
 notIn colRef1 colRef2 = NotIn (colRef colRef1) (colRef colRef2)
 
 -- | Create a IS FALSE function.
-isFalse :: ToColRefs a [ColRef Bool b] => a -> Expression Bool b
+isFalse :: ToColRef a (ColRef Bool b) => a -> Expression Bool b
 isFalse = IsFalse . colRef
 
 -- | Create a IS NOT FALSE function.
-isNotFalse :: ToColRefs a [ColRef Bool b] => a -> Expression Bool b
+isNotFalse :: ToColRef a (ColRef Bool b) => a -> Expression Bool b
 isNotFalse = IsNotFalse . colRef
 
 -- | Create a IS NOT NULL function.
-isNotNull :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+isNotNull :: ToColRef a (ColRef c b) => a -> Expression Bool b
 isNotNull = IsNotNull . colRef
 
 -- | Create a IS NOT TRUE function.
-isNotTrue :: ToColRefs a [ColRef Bool b] => a -> Expression Bool b
+isNotTrue :: ToColRef a (ColRef Bool b) => a -> Expression Bool b
 isNotTrue = IsNotTrue . colRef
 
 -- | Create a IS NOT UNKNOWN function.
-isNotUnknown :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+isNotUnknown :: ToColRef a (ColRef c b) => a -> Expression Bool b
 isNotUnknown = IsNotUnknown . colRef
 
 -- | Create a IS NULL function.
-isNull :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+isNull :: ToColRef a (ColRef c b) => a -> Expression Bool b
 isNull = IsNull . colRef
 
 -- | Create a IS TRUE function.
-isTrue :: ToColRefs a [ColRef Bool b] => a -> Expression Bool b
+isTrue :: ToColRef a (ColRef Bool b) => a -> Expression Bool b
 isTrue = IsTrue . colRef
 
 -- | Create a IS UNKNOWN function.
-isUnknown :: ToColRefs a [ColRef c b] => a -> Expression Bool b
+isUnknown :: ToColRef a (ColRef c b) => a -> Expression Bool b
 isUnknown = IsUnknown . colRef
 
 -- | Create a LIKE operator.
 like ::
-    (  ToColRefs a [ColRef String c]
-    ,  ToColRefs b [ColRef String c]
+    (  ToColRef a (ColRef String c)
+    ,  ToColRef b (ColRef String c)
     )
     => a
     -> b
@@ -1793,15 +1644,15 @@ like colRef1 colRef2 = Like (colRef colRef1) (colRef colRef2)
 ---------------------------------------
 
 -- | Create a COUNT function.
-count :: ToColRefs a [ColRef c b] => a -> Expression Int b 
+count :: ToColRef a (ColRef c b) => a -> Expression Int b 
 count = Count . colRef
 
 -- | Create a MAX function.
-max_ :: Num c => ToColRefs a [ColRef c b] => a -> Expression c b
+max_ :: Num c => ToColRef a (ColRef c b) => a -> Expression c b
 max_ = Max . colRef
 
 -- | Create a MIN function.
-min_ :: Num c => ToColRefs a [ColRef c b] => a -> Expression c b
+min_ :: Num c => ToColRef a (ColRef c b) => a -> Expression c b
 min_ = Min . colRef
 
 -- | Create a random() function.
@@ -1809,7 +1660,7 @@ random :: Num b => Expression b a
 random = Random
    
 -- | Create a SUM function.
-sum_ :: Num c => ToColRefs a [ColRef c b] => a -> Expression c b
+sum_ :: Num c => ToColRef a (ColRef c b) => a -> Expression c b
 sum_ = Sum . colRef
 
 ---------------------------------------
@@ -1826,35 +1677,90 @@ currentDate = CurrentDate
 -- Statement
 --------------------------------------------------------------------------------
 
--- | Coerce a value to a 'Statement'.
+-- | Convert a value to a 'Statement'.
 class ToStmt a b | a -> b where
-    toStmt :: a -> b
+    statement :: a -> b
 
 instance ToStmt (Create a) (Statement a) where
-    toStmt = CreateStmt
+    statement = CreateStmt
 
 instance ToStmt (Delete a) (Statement a) where
-    toStmt = DeleteStmt
+    statement = DeleteStmt
 
 instance ToStmt (Drop a) (Statement a) where
-    toStmt = DropStmt
+    statement = DropStmt
 
 instance ToStmt (Insert a) (Statement a) where
-    toStmt = InsertStmt
+    statement = InsertStmt
 
 instance ToStmt (Select b a) (Statement a) where
-    toStmt = SelectStmt . SelectWrap
+    statement = SelectStmt . SelectWrap
 
 instance ToStmt (SelectWrap a) (Statement a) where
-    toStmt = SelectStmt
+    statement = SelectStmt
     
 instance ToStmt (Update a) (Statement a) where
-    toStmt = UpdateStmt
+    statement = UpdateStmt
 
--- | Create a statement.
-statement :: ToStmt a (Statement b) => a -> Statement b
-statement = toStmt
+--------------------------------------------------------------------------------
+-- Utility functions.
+--------------------------------------------------------------------------------
 
--- | Create many statements from a list.
-statements :: ToStmt a (Statement b) => [a] -> [Statement b]
-statements = map statement
+{-|
+Convert an element to a list or, if it is already a list return the list as is
+('id' function).
+
+This class and its instances allow to pass a list or a single element to a
+function. This mimic SQL with the SELECT or FROM clauses for example which
+can take one or more argument.
+-}
+class ToList a b | a -> b where
+    toList :: a -> b
+
+instance ToList (Table a) [Table a] where
+    toList x = [x]
+
+instance ToList [Table a] [Table a] where
+    toList = id
+    
+instance ToList (TableRef a) [TableRef a] where
+    toList x = [x]
+
+instance ToList [TableRef a] [TableRef a] where
+    toList = id
+    
+instance ToList (Join a) [Join a] where
+    toList x = [x]
+
+instance ToList [Join a] [Join a] where
+    toList = id
+    
+instance ToList (Column b a) [Column b a] where
+    toList x = [x]
+
+instance ToList [Column b a] [Column b a] where
+    toList = id
+    
+instance ToList (ColRef b a) [ColRef b a] where
+    toList x = [x]
+
+instance ToList [ColRef b a] [ColRef b a] where
+    toList = id
+    
+instance ToList (ColWrap a) [ColWrap a] where
+    toList x = [x]
+
+instance ToList [ColWrap a] [ColWrap a] where
+    toList = id
+    
+instance ToList (ColRefWrap a) [ColRefWrap a] where
+    toList x = [x]
+
+instance ToList [ColRefWrap a] [ColRefWrap a] where
+    toList = id
+    
+instance ToList (SortRef a) [SortRef a] where
+    toList x = [x]
+    
+instance ToList [SortRef a] [SortRef a] where
+    toList = id

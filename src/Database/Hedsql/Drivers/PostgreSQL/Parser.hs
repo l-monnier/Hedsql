@@ -70,8 +70,8 @@ parsePostgreSQLColConstTypeFunc parser constraint =
     type Integer with an AUTOINCREMENT constraints get translated as a "serial".
 -}
 parsePostgreSqlColCreateFunc :: Parser a -> ColWrap a -> String
-parsePostgreSqlColCreateFunc parser (ColWrap col) =
-        parseCols (DataTypeWrap $ col^.colType) (col^.colConstraints)        
+parsePostgreSqlColCreateFunc parser (ColWrap c) =
+        parseCols (DataTypeWrap $ c^.colType) (c^.colConstraints)        
     where
         parseCols (DataTypeWrap Integer) colConsts@(_:_) =
             if hasAutoIncrement colConsts
@@ -83,7 +83,7 @@ parsePostgreSqlColCreateFunc parser (ColWrap col) =
             , consts colConsts
             ]
         
-        cName = _quoteElem parser $ col^.colName
+        cName = _quoteElem parser $ c^.colName
         
         consts [] = ""
         consts cs = " " ++ intercalate ", " (map (_parseColConst parser) cs) 

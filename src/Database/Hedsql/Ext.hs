@@ -14,14 +14,15 @@ Portability : portable
 
 Extension of Hedsql which allow to use untyped columns and values.
 This extension allows some quick & dirty coding by not having to define
-the typDatabase.Hedsql.Columnsty of Hedsql to perform
-static type checks.
+the type of the columns to perform. The downside is that you will not benefit
+from static type checks.
 However, this isn't a black or white choice as you can mix both styles.
 
 = Example
 
 The below example use directly a 'String' in the 'select' clause and neither
-age nor the 'Int' value have a proper type: age is generic as the value.
+age nor the 'Int' value have a proper type: age is 'Undefined' while the value
+is generic.
 > select "firstName" /++ from "People" /++ where_ ("age" /> genVal (18::Int))
 
 = Deactivate the GHC OverloadedStrings language extension
@@ -38,21 +39,16 @@ This will allow to write queries like this:
 instead of:
 
 > select ("col1"::String) /++ from ("table1"::String)
-
-For more explanations related to the why and how, please refer to the
-following discussion:
-<http://haskell.1045720.n5.nabble.com/Proposal-Improving-the-IsString-String
--instance-td5734824.html>
 -}
 module Database.Hedsql.Ext
     (
       -- * Table and table reference
       {-|
-      Extra instances provinding shortcuts such the ability to convert a
+      Extra instances providing shortcuts such the ability to convert a
       table reference back to a table or creating tables directly from 'String'.
       -}
-      ToTables
-    , ToTableRefs
+      ToTable
+    , ToTableRef
     
       -- * Column and column reference
       {-|
@@ -61,9 +57,8 @@ module Database.Hedsql.Ext
       
       Such columns will be of generic type.
       -}
-    , ToCols
-    , ToColRefs
-    , ToColRefWraps
+    , ToCol
+    , ToColRef
     
       -- * Generic Values
     , (/?)
@@ -79,10 +74,12 @@ module Database.Hedsql.Ext
     , SelectConstr
     
       -- * FROM
-    , ToJoinClauses
+    , ToJoinClause
     
       -- * ORDER BY
-    , ToSortRefs
+    , ToSortRef
+    
+      -- * Utility functions
     ) where
 
 --------------------------------------------------------------------------------
@@ -98,53 +95,37 @@ import Prelude hiding (null)
 -- Table and table reference
 --------------------------------------------------------------------------------
 
+type SqlString a = String
+
 -- | Create a table from its name.
-instance ToTables (SqlString a) [Table a] where
-    toTables name = [Table name [] []]
+instance ToTable (SqlString a) (Table a) where
+    table name = Table name [] []
     
 {-|
-Convert a table reference to a list of tables.
+Convert a table reference to a table.
 If the table reference is a table, then use that table.
 Else, create a table using the name of this table reference.
 -}
-instance ToTables (TableRef a) [Table a] where
-    toTables ref =
+instance ToTable (TableRef a) (Table a) where
+    table ref =
         case ref of
-            TableRef t _ -> [t]
-            _            -> [Table (getTableRefName ref) [] []]
+            TableRef t _ -> t
+            _            -> Table (getTableRefName ref) [] []
 
--- | Create a list containing one table reference using its name.            
-instance ToTableRefs (SqlString a) [TableRef a] where
-    toTablesRef name = [TableRef (table name) Nothing]
-
--- | Create a list of table references using the provided names.
-instance ToTableRefs [SqlString a] [TableRef a] where
-    toTablesRef = map (head.toTablesRef)
+-- | Create a table reference using its name.            
+instance ToTableRef (SqlString a) (TableRef a) where
+    tableRef name = TableRef (table name) Nothing
 
 --------------------------------------------------------------------------------
 -- Column and column reference
 --------------------------------------------------------------------------------
 
--- TODO: replace it by a generic type rather than an undefined one.
-
-instance ToCols (SqlString a) [Column Undefined a] where
-    toCols name = [Column name Undef []]
+instance ToCol (SqlString a) (Column Undefined a) where
+    toCol name = Column name Undef []
     
-instance ToCols [SqlString a] [Column Undefined a] where
-    toCols = map (head.toCols)
+instance ToColRef (SqlString a) (ColRef Undefined a) where
+    colRef name = ColRef (ColExpr $ ColDef (toCol name) Nothing) Nothing
     
-instance ToColRefs (SqlString a) [ColRef Undefined a] where
-    toColRefs name = [ColRef (ColExpr $ ColDef (toCol name) Nothing) Nothing]
-
-instance ToColRefs [SqlString a] [ColRef Undefined a] where
-    toColRefs = map (head.toColRefs)
-    
-instance ToColRefWraps (SqlString a) [ColRefWrap a] where
-    toColRefWraps = mkColRefWraps
-
-instance ToColRefWraps [SqlString a] [ColRefWrap a] where
-    toColRefWraps = mkColRefWrap
-
 --------------------------------------------------------------------------------
 -- Generic values
 --------------------------------------------------------------------------------
@@ -184,7 +165,6 @@ genQVal = GenQVal
 -- SELECT
 --------------------------------------------------------------------------------
 
-type SqlString a = String
 type SqlString' b a = String
 
 instance SelectConstr (SqlString' b a) (Select [Undefined] a) where
@@ -202,20 +182,22 @@ list :: a -> [a]
 list a = [a]
 
 -- | Create an USING join clause from a string which is a column name.
-instance ToJoinClauses (SqlString a) [JoinClause a] where
-    toJoinClauses = list . JoinClauseUsing . map ColWrap . toCols
-
--- | Create an USING join clause from a list of strings which are column names.    
-instance ToJoinClauses [SqlString a] [JoinClause a] where
-    toJoinClauses = list . JoinClauseUsing . map ColWrap . toCols
+instance ToJoinClause (SqlString a) (JoinClause a) where
+    joinClause = JoinClauseUsing . list . ColWrap . toCol
     
 ----------------------------------------
 -- ORDER BY
 ----------------------------------------    
 
-instance ToSortRefs (SqlString a) [SortRef a] where
-    toSortRefs name = [SortRef (ColRefWrap $ colRef name) Nothing Nothing]
+instance ToSortRef (SqlString a) (SortRef a) where
+    sortRef name = SortRef (ColRefWrap $ colRef name) Nothing Nothing
+        
+--------------------------------------------------------------------------------
+-- Utility functions
+--------------------------------------------------------------------------------
 
-instance ToSortRefs [SqlString a] [SortRef a] where
-    toSortRefs =
-        map (\name -> SortRef (ColRefWrap $ colRef name) Nothing Nothing)
+instance ToList String [String] where
+    toList x = [x]
+    
+instance ToList [String] [String] where
+    toList = id
