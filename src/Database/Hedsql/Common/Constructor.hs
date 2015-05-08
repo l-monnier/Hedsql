@@ -32,11 +32,10 @@ mySelect =
     select [firstName, age]
     where
         firstName = col "firstName" $ varchar 256
-        age = col "age" $ integer   
+        age = col "age" integer   
 @
 
-The additional FROM clause can be added using the '/++' function of the
-'Add' class.
+The additional FROM clause can be added using the '(/++)' function.
 With our previous example, you could add a FROM part as so:
 
 @
@@ -57,7 +56,7 @@ functions. Let's take a look at the 'select' function:
 > select [col "col1" $ varchar 256, column "col2" integer]
 
 Both above examples are valid.
-We can first see that it is possible to pass a single argument or a list to
+We can first see that it's possible to pass a single argument or a list to
 the 'select' function.
 It would also be possible to pass arguments of type 'Sring' using the extension
 module.
@@ -65,8 +64,10 @@ module.
 ==Type signature
 The signatures of the returned types are composed of one to two phantom types.
 The first one is the type of the element in SQL. The second one is the SQL
-vendor. For exampl, the following type:
+vendor. For example, the following type:
+
 > Select [Int] SqLite
+
 means that it is a SELECT query returning one column of integers and is a
 SQLite statement. Such statement could therefore be parsed only by the SqLite
 parser.
@@ -89,10 +90,10 @@ the end in some cases (as does Esqueletto):
 Limit and offset have to be added to the 'OrderBy' clause and are not part of a
 clause on their own.
 This way, we ensure to have an ORDER BY clause defined when using OFFSET
-and LIMT, which is a good practice, because SQL does not guarantee any
+and LIMIT, which is a good practice, because SQL does not guarantee any
 order of the result unless explicitly specified.
-This means that without an ORDER BY clause, using LIMIT or OFFSET would
-result in random results.
+This means that without an ORDER BY clause, using LIMIT or OFFSET leads to
+random results.
 -}
 module Database.Hedsql.Common.Constructor
     (

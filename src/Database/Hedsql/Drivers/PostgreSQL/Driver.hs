@@ -1,3 +1,5 @@
+{-# LANGUAGE EmptyDataDecls #-} 
+
 {-|
 Module      : Database/Hedsql/Drivers/PostgreSQL/Driver.hs
 Description : PostgreSQL driver.

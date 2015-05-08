@@ -1,3 +1,5 @@
+{-# LANGUAGE EmptyDataDecls #-} 
+
 {-|
 Module      : Database/Hedsql/Drivers/SqLite/Driver.hs
 Description : SqLite driver.

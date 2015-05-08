@@ -1,3 +1,5 @@
+{-# LANGUAGE EmptyDataDecls #-} 
+
 {-|
 Module      : Database/Hedsql/Drivers/MariaDB/Driver.hs
 Description : MariaDB driver.
