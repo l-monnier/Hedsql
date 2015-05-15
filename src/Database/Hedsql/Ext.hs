@@ -167,10 +167,10 @@ genQVal = GenQVal
 
 type SqlString' b a = String
 
-instance SelectConstr (SqlString' b a) (Select [Undefined] a) where
+instance SelectConstr (SqlString' b a) (Query [Undefined] a) where
     select c = simpleSelect $ USelection $ ColRefWrap $ colRef c
 
-instance SelectConstr [SqlString' b a] (Select [[Undefined]] a) where
+instance SelectConstr [SqlString' b a] (Query [[Undefined]] a) where
     select c = simpleSelect $ UsSelection $ map (ColRefWrap . colRef) c
 
 --------------------------------------------------------------------------------

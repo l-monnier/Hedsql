@@ -35,13 +35,20 @@ mySelect =
         age = col "age" integer   
 @
 
-The additional FROM clause can be added using the '(/++)' function.
+The additional FROM clause can be added using the do notation.
+The monad in which the query is stored is a 'State' monad.
+As we are know using a monad, the returned type of the SELECT query will change.
+In our case, it will be 'Query' instead of 'Select'.
+Note that in our previous example we could also have used a do and thus the
+same 'Query' type.
+
 With our previous example, you could add a FROM part as so:
 
 @
-mySelect :: Select [[Undefined]] a
-mySelect =
-    select [firstName, age] /++ people
+mySelect :: Query [[Undefined]] a
+mySelect = do
+    select [firstName, age]
+    from people
     where
         firstName = col "firstName" $ varchar 256
         age = col "age" $ integer
@@ -53,7 +60,7 @@ It is therefore possible to pass different type of argument to the same
 functions. Let's take a look at the 'select' function:
 
 > select $ col "col1" $ varchar 256
-> select [col "col1" $ varchar 256, column "col2" integer]
+> select [col "col1" $ varchar 256, col "col2" varchar 256]
 
 Both above examples are valid.
 We can first see that it's possible to pass a single argument or a list to
@@ -82,18 +89,6 @@ the end in some cases (as does Esqueletto):
 - AS becomes 'as_'
 - IN becomes 'in_'
 - OR becomes 'or_'
-
-=Special cases
-
-==ORDER BY
-
-Limit and offset have to be added to the 'OrderBy' clause and are not part of a
-clause on their own.
-This way, we ensure to have an ORDER BY clause defined when using OFFSET
-and LIMIT, which is a good practice, because SQL does not guarantee any
-order of the result unless explicitly specified.
-This means that without an ORDER BY clause, using LIMIT or OFFSET leads to
-random results.
 -}
 module Database.Hedsql.Common.Constructor
     (
@@ -157,6 +152,11 @@ module Database.Hedsql.Common.Constructor
     
       -- * Composition
     , (/++)
+    , CreateStmt
+    , Query
+    , DeleteStmt
+    , UpdateStmt
+    , execStmt
     
       -- * CREATE
     , createTable
@@ -170,7 +170,7 @@ module Database.Hedsql.Common.Constructor
     , nullable
     , primary
     , primaryT
-    , tableConstraint
+    , constraint
     , unique
     , uniqueT
     , createView
@@ -340,6 +340,8 @@ module Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.AST
 
 import Control.Lens hiding (assign, coerce, from)
+import Control.Monad.State.Lazy
+import Data.Maybe
 import Unsafe.Coerce
 
 --------------------------------------------------------------------------------
@@ -374,7 +376,7 @@ class ToTableRef a b | a -> b where
     tableRef :: a -> b
 
 instance ToTableRef (Join a) (TableRef a) where
-    tableRef join = JoinRef join Nothing
+    tableRef j = JoinRef j Nothing
 
 instance ToTableRef (Table a) (TableRef a) where
     tableRef name = TableRef name Nothing
@@ -428,6 +430,9 @@ instance ToColRef [Value b a] (ColRef [b] a) where
 
 instance ToColRef (Select b a) (ColRef b a) where
     colRef query = ColRef (SelectExpr query) Nothing
+
+instance ToColRef (Query b a) (ColRef b a) where
+    colRef = colRef . execStmt
 
 -- | Create a column reference with a qualified name.
 (/.) ::
@@ -527,19 +532,22 @@ For example:
 This technique allows to build heterogeneous list of elements in a standardized
 way with always the same function call.
 -}
-class Wrapper a d | a -> d where
-    wrap :: a c b -> d b
+class Wrapper a b | a -> b where
+    wrap :: a -> b
     
-instance Wrapper Column ColWrap where
+instance Wrapper (Column b a) (ColWrap a) where
     wrap = ColWrap
 
-instance Wrapper ColRef ColRefWrap where
+instance Wrapper (ColRef b a) (ColRefWrap a) where
     wrap = ColRefWrap
 
-instance Wrapper Select SelectWrap where
+instance Wrapper (Select b a) (SelectWrap a) where
     wrap = SelectWrap
+
+instance Wrapper (Query b a) (SelectWrap a) where
+    wrap = wrap . execStmt
     
-instance Wrapper Value ValueWrap where
+instance Wrapper (Value b a) (ValueWrap a) where
     wrap = ValueWrap
 
 --------------------------------------------------------------------------------
@@ -550,13 +558,50 @@ instance Wrapper Value ValueWrap where
 -- Private
 ----------------------------------------
 
--- | Set a Maybe value to the target using the provide element.
-setMaybe ::
-       ASetter s t a (Maybe b) -- ^ Lens.
-    -> s                       -- ^ Target.
-    -> b                       -- ^ Element to set.
-    -> t                       -- ^ Target with the provided element set.
-setMaybe l target el = set l (Just el) target
+{-|
+Type synonym for a 'State' monad. It allows to have simpler type signature
+when creating 'Select' queries.
+-}
+type CreateStmt a = State (Create a) ()
+
+type Query b a = State (Select b a) ()
+
+type DeleteStmt a = State (Delete a) ()
+
+type UpdateStmt a = State (Update a) ()
+
+{-|
+Execute the state of the 'State' monad.
+Concretely, it allows to retrieve a statement "encapsulated" inside the 'State'
+monad.
+-}
+class ToExec a b | a -> b where
+    execStmt :: a -> b
+
+instance ToExec (CreateStmt a) (Create a) where
+    execStmt q = execState q $ CreateTable False (Table "" [] [])
+
+instance ToExec (TableConstraintType a) (Create a) where
+    execStmt c =
+        CreateTable False (Table "" [] [TableConstraint Nothing c Nothing])
+    
+instance ToExec (Select b a) (Select b a) where
+    execStmt = id
+    
+instance ToExec (Query b a) (Select b a) where
+    execStmt q = execState q $ simpleSelect' $ TsSelection []
+
+instance ToExec (Delete a) (Delete a) where
+    execStmt = id
+    
+instance ToExec (DeleteStmt a) (Delete a) where
+    execStmt q = execState q $ Delete (Table "" [] []) Nothing
+
+instance ToExec (Update a) (Update a) where
+    execStmt = id
+    
+instance ToExec (UpdateStmt a) (Update a) where
+    execStmt q = execState q $ Update (Table "" [] []) [] Nothing
 
 {-|
 Allow to easily add optional elements to data types using the '/++' infix
@@ -593,50 +638,9 @@ instance Add ColWrap ColConstraintTypes where
     addElem target (ColConstraintTypes els) =
         addElem target $ ColConstraints $ map (colConstraint "") els
 
--- | Add a WHERE part to a DELETE query.
-instance Add Delete Where where
-    addElem = setMaybe deleteWhere
-
--- | Add a HAVING clause to a GROUP BY clause.
-instance Add GroupBy Having where
-    addElem = setMaybe groupByHaving
-
--- | Add a LIMIT to an ORDER BY part.
-instance Add OrderBy Limit where
-    addElem = setMaybe orderByLimit
-
--- | Add an OFFSET to an ORDER BY part.
-instance Add OrderBy Offset where
-    addElem = setMaybe orderByOffset
-
--- | Add a FROM part to a SELECT query.
-instance Add (Select a) From where
-    addElem query f = setSelect selectFrom (Just f) query
-    
--- | Add a GROUP BY part to a SELECT query.
-instance Add (Select a) GroupBy where
-    addElem query g = setSelect selectGroupBy (Just g) query
-
--- | Add an ORDER BY part to a SELECT query.
-instance Add (Select a) OrderBy where
-    addElem query o = setSelect selectOrderBy (Just o) query
-
--- | Add a WHERE part to a SELECT query.
-instance Add (Select a) Where where
-    addElem query w = setSelect selectWhere (Just w) query
-
--- | Add a table constraint to a CREATE TABLE statement.
-instance Add Create TableConstraint where
-    addElem (CreateTable c t) el = CreateTable c $ set tableConsts [el] t
-    addElem c _                  = c
-
 -- | Add a table constraint to a table.
 instance Add Table TableConstraint where
     addElem target el = set tableConsts [el] target
-
--- | Add a WHERE part to an UPDATE query.
-instance Add Update Where where
-    addElem = setMaybe updateWhere
 
 {-|
 Coerce a type to another type which can then be used by an Add instance.
@@ -736,12 +740,13 @@ colConstraint :: String -> ColConstraintType a -> ColConstraint a
 colConstraint name = ColConstraint (maybeString name)
 
 -- | Create a CREATE TABLE statement.
-createTable :: ToTable a (Table b) => a -> [ColWrap b] -> Create b
-createTable t c = CreateTable False $ table t & tableCols .~ c
+createTable :: ToTable a (Table b) => a -> [ColWrap b] -> CreateStmt b
+createTable t c = modify (\_ -> CreateTable False $ table t & tableCols .~ c)
 
 -- | Create a CREATE TABLE IF NOT EXIST statement.
-createTableIfNotExist :: ToTable a (Table b) => a -> [ColWrap b] -> Create b
-createTableIfNotExist t c = CreateTable True (table t & tableCols .~ c)
+createTableIfNotExist :: ToTable a (Table b) => a -> [ColWrap b] -> CreateStmt b
+createTableIfNotExist t c =
+    modify (\_ -> CreateTable True (table t & tableCols .~ c))
 
 -- | Create a CREATE VIEW statement.
 createView ::
@@ -812,22 +817,34 @@ primary ::
     -> ColConstraintType a
 primary = Primary
 
--- | Create a PRIMARY KEY constraint to be used in a table constraint.
-primaryT :: (ToList a [d], ToCol d (Column b c)) => a -> TableConstraintType c
-primaryT = TCPrimaryKey . map (ColWrap . toCol) . toList
+-- | Add a PRIMARY KEY constraint to a table constraint 'State'.
+primaryT :: (ToList a [d], ToCol d (Column b c)) => a -> CreateStmt c
+primaryT c = constraint "" $ TCPrimaryKey $ map (ColWrap . toCol) $ toList c
 
--- | Create a table constraint.
-tableConstraint :: String -> TableConstraintType a -> TableConstraint a
-tableConstraint name constraintType =
-    TableConstraint (maybeString name) constraintType Nothing
+-- | Add a table constraint to a table.
+constraint :: ToExec a (Create b) => String -> a -> CreateStmt b
+constraint name con =
+    modify modifyCreate
+    where
+        modifyCreate (CreateTable c t) = CreateTable c $ modifyTable t
+        modifyCreate v                 = v
+        
+        modifyTable t = over tableConsts (\xs -> xs ++ tcs) t
+        tcs = maybe [] makeTableConst constType
+        makeTableConst t = [TableConstraint (maybeString name) t Nothing]
+        constType = fmap (view tableConstraintType) getMaybeConsts
+        getMaybeConsts = listToMaybe $ getCreateConsts $ execStmt con
+        
+        getCreateConsts (CreateTable _ t) = t^.tableConsts
+        getCreateConsts _                 = []
 
 -- | Create an UNIQUE column constraint.
 unique :: ColConstraintType a
 unique = Unique
 
 -- | Create an UNIQUE table constraint
-uniqueT :: [ColWrap a] -> TableConstraintType a
-uniqueT cs = TCUnique cs
+uniqueT :: [ColWrap a] -> CreateStmt a
+uniqueT cs = constraint "" $ TCUnique cs
 
 --------------------------------------------------------------------------------
 -- SELECT
@@ -914,9 +931,22 @@ tableJoin joinType tableRef1 tableRef2 =
 ----------------------------------------
 
 -- | Create a Select query with only a column selection clause.
-simpleSelect :: Selection b a -> Select b a
+simpleSelect' :: Selection b a -> Select b a
+simpleSelect' selection =
+    Single $ SelectQ
+        All
+        selection
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+
+simpleSelect :: Selection b a -> Query b a 
 simpleSelect selection =
-    Single $ SelectQ All selection Nothing Nothing Nothing Nothing
+    modify (\(Single _) -> simpleSelect' selection)
 
 {-|
 Allow the creation of SELECT queries with correct types.
@@ -931,16 +961,16 @@ class SelectConstr a b | a -> b where
     -- | Create a SELECT query.
     select :: a -> b
 
-instance SelectConstr (Select b a) (Select b a) where
-    select = id
+instance SelectConstr (Select b a) (Query b a) where
+    select s = modify (\_ -> s)
 
-instance SelectConstr (ColRefWrap a) (Select [Undefined] a) where
+instance SelectConstr (ColRefWrap a) (Query [Undefined] a) where
     select = simpleSelect . USelection
 
-instance SelectConstr [ColRefWrap a] (Select [[Undefined]] a) where
+instance SelectConstr [ColRefWrap a] (Query [[Undefined]] a) where
     select = simpleSelect . UsSelection
 
-instance SelectConstr (Column b a) (Select [b] a) where
+instance SelectConstr (Column b a) (Query [b] a) where
     select c =
         simpleSelect $ TSelection (colRef column)
         where
@@ -948,7 +978,7 @@ instance SelectConstr (Column b a) (Select [b] a) where
             column :: Column [b] a
             column = unsafeCoerce c
 
-instance SelectConstr [Column b a] (Select [[b]] a) where
+instance SelectConstr [Column b a] (Query [[b]] a) where
     select cs =
         simpleSelect $ TsSelection $ map colRef columns
         where
@@ -956,23 +986,23 @@ instance SelectConstr [Column b a] (Select [[b]] a) where
             columns :: [Column [[b]] a]
             columns = unsafeCoerce cs
 
-instance SelectConstr (ColWrap a) (Select [Undefined] a) where
+instance SelectConstr (ColWrap a) (Query [Undefined] a) where
     select (ColWrap c) = simpleSelect $ USelection $ ColRefWrap $ colRef c
 
-instance SelectConstr [ColWrap a] (Select [[Undefined]] a) where
+instance SelectConstr [ColWrap a] (Query [[Undefined]] a) where
     select cs =
         simpleSelect $ UsSelection $ map toColRef cs
         where
             toColRef (ColWrap c) = ColRefWrap $ colRef c
 
-instance SelectConstr (ColRef b a) (Select [b] a) where
+instance SelectConstr (ColRef b a) (Query [b] a) where
     select c = simpleSelect $ TSelection cRef
         where
             -- Unsafe coercion to the correct phantom types parameter.
             cRef :: ColRef [b] a
             cRef = unsafeCoerce c
 
-instance SelectConstr [ColRef b a] (Select [[b]] a) where
+instance SelectConstr [ColRef b a] (Query [[b]] a) where
     select cs =
         simpleSelect $ TsSelection cRefs
         where
@@ -980,7 +1010,7 @@ instance SelectConstr [ColRef b a] (Select [[b]] a) where
             cRefs :: [ColRef [[b]] a]
             cRefs = unsafeCoerce cs
 
-instance SelectConstr (Expression b a) (Select [b] a) where
+instance SelectConstr (Expression b a) (Query [b] a) where
     select c =
         simpleSelect $ TSelection (colRef cRef)
         where
@@ -998,8 +1028,11 @@ If that query is a single query, it will become a select distinct one.
 If that query is a combination of select queries (UNION, EXCEPT, etc.) then
 all the queries will become select distinct ones.
 -}
-selectDistinct :: SelectConstr a (Select c b) => a -> Select c b
-selectDistinct = setSelect selectType Distinct . select
+selectDistinct :: SelectConstr a (Query c b) => a -> Query c b
+selectDistinct selection =
+    modify (\_ -> s)
+    where
+        s = setSelects selectType Distinct $ execStmt $ select selection
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
@@ -1032,9 +1065,12 @@ isNotDistinctFrom colRef1 colRef2 =
 ----------------------------------------
 
 -- | Add a FROM clause to a SELECT query.
-from :: (ToList a [b], ToTableRef b (TableRef c)) => a -> From c
-from = From . map tableRef . toList
-
+from :: (ToList a [b], ToTableRef b (TableRef c)) => a -> Query d c
+from tRef =
+    modify (\s -> setSelects selectFrom (Just fromClause) s)
+    where
+        fromClause = From $ map tableRef $ toList tRef
+    
 -- | Create a CROSS JOIN.
 crossJoin ::
     (  ToTableRef a (TableRef c)
@@ -1141,19 +1177,29 @@ rightJoin = columnJoin RightJoin
 
 -- | Create a sub-query in a FROM clause.
 subQuery ::
-       Select  b a -- ^ Sub-query.
-    -> String      -- ^ Alias of the sub-query.
-    -> TableRef a  -- ^ Table reference.
-subQuery sub name = SelectRef (SelectWrap sub) $ TableRefAs name []
+       (ToExec a (Select b c))
+    => a          -- ^ Sub-query.
+    -> String     -- ^ Alias of the sub-query.
+    -> TableRef c -- ^ Table reference.
+subQuery sub name = SelectRef (SelectWrap $ execStmt sub) $ TableRefAs name []
 
 ----------------------------------------
 -- WHERE
 ----------------------------------------
 
--- | Create a WHERE clause for a SELECT query.
-where_ :: Expression Bool b -> Where b
-where_ = Where
+class WhereState a where
+    where_ :: Expression Bool b -> State (a b) ()
 
+-- | Create a WHERE clause for a SELECT query.    
+instance WhereState (Select b) where
+    where_ cond = modify (\s -> setSelects selectWhere (Just $ Where cond) s)
+
+instance WhereState Delete where
+    where_ cond = modify (\d -> set deleteWhere (Just $ Where cond) d)
+
+instance WhereState Update where
+    where_ cond = modify (\u -> set updateWhere (Just $ Where cond) u)
+    
 ----------------------------------------
 -- ORDER BY
 ----------------------------------------
@@ -1164,8 +1210,10 @@ orderBy ::
     ,  ToSortRef b (SortRef c)
     ) 
     => a          -- ^ Sorting references.
-    -> OrderBy c
-orderBy cs = OrderBy (map sortRef $ toList cs) Nothing Nothing
+    -> Query d c
+orderBy cs = modify (\s -> setSelects selectOrderBy (Just clause) s)
+    where
+        clause = OrderBy $ map sortRef $ toList cs
 
 {-|
 Add an ascending sorting order (ASC) to a sort reference
@@ -1200,37 +1248,43 @@ nullsLast sRef = set sortRefNulls (Just NullsLast) (sortRef sRef)
 ----------------------------------------
 
 -- | Create a GROUP BY clause.
-groupBy :: (ToList a [b], ToColRef b (ColRef d c)) => a -> GroupBy c
-groupBy cs = GroupBy (map colRefWrap $ toList cs) Nothing
+groupBy :: (ToList a [b], ToColRef b (ColRef d c)) => a -> Query e c
+groupBy cs = modify (\s -> setSelects selectGroupBy (Just clause) s)
+    where
+        clause = GroupBy (map colRefWrap $ toList cs)
 
--- | Add a HAVING clause to a GROUP BY clause.
-class HavingConstr  a b | a -> b where
-    having :: a -> b
+-- | Add a HAVING clause to a select query.
+having :: HavingCond a => a b -> Query c b
+having c = modify (\s -> setSelects selectHaving (Just $ havingCond c) s)
+
+-- | Create a HAVING condition.
+class HavingCond a where
+    havingCond :: a b -> Having b
 
 {-|
 Instance for regular predicates – which could also be used in a WHERE clause.
 -}
-instance HavingConstr (Expression Bool a) (Having a) where
-    having = HavingPred
+instance HavingCond (Expression Bool) where
+    havingCond = HavingPred
 
 {-|
 Instance for predicates containing an aggregate function (COUNT, SUM, etc.)
 – which couldn't be used in a WHERE clause.
 -}
-instance HavingConstr (Expression AggrPred a) (Having a) where
-    having = HavingAggrPred
+instance HavingCond (Expression AggrPred) where
+    havingCond= HavingAggrPred
 
 ----------------------------------------
 -- LIMIT
 ----------------------------------------
 
--- | Add a LIMIT clause to an ORDER BY part.
-limit :: Int -> Limit a
-limit = Limit
+-- | Add a LIMIT clause to a SELECT query.
+limit :: Int -> Query b a
+limit x = modify (\s -> setSelects selectLimit (Just $ Limit x) s)
 
--- | Create an OFFSET clause.
-offset :: Int -> Offset a
-offset = Offset
+-- | Create an OFFSET clause to a SELECT query.
+offset :: Int -> Query b a
+offset x = modify (\s -> setSelects selectOffset (Just $ Offset x) s)
 
 ----------------------------------------
 -- Combined queries
@@ -1241,52 +1295,59 @@ Combine two SELECT queries using the provided combination clause
 (UNION, EXCEPT, etc.).
 -}
 combinedQuery ::
-       Combination a
-    -> Select b a
-    -> Select b a
-    -> Select b a
-combinedQuery cType c1 c2 = Combined cType [c1, c2]
+       (ToExec a (Select e c), ToExec b (Select e c))
+    => Combination c
+    -> a
+    -> b
+    -> Select e c
+combinedQuery cType c1 c2 = Combined cType [execStmt c1, execStmt c2]
 
 -- | Apply an EXCEPT to two queries.
 except ::
-       Select b a
-    -> Select b a
-    -> Select b a
+       (ToExec a (Select e c), ToExec b (Select e c))
+    => a
+    -> b
+    -> Select e c
 except = combinedQuery Except
 
 -- | Apply an EXCEPT ALL to two queries.
 exceptAll ::
-       Select b a
-    -> Select b a
-    -> Select b a
+       (ToExec a (Select e c), ToExec b (Select e c))
+    => a
+    -> b
+    -> Select e c
 exceptAll = combinedQuery ExceptAll
 
 -- | Apply an INTERSECT to two queries.
 intersect ::
-       Select b a
-    -> Select b a
-    -> Select b a
+       (ToExec a (Select e c), ToExec b (Select e c))
+    => a
+    -> b
+    -> Select e c
 intersect = combinedQuery Intersect
 
 -- | Apply an INTERSECT ALL to two queries.
 intersectAll ::
-       Select b a
-    -> Select b a
-    -> Select b a
+       (ToExec a (Select e c), ToExec b (Select e c))
+    => a
+    -> b
+    -> Select e c
 intersectAll = combinedQuery IntersectAll
 
 -- | Create an UNION operation between two queries.
 union ::
-       Select b a
-    -> Select b a
-    -> Select b a
+       (ToExec a (Select e c), ToExec b (Select e c))
+    => a
+    -> b
+    -> Select e c
 union = combinedQuery Union
 
 -- | Create an UNION ALL operation between two queries.
 unionAll ::
-       Select b a
-    -> Select b a
-    -> Select b a
+       (ToExec a (Select e c), ToExec b (Select e c))
+    => a
+    -> b
+    -> Select e c
 unionAll = combinedQuery UnionAll
 
 --------------------------------------------------------------------------------
@@ -1316,8 +1377,8 @@ update ::
        ToTable a (Table b)
     => a              -- ^ Table to update.
     -> [Assignment b] -- ^ Column/value assignments.
-    -> Update b
-update t assignments = Update (table t) assignments Nothing
+    -> UpdateStmt b
+update t assignments = modify (\_ -> Update (table t) assignments Nothing)
 
 --------------------------------------------------------------------------------
 -- DELETE
@@ -1327,8 +1388,8 @@ update t assignments = Update (table t) assignments Nothing
 deleteFrom ::
        ToTable a (Table b)
     => a
-    -> Delete b
-deleteFrom t = Delete (table t) Nothing
+    -> DeleteStmt b
+deleteFrom t = modify (\_ -> Delete (table t) Nothing)
 
 --------------------------------------------------------------------------------
 -- Values
@@ -1684,6 +1745,9 @@ class ToStmt a b | a -> b where
 
 instance ToStmt (Create a) (Statement a) where
     statement = CreateStmt
+    
+instance ToStmt (CreateStmt a) (Statement a) where
+    statement = statement . execStmt
 
 instance ToStmt (Delete a) (Statement a) where
     statement = DeleteStmt
@@ -1702,6 +1766,15 @@ instance ToStmt (SelectWrap a) (Statement a) where
     
 instance ToStmt (Update a) (Statement a) where
     statement = UpdateStmt
+    
+instance ToStmt (Query b a) (Statement a) where
+    statement = statement . execStmt
+
+instance ToStmt (UpdateStmt a) (Statement a) where
+    statement = statement . execStmt
+
+instance ToStmt (DeleteStmt a) (Statement a) where
+    statement = statement . execStmt
 
 --------------------------------------------------------------------------------
 -- Utility functions.

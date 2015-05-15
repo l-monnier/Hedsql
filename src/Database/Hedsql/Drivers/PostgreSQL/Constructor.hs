@@ -16,6 +16,8 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     , lateral
     , selectDistinctOn
     ) where
+
+import Control.Monad.State.Lazy
     
 import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.AST
@@ -49,8 +51,9 @@ If that query is a combination of select queries (UNION, EXCEPT, etc.) then
 all the queries will become SELECT DISTINCT ON ones.
 -}
 selectDistinctOn ::
-       SelectConstr a (Select c PostgreSQL)
-    => [ColRefWrap PostgreSQL]              -- ^ Distinct expression.
-    -> a                                    -- ^ Select clause.
-    -> Select c PostgreSQL                  -- ^ Select query.
-selectDistinctOn dExpr = setSelect selectType (DistinctOn dExpr) . select
+       SelectConstr a (Query c PostgreSQL)
+    => [ColRefWrap PostgreSQL]             -- ^ Distinct expression.
+    -> a                                   -- ^ Select clause.
+    -> Query c PostgreSQL                  -- ^ Select query.
+selectDistinctOn dExpr clause =
+    modify (\_ -> setSelects selectType (DistinctOn dExpr) $ execStmt $ select clause)

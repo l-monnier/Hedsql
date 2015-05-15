@@ -514,7 +514,14 @@ parseSelectFunc parser (SelectWrap (Single select)) =
         , parseM (_parseFrom parser)     $ select^.selectFrom
         , parseM (_parseWhere parser)    $ select^.selectWhere
         , parseM (_parseGroupBy parser)  $ select^.selectGroupBy
+        , parseM (_parseHaving parser)   $ select^.selectHaving
         , parseM (_parseOrderBy parser)  $ select^.selectOrderBy
+        , parseM
+            (\(Limit v) -> "LIMIT " ++ show v)
+            (select^.selectLimit)
+        , parseM
+            (\(Offset v) -> "OFFSET " ++ show v)
+            (select^.selectOffset)
         ]
     where
         parseM f = fmap $ (++) " " . f
@@ -791,11 +798,10 @@ parseFromFunc parser (From tableReferences) =
 
 -- | Parse a GROUP BY clause.
 parseGroupByFunc :: Parser a -> GroupBy a -> String
-parseGroupByFunc parser (GroupBy colRefs having) =
+parseGroupByFunc parser (GroupBy colRefs) =
     concat
         [ "GROUP BY "
         , intercalate ", " $ map (_parseColRefDef parser) colRefs
-        , parseMaybe (_parseHaving parser) having
         ] 
 
 -- | Parse a HAVING clause.
@@ -827,15 +833,12 @@ parseOrderByFunc parser clause =
     concat
         [ "ORDER BY "
         , intercalate ", " sortRefsParsed
-        , parseMaybe
-            (\(Limit v) -> "LIMIT " ++ show v)
-            (clause^.orderByLimit)
-        , parseMaybe
-            (\(Offset v) -> "OFFSET " ++ show v)
-            (clause^.orderByOffset)
         ]
     where
-        sortRefsParsed = map (_parseSortRef parser) (clause^.orderByCols)
+        sortRefsParsed =
+            map
+                (_parseSortRef parser)
+                (clause^.orderBySortSpecList)
 
 -- | Parse the NULLS FIRST or NULLS LAST of a the sorting clause.
 parseSortNullFunc :: SortNulls a -> String

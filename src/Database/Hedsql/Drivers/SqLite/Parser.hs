@@ -113,5 +113,5 @@ sqLiteParser =
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: ToStmt (a SqLite) (Statement SqLite) => a SqLite -> String
+parse :: ToStmt a (Statement SqLite) => a -> String
 parse = _parseStmt sqLiteParser . statement

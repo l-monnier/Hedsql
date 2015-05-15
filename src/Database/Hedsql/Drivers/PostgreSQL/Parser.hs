@@ -59,10 +59,10 @@ We must therefore remove the AUTOINCREMENT constraint when parsing
 a PRIMARY KEY column constraint.
 -}
 parsePostgreSQLColConstTypeFunc :: Parser a -> ColConstraintType a -> String
-parsePostgreSQLColConstTypeFunc parser constraint =
-    case constraint of
+parsePostgreSQLColConstTypeFunc parser c =
+    case c of
         (Primary _) -> "PRIMARY KEY"
-        _           -> parseColConstTypeFunc parser constraint
+        _           -> parseColConstTypeFunc parser c
 
 {- |
     Custom function for PostgreSQL for the creation of a table.
@@ -96,5 +96,5 @@ parsePostgreSqlColCreateFunc parser (ColWrap c) =
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: ToStmt (a PostgreSQL) (Statement PostgreSQL) => a PostgreSQL -> String
+parse :: ToStmt a (Statement PostgreSQL) => a -> String
 parse = _parseStmt postgreSQLParser . statement

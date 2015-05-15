@@ -27,7 +27,7 @@ library
                     base,
                     lens,
                     template-haskell,
-                    fclabels
+                    mtl >=2.1 && <2.2
   other-modules:    
                     Database.Hedsql.Drivers.MariaDB.Driver,
                     Database.Hedsql.Drivers.MariaDB.Parser,

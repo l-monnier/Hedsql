@@ -176,15 +176,19 @@ module Database.Hedsql.Common.AST
     
       -- ** SELECT
     , Select(..)
-    , setSelect
+    , getSelects
+    , setSelects
     , Combination(..)
     , SelectQ(SelectQ)
     , selectType
     , selectCols
     , selectFrom
     , selectWhere
+    , selectHaving
     , selectGroupBy
     , selectOrderBy
+    , selectLimit
+    , selectOffset
     , SelectWrap(..)
     
       -- *** Selection clause
@@ -216,16 +220,13 @@ module Database.Hedsql.Common.AST
       -- *** GROUP BY and HAVING clauses
     , GroupBy(GroupBy)
     , groupByColRefs
-    , groupByHaving
     
     , Having(HavingPred, HavingAggrPred)
     , getHavingExpr
     
     -- *** ORDER BY, OFFSET and LIMIT clauses
     , OrderBy(OrderBy)
-    , orderByCols
-    , orderByOffset
-    , orderByLimit
+    , orderBySortSpecList
     , SortRef(SortRef)
     , sortRefColRef
     , sortRefOrder
@@ -1047,7 +1048,8 @@ data Select b a =
       -- | Combined query such as UNION.
     | Combined (Combination a) [Select b a]
 
-setSelect ::
+-- | Set a specific clause of all select queries of a SELECT statement.
+setSelects ::
        
        -- | Lens.
        ASetter (SelectQ b a) (SelectQ b a) d c 
@@ -1060,10 +1062,15 @@ setSelect ::
        
        -- | SELECT query with the newly set value.                         
     -> Select b a                              
-setSelect l val query = 
+setSelects l val query = 
     case query of
         Single sq -> Single $ set l val sq
-        Combined combi sqs -> Combined combi $ map (setSelect l val) sqs
+        Combined combi sqs -> Combined combi $ map (setSelects l val) sqs
+
+-- | Return the select queries of a SELECT statement.
+getSelects :: Select b a -> [SelectQ b a]
+getSelects (Single s) = [s]
+getSelects (Combined _ selects) = concat $ map getSelects selects
 
 -- | The different possible combinations of SELECT queries.
 data Combination a =
@@ -1099,11 +1106,20 @@ data SelectQ b a = SelectQ
       -- | WHERE clause.
     , _selectWhere :: Maybe (Where a)
     
+      -- | Having clause.
+    , _selectHaving :: Maybe (Having a)
+    
       -- | GROUP BY clause.
     , _selectGroupBy :: Maybe (GroupBy a)
     
       -- | ORDER BY clause.
     , _selectOrderBy :: Maybe (OrderBy a)
+    
+      -- | LIMIT clause.
+    , _selectLimit :: Maybe (Limit a)
+    
+      -- | OFFSET clause.
+    , _selectOffset :: Maybe (Offset a)
     }
 
 -- | SELECT statement wrapper.
@@ -1240,20 +1256,11 @@ data Where a = Where
 -- GROUP BY and HAVING clauses
 --------------------
 
-{-|
-GROUP BY clause.
-
-Note: the GROUP BY clause holds an optional HAVING clause. The structure is
-as such because it is not possible to use a HAVING clause without a GROUP BY
-one.
--}
+-- | GROUP BY clause.
 data GroupBy a = GroupBy
     { 
       -- | Columns references of the GROUP BY clause.
       _groupByColRefs :: [ColRefWrap a]
-      
-      -- | HAVING clause.
-    , _groupByHaving :: Maybe (Having a)
     }
 
 -- | HAVING clause.
@@ -1270,24 +1277,11 @@ getHavingExpr :: Having a -> ExprWrap a
 getHavingExpr (HavingPred expr)     = ExprWrap expr
 getHavingExpr (HavingAggrPred expr) = ExprWrap expr
 
-{- |
-ORDER BY query part.
-
-LIMIT and OFFSET can also be specified on top of the ORDER BY.
-Those are specified here - and not as query parts - because defining a limit or
-an offset without any order by clause would result in inconsistant results.
-Indeed, SQL does not guarantee any specific return order if not mentioned.
--}
+-- | ORDER BY clause.
 data OrderBy a = OrderBy
     {
       -- | Definition of the sorting order of the columns.
-      _orderByCols :: [SortRef a]
-      
-      -- | Optional OFFSET clause.
-    , _orderByOffset :: Maybe (Offset a)
-      
-      -- | Optional LIMIT clause.
-    , _orderByLimit :: Maybe (Limit a)
+      _orderBySortSpecList :: [SortRef a]
     }
 
 -- | Defines how a given column is sorted.
