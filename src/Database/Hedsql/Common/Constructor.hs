@@ -14,7 +14,7 @@ Portability : portable
 
 Constructor functions for SQL SELECT queries.
 
-They provide a flexible and natural way to create the various SQL data types.
+They provide a flexible and natural way to create the SQL AST.
 
 =Building a query
 
@@ -37,12 +37,12 @@ mySelect =
 
 The additional FROM clause can be added using the do notation.
 The monad in which the query is stored is a 'State' monad.
-As we are know using a monad, the returned type of the SELECT query will change.
+As we are now using a monad, the returned type of the SELECT query will change.
 In our case, it will be 'Query' instead of 'Select'.
 Note that in our previous example we could also have used a do and thus the
 same 'Query' type.
 
-With our previous example, you could add a FROM part as so:
+Adding a FROM clause to our previous example leads to:
 
 @
 mySelect :: Query [[Undefined]] a
@@ -65,7 +65,7 @@ functions. Let's take a look at the 'select' function:
 Both above examples are valid.
 We can first see that it's possible to pass a single argument or a list to
 the 'select' function.
-It would also be possible to pass arguments of type 'Sring' using the extension
+It would also be possible to pass arguments of type 'String' using the extension
 module.
 
 ==Type signature
@@ -78,6 +78,12 @@ vendor. For example, the following type:
 means that it is a SELECT query returning one column of integers and is a
 SQLite statement. Such statement could therefore be parsed only by the SqLite
 parser.
+
+If your statement can work for all vendors, you can you use a generic type:
+
+> Select [Int] a
+
+Such statement could then be parsed for any vendor.
 
 =Naming
 
