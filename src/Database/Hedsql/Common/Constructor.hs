@@ -151,12 +151,17 @@ module Database.Hedsql.Common.Constructor
     , wrap
     
       -- * Composition
-    , (/++)
+    , (/++)  
+    , execStmt
+    
+      {-|
+      Type synonym for a 'State' monad. It allows to have simpler type signature
+      when creating 'Select' queries.
+      -}
     , CreateStmt
     , Query
     , DeleteStmt
     , UpdateStmt
-    , execStmt
     
       -- * CREATE
     , createTable
@@ -554,14 +559,6 @@ instance Wrapper (Value b a) (ValueWrap a) where
 -- Composition
 --------------------------------------------------------------------------------
 
-----------------------------------------
--- Private
-----------------------------------------
-
-{-|
-Type synonym for a 'State' monad. It allows to have simpler type signature
-when creating 'Select' queries.
--}
 type CreateStmt a = State (Create a) ()
 
 type Query b a = State (Select b a) ()
@@ -603,16 +600,11 @@ instance ToExec (Update a) (Update a) where
 instance ToExec (UpdateStmt a) (Update a) where
     execStmt q = execState q $ Update (Table "" [] []) [] Nothing
 
+-- TODO: use do notation for the columns as well.
+
 {-|
 Allow to easily add optional elements to data types using the '/++' infix
 function.
-
-For example, if you wish to add an ORDER BY clause to a SELECT query you can do
-it as follow:
-@
-    selectQuery
-/++ orderByClause
-@
 -}
 class Add a b where
     addElem ::
@@ -637,10 +629,6 @@ instance Add ColWrap ColConstraintType where
 instance Add ColWrap ColConstraintTypes where
     addElem target (ColConstraintTypes els) =
         addElem target $ ColConstraints $ map (colConstraint "") els
-
--- | Add a table constraint to a table.
-instance Add Table TableConstraint where
-    addElem target el = set tableConsts [el] target
 
 {-|
 Coerce a type to another type which can then be used by an Add instance.
@@ -669,33 +657,6 @@ newtype ColConstraintTypes a = ColConstraintTypes [ColConstraintType a]
 
 instance ToAddable [ColConstraintType a] (ColConstraintTypes a) where
     toConvertible = ColConstraintTypes
-
-instance ToAddable (From a) (From a) where
-    toConvertible = id
-
-instance ToAddable (GroupBy a) (GroupBy a) where
-    toConvertible = id
-
-instance ToAddable (Having a) (Having a) where
-    toConvertible = id
-
-instance ToAddable (Limit a) (Limit a) where
-    toConvertible = id
-
-instance ToAddable (Offset a) (Offset a) where
-    toConvertible = id
-
-instance ToAddable (OrderBy a) (OrderBy a) where
-    toConvertible = id
-
-instance ToAddable (Table a) (Table a) where
-    toConvertible = id
-
-instance ToAddable (TableConstraint a) (TableConstraint a) where
-    toConvertible = id
-
-instance ToAddable (Where a) (Where a) where
-    toConvertible = id
 
 ----------------------------------------
 -- Public
