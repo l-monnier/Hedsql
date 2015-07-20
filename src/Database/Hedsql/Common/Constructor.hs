@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -11,10 +12,10 @@ License     : GPL-3
 Maintainer  : leonard.monnier@gmail.com
 Stability   : experimental
 Portability : portable
-
 Constructor functions for SQL SELECT queries.
 
 They provide a flexible and natural way to create the SQL AST.
+
 
 =Building a query
 
@@ -28,11 +29,12 @@ columns.
 
 @
 mySelect :: Select [[Undefined]] a
+
 mySelect =
     select [firstName, age]
     where
         firstName = col "firstName" $ varchar 256
-        age = col "age" integer   
+        age = col "age" integer
 @
 
 The additional FROM clause can be added using the do notation.
@@ -99,16 +101,16 @@ the end in some cases (as does Esqueletto):
 module Database.Hedsql.Common.Constructor
     (
       -- * Table and table reference
-      
+
       {-|
       A 'Table' represents a database table which can be used in CREATE or DROP
       statements.
-      
+
       A 'TableRef' on the other hand is a reference to a table. It could be
       a table, but it could also be a 'Join'.
       It can be used in data manipulation statements (SELECT, INSERT, UPDATE or
       DELETE).
-      
+
       In practice a 'Table' can also be used in data manipulation statements:
       in such case it will be coerced automatically to a table reference by the
       related function itself.
@@ -121,7 +123,7 @@ module Database.Hedsql.Common.Constructor
     , ToTableRef
     , alias
     , tableRef
-    
+
       -- * Column and column reference
     , ToCol
     , col
@@ -135,31 +137,31 @@ module Database.Hedsql.Common.Constructor
     -- * Expression
     , expr
     , exprs
-         
+
       -- * Types
-      
+
       -- ** Character types
     , char
     , varchar
-    
+
       -- ** Numeric types
     , bigInt
     , integer
     , smallInt
-    
+
       -- ** Other types
     , boolean
     , date
-      
+
     , assign
-      
+
       -- * Wrapper
     , wrap
-    
+
       -- * Composition
-    , (/++)  
+    , (/++)
     , execStmt
-    
+
       {-|
       Type synonym for a 'State' monad. It allows to have simpler type signature
       when creating 'Select' queries.
@@ -168,7 +170,7 @@ module Database.Hedsql.Common.Constructor
     , Query
     , DeleteStmt
     , UpdateStmt
-    
+
       -- * CREATE
     , createTable
     , createTableIfNotExist
@@ -186,24 +188,24 @@ module Database.Hedsql.Common.Constructor
     , uniqueT
     , createView
     , createViewIfNotExist
-    
+
     -- ** DROP
     , dropTable
     , dropTableIfExists
     , dropView
     , dropViewIfExists
-    
+
       -- * SELECT
-    
+
       -- ** Selection clause
-    , SelectConstr  
+    , SelectConstr
     , select
     , selectDistinct
     , simpleSelect
     , isDistinctFrom
     , isNotDistinctFrom
     , (//*)
-    
+
       -- ** FROM clause
     , from
     , ToJoinClause
@@ -218,15 +220,15 @@ module Database.Hedsql.Common.Constructor
     , naturalLeftJoin
     , naturalRightJoin
     , subQuery
-    
+
     -- ** WHERE clause
     , where_
-    
+
     -- ** GROUP BY clause
     , ToSortRef
     , groupBy
     , having
-    
+
     -- ** ORDER BY clause
     , orderBy
     , asc
@@ -234,11 +236,11 @@ module Database.Hedsql.Common.Constructor
     , sortRef
     , nullsFirst
     , nullsLast
-    
+
     -- ** LIMIT clause
     , offset
     , limit
-    
+
     -- ** Combined queries
     , combinedQuery
     , except
@@ -247,16 +249,16 @@ module Database.Hedsql.Common.Constructor
     , intersectAll
     , union
     , unionAll
-    
+
     -- * INSERT
     , insert
-    
+
     -- * UPDATE
     , update
-    
+
     -- * DELETE
     , deleteFrom
-    
+
     -- * Values
     , ToSqlValue
     , value
@@ -264,9 +266,9 @@ module Database.Hedsql.Common.Constructor
     , numVal
     , intVal
     , stringVal
-    
+
     -- ** Placeholders
-    
+
     {-|
     Placeholders (?) to be bused in queries rather than direct values (which
     is the most advisable SQL technique).
@@ -277,9 +279,9 @@ module Database.Hedsql.Common.Constructor
     , pDouble
     , pInt
     , pString
-    
+
       -- * Functions
-    
+
       -- ** Operators
     , (/+)
     , (/-)
@@ -290,21 +292,19 @@ module Database.Hedsql.Common.Constructor
     , (/<)
     , (/<=)
     , (/<>)
-    
+
       -- ** Comparison
     , between
     , exists
     , in_
-    , like
+    , Database.Hedsql.Common.Constructor.like
     , notBetween
     , notIn
-    
+
       -- ** Logic
     , and_
-    , ands
     , or_
-    , ors
-    
+
     -- ** Conditions
     , isFalse
     , isNotFalse
@@ -314,19 +314,19 @@ module Database.Hedsql.Common.Constructor
     , isNull
     , isTrue
     , isUnknown
-    
+
     -- ** Maths
     , count
     , max_
     , min_
     , random
     , sum_
-    
+
     -- ** Dates
     , currentDate
-    
+
     -- * Statement
-    
+
     {-|
     Ultimately any SQL instruction is a 'Statement' (SELECT, INSERT, etc.).
     In Hedsql only a 'Statement' can be parsed.
@@ -338,12 +338,12 @@ module Database.Hedsql.Common.Constructor
     -}
     , ToStmt
     , statement
-    
+
     -- * Utility functions
     , ToList
     , toList
     ) where
- 
+
 --------------------------------------------------------------------------------
 -- IMPORTS
 --------------------------------------------------------------------------------
@@ -391,7 +391,7 @@ instance ToTableRef (Join a) (TableRef a) where
 
 instance ToTableRef (Table a) (TableRef a) where
     tableRef name = TableRef name Nothing
-    
+
 instance ToTableRef (TableRef a) (TableRef a) where
     tableRef = id
 
@@ -545,7 +545,7 @@ way with always the same function call.
 -}
 class Wrapper a b | a -> b where
     wrap :: a -> b
-    
+
 instance Wrapper (Column b a) (ColWrap a) where
     wrap = ColWrap
 
@@ -557,7 +557,7 @@ instance Wrapper (Select b a) (SelectWrap a) where
 
 instance Wrapper (Query b a) (SelectWrap a) where
     wrap = wrap . execStmt
-    
+
 instance Wrapper (Value b a) (ValueWrap a) where
     wrap = ValueWrap
 
@@ -587,22 +587,22 @@ instance ToExec (CreateStmt a) (Create a) where
 instance ToExec (TableConstraintType a) (Create a) where
     execStmt c =
         CreateTable False (Table "" [] [TableConstraint Nothing c Nothing])
-    
+
 instance ToExec (Select b a) (Select b a) where
     execStmt = id
-    
+
 instance ToExec (Query b a) (Select b a) where
     execStmt q = execState q $ simpleSelect' $ TsSelection []
 
 instance ToExec (Delete a) (Delete a) where
     execStmt = id
-    
+
 instance ToExec (DeleteStmt a) (Delete a) where
     execStmt q = execState q $ Delete (Table "" [] []) Nothing
 
 instance ToExec (Update a) (Update a) where
     execStmt = id
-    
+
 instance ToExec (UpdateStmt a) (Update a) where
     execStmt q = execState q $ Update (Table "" [] []) [] Nothing
 
@@ -734,13 +734,13 @@ defaultValue e = Default $ expr e
 -- | Create a DROP TABLE statement.
 dropTable ::
        (ToTable a (Table b))
-    => a      -- ^ Table to drop. 
+    => a      -- ^ Table to drop.
     -> Drop b
 dropTable = DropTable False . table
 
 dropTableIfExists ::
        ToTable a (Table b)
-    => a      -- ^ Table to drop. 
+    => a      -- ^ Table to drop.
     -> Drop b
 dropTableIfExists = DropTable True . table
 
@@ -795,13 +795,13 @@ constraint name con =
     where
         modifyCreate (CreateTable c t) = CreateTable c $ modifyTable t
         modifyCreate v                 = v
-        
+
         modifyTable t = over tableConsts (\xs -> xs ++ tcs) t
         tcs = maybe [] makeTableConst constType
         makeTableConst t = [TableConstraint (maybeString name) t Nothing]
         constType = fmap (view tableConstraintType) getMaybeConsts
         getMaybeConsts = listToMaybe $ getCreateConsts $ execStmt con
-        
+
         getCreateConsts (CreateTable _ t) = t^.tableConsts
         getCreateConsts _                 = []
 
@@ -824,7 +824,7 @@ list a = [a]
 -- | Coerce a type to a list of JoinClause type such as ON or USING.
 class ToJoinClause a b | a -> b where
     joinClause :: a -> b
-    
+
 -- | Create an ON join clause from a boolean function.
 instance ToJoinClause (Expression Bool a) (JoinClause a) where
     joinClause = JoinClauseOn
@@ -873,7 +873,7 @@ columnJoin joinType tableRef1 tableRef2 clause =
         (tableRef tableRef1)
         (tableRef tableRef2)
         (joinClause clause)
- 
+
 -- | Create a join on tables (CROSS or NATURAL join).
 tableJoin ::
     (  ToTableRef   a (TableRef c)
@@ -911,7 +911,7 @@ simpleSelect' selection =
         Nothing
         Nothing
 
-simpleSelect :: Selection b a -> Query b a 
+simpleSelect :: Selection b a -> Query b a
 simpleSelect selection =
     modify (\(Single _) -> simpleSelect' selection)
 
@@ -1037,7 +1037,7 @@ from tRef =
     modify (\s -> setSelects selectFrom (Just fromClause) s)
     where
         fromClause = From $ map tableRef $ toList tRef
-    
+
 -- | Create a CROSS JOIN.
 crossJoin ::
     (  ToTableRef a (TableRef c)
@@ -1066,7 +1066,7 @@ If the join clause is a condition or a boolean function, it will be an ON
 clause.
 If the join clause is a column, a string or a list of columns or strings, it
 will be an USING clause.
--} 
+-}
 innerJoin ::
     ( ToTableRef   a (TableRef d)
     , ToTableRef   b (TableRef d)
@@ -1157,7 +1157,7 @@ subQuery sub name = SelectRef (SelectWrap $ execStmt sub) $ TableRefAs name []
 class WhereState a where
     where_ :: Expression Bool b -> State (a b) ()
 
--- | Create a WHERE clause for a SELECT query.    
+-- | Create a WHERE clause for a SELECT query.
 instance WhereState (Select b) where
     where_ cond = modify (\s -> setSelects selectWhere (Just $ Where cond) s)
 
@@ -1166,7 +1166,7 @@ instance WhereState Delete where
 
 instance WhereState Update where
     where_ cond = modify (\u -> set updateWhere (Just $ Where cond) u)
-    
+
 ----------------------------------------
 -- ORDER BY
 ----------------------------------------
@@ -1175,7 +1175,7 @@ instance WhereState Update where
 orderBy ::
     (  ToList a [b]
     ,  ToSortRef b (SortRef c)
-    ) 
+    )
     => a          -- ^ Sorting references.
     -> Query d c
 orderBy cs = modify (\s -> setSelects selectOrderBy (Just clause) s)
@@ -1389,7 +1389,7 @@ instance ToSqlValue (Value a b) (Value a b) where
 
 instance ToSqlValue (SqlBool a) (Value Bool a) where
     value = BoolVal
-    
+
 instance ToSqlValue (SqlString a) (Value String a) where
     value = StringVal
 
@@ -1419,11 +1419,11 @@ numVal = NumericVal
 -- | Create a placeholder "?" for a boolean value.
 pBool :: Value Bool a
 pBool = PlaceBool
-    
+
 -- | Create a placeholder "?" for a numeric value.
 pNum :: Value Numeric a
 pNum = PlaceNum
-    
+
 -- | Create a placeholder "?" for a floating number value.
 pFloat :: Value Float a
 pFloat = PlaceFloat
@@ -1431,11 +1431,11 @@ pFloat = PlaceFloat
 -- | Create a placeholder "?" for a double precision number value.
 pDouble :: Value Double a
 pDouble = PlaceDouble
-    
+
 -- | Create a placeholder "?" for a integer value.
 pInt :: Value Int a
 pInt = PlaceInt
-    
+
 -- | Create a placeholder ? for a string value.
 pString :: Value String a
 pString = PlaceString
@@ -1553,21 +1553,19 @@ infix 7 /<>
 -- Logic
 ---------------------------------------
 
+-- TODO: find a way to enclose them in parenthesis.
+-- The solution is probabyl to:
+-- - add a paremeter to the AND constructor. If it is 'True', parenthesis are
+--   there.
+-- - use a 'parens' function to turn this parameter to 'True'.
+
 -- | Join two predicates with an AND.
 and_ :: Expression Bool b -> Expression Bool b -> Expression Bool b
-and_ c1 c2 = And [c1, c2]
-
--- | Join a list of predicates with AND which will be enclosed in a parenthesis.
-ands :: [Expression Bool b] -> Expression Bool b
-ands = And 
+and_ c1 c2 = And c1 c2 False
 
 -- | Join two predicates with an OR.
 or_ :: Expression Bool b -> Expression Bool b -> Expression Bool b
-or_ c1 c2 = Or [c1, c2] 
-
--- | Join a list of predicates with OR which will be enclosed in a parenthesis.
-ors :: [Expression Bool b] -> Expression Bool b
-ors = Or
+or_ c1 c2 = Or c1 c2 False
 
 ---------------------------------------
 -- Conditions
@@ -1673,7 +1671,7 @@ like colRef1 colRef2 = Like (colRef colRef1) (colRef colRef2)
 ---------------------------------------
 
 -- | Create a COUNT function.
-count :: ToColRef a (ColRef c b) => a -> Expression Int b 
+count :: ToColRef a (ColRef c b) => a -> Expression Int b
 count = Count . colRef
 
 -- | Create a MAX function.
@@ -1687,7 +1685,7 @@ min_ = Min . colRef
 -- | Create a random() function.
 random :: Num b => Expression b a
 random = Random
-   
+
 -- | Create a SUM function.
 sum_ :: Num c => ToColRef a (ColRef c b) => a -> Expression c b
 sum_ = Sum . colRef
@@ -1712,7 +1710,7 @@ class ToStmt a b | a -> b where
 
 instance ToStmt (Create a) (Statement a) where
     statement = CreateStmt
-    
+
 instance ToStmt (CreateStmt a) (Statement a) where
     statement = statement . execStmt
 
@@ -1730,10 +1728,10 @@ instance ToStmt (Select b a) (Statement a) where
 
 instance ToStmt (SelectWrap a) (Statement a) where
     statement = SelectStmt
-    
+
 instance ToStmt (Update a) (Statement a) where
     statement = UpdateStmt
-    
+
 instance ToStmt (Query b a) (Statement a) where
     statement = statement . execStmt
 
@@ -1763,45 +1761,45 @@ instance ToList (Table a) [Table a] where
 
 instance ToList [Table a] [Table a] where
     toList = id
-    
+
 instance ToList (TableRef a) [TableRef a] where
     toList x = [x]
 
 instance ToList [TableRef a] [TableRef a] where
     toList = id
-    
+
 instance ToList (Join a) [Join a] where
     toList x = [x]
 
 instance ToList [Join a] [Join a] where
     toList = id
-    
+
 instance ToList (Column b a) [Column b a] where
     toList x = [x]
 
 instance ToList [Column b a] [Column b a] where
     toList = id
-    
+
 instance ToList (ColRef b a) [ColRef b a] where
     toList x = [x]
 
 instance ToList [ColRef b a] [ColRef b a] where
     toList = id
-    
+
 instance ToList (ColWrap a) [ColWrap a] where
     toList x = [x]
 
 instance ToList [ColWrap a] [ColWrap a] where
     toList = id
-    
+
 instance ToList (ColRefWrap a) [ColRefWrap a] where
     toList x = [x]
 
 instance ToList [ColRefWrap a] [ColRefWrap a] where
     toList = id
-    
+
 instance ToList (SortRef a) [SortRef a] where
     toList x = [x]
-    
+
 instance ToList [SortRef a] [SortRef a] where
     toList = id

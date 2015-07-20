@@ -1,5 +1,6 @@
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-|
 Module      : Database/Hedsql/Drivers/SqLite/Parser.hs
@@ -14,6 +15,7 @@ SqLite parser implementation.
 -}
 module Database.Hedsql.Drivers.SqLite.Parser
     ( parse
+    , parseP
     ) where
 
 --------------------------------------------------------------------------------
@@ -26,29 +28,33 @@ import Database.Hedsql.Common.Parser
 import Database.Hedsql.Drivers.SqLite.Driver
 
 import Data.Char
+import Data.Text.Lazy(pack)
+import Database.Hedsql.Common.PrettyPrint
 
 --------------------------------------------------------------------------------
 -- PRIVATE
 --------------------------------------------------------------------------------
 
 -- | Parse SqLite data types.
-sqLiteDataTypeFunc :: DataTypeWrap SqLite -> String
+sqLiteDataTypeFunc :: DataTypeWrap SqLite -> Doc
 sqLiteDataTypeFunc dataType =
     case dataType of
-        DataTypeWrap (Char lenght) -> "CHARACTER(" ++ show lenght ++ ")"
-        _                          -> map toUpper $ parseDataTypeFunc dataType
+        DataTypeWrap (Char lenght) ->
+            "CHARACTER" <> parens (int lenght)
+        _ ->
+            text $ pack $ map toUpper $ renderRaw $ parseDataTypeFunc dataType
 
 {-|
 Parse a SqLite value.
 Booleans in SqLite are represented by numeric values only (0 or 1).
 -}
-sqLiteParseValueFunc :: ValueWrap SqLite -> String
+sqLiteParseValueFunc :: ValueWrap SqLite -> Doc
 sqLiteParseValueFunc (ValueWrap (BoolVal True))  = "1"
 sqLiteParseValueFunc (ValueWrap (BoolVal False)) = "0"
 sqLiteParseValueFunc val = parseValueFunc sqLiteParser val
 
 -- | Create the SqLite function parser.
-sqLiteExprFunc :: ExprWrap SqLite -> String
+sqLiteExprFunc :: ExprWrap SqLite -> Doc
 sqLiteExprFunc (ExprWrap CurrentDate) = "Date('now')"
 sqLiteExprFunc e = parseExprFunc sqLiteParser e
 
@@ -58,7 +64,6 @@ sqLiteParser =
     Parser
       (parseStmtFunc sqLiteParser)
       sqLiteExprFunc
-      (parseTableFunc sqLiteParser)
       (parseTableConstFunc sqLiteParser)
       (parseTableConstTypeFunc sqLiteParser)
       (parseFkFunc sqLiteParser)
@@ -114,4 +119,11 @@ Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
 parse :: ToStmt a (Statement SqLite) => a -> String
-parse = _parseStmt sqLiteParser . statement
+parse = renderRaw ._parseStmt sqLiteParser . statement
+
+{-|
+Convert a SQL statement (or something which can be coerced to a statement)
+to a SQL string in pretty print mode.
+-}
+parseP :: ToStmt a (Statement SqLite) => a -> String
+parseP = show ._parseStmt sqLiteParser . statement

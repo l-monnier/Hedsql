@@ -11,24 +11,26 @@ category:       Database
 license:        GPL-3
 license-file:   LICENCE.md
 copyright:      (c) 2014-2015 Leonard Monnier
-tested-with:    GHC==7.8.2
+tested-with:    GHC==7.10.2
 
 library
   hs-source-dirs:   src
   ghc-options:      -Wall
-  exposed-modules:  
+  exposed-modules:
                     Database.Hedsql.Drivers.MariaDB.Constructor,
                     Database.Hedsql.Drivers.PostgreSQL.Constructor,
                     Database.Hedsql.MariaDB,
                     Database.Hedsql.PostgreSQL,
                     Database.Hedsql.SqLite
                     Database.Hedsql.Ext
-  build-depends:    
+  build-depends:
                     base,
                     lens,
                     template-haskell,
-                    mtl >=2.1 && <2.2
-  other-modules:    
+                    mtl,
+                    text,
+                    wl-pprint-text
+  other-modules:
                     Database.Hedsql.Drivers.MariaDB.Driver,
                     Database.Hedsql.Drivers.MariaDB.Parser,
                     Database.Hedsql.Drivers.PostgreSQL.Driver,
@@ -37,13 +39,14 @@ library
                     Database.Hedsql.Drivers.SqLite.Parser,
                     Database.Hedsql.Common.AST,
                     Database.Hedsql.Common.Parser,
+                    Database.Hedsql.Common.PrettyPrint,
                     Database.Hedsql.Common.Constructor
 
 test-suite tests
   type:            exitcode-stdio-1.0
   x-uses-tf:       true
   ghc-options:     -Wall -rtsopts
-  build-depends:   
+  build-depends:
                    base,
                    HUnit,
                    QuickCheck,
@@ -51,7 +54,7 @@ test-suite tests
                    test-framework-quickcheck2,
                    test-framework-hunit,
                    random
-  hs-source-dirs:  
+  hs-source-dirs:
                    src,
                    tests
   main-is:         Test.hs
