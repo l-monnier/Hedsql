@@ -14,7 +14,7 @@ Portability : portable
 Implementation of the SQL parser. It converts the AST to a 'DOC' which can
 then be rendered ('renderRaw') and executed by a SQL engine.
 
-Alternatively, the AST can be pretty parsed using the 'renderPretty' function.
+Alternatively, the AST can be pretty parsed using 'show'.
 -}
 module Database.Hedsql.Common.Parser
     (
@@ -83,26 +83,32 @@ module Database.Hedsql.Common.Parser
 -- IMPORTS
 --------------------------------------------------------------------------------
 
-import Database.Hedsql.Common.AST
+import           Database.Hedsql.Common.AST
 
-import Control.Lens
-import Data.List(intersperse)
-import Data.Maybe
-import Data.Text.Lazy(pack)
-import Database.Hedsql.Common.PrettyPrint
-import Prelude hiding ((<$>))
+import           Control.Lens
+import           Data.List                          (intersperse)
+import           Data.Maybe
+import           Data.Text.Lazy                     (pack)
+import           Database.Hedsql.Common.PrettyPrint
+import           Prelude                            hiding ((<$>))
 
 --------------------------------------------------------------------------------
 -- PRIVATE
 --------------------------------------------------------------------------------
 
+-- | Map all the elements of a list but the last one.
+mapButLast :: (a -> a) -> [a] -> [a]
+mapButLast _ []     = []
+mapButLast _ [x]    = [x]
+mapButLast f (x:xs) = f x : mapButLast f xs
+
 {-|
-Apply a parsing function to a maybe.
-If 'Just', returns the result of the parse function preceed by a space.
-If 'Nothing', returns an empty 'Doc'.
+Apply  a parsing function to a maybe value if that value is 'Just'.
+If the value is 'Nothing' return the empty document.
 -}
-parseMaybe :: (a -> Doc) -> Maybe a -> Doc
-parseMaybe f = maybe empty ((<>) space . f)
+parseM :: (a -> Doc) -> Maybe a -> Doc
+parseM f (Just x) = f x
+parseM _ _        = empty
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -122,54 +128,54 @@ of the _parseExpr record you could write:
 -}
 getParser :: Parser a -> Parser a
 getParser parser =
-    Parser
-      (parseStmtFunc parser)
-      (parseExprFunc parser)
-      (parseTableConstFunc parser)
-      (parseTableConstTypeFunc parser)
-      (parseFkFunc parser)
-      parseMatchFunc
-      (parseOnActionFunc parser)
-      parseActionFunc
-      parseConstTimingFunc
-      (parseViewFunc parser)
-      (parseColCreateFunc parser)
-      parseDataTypeFunc
-      (parseColConstFunc parser)
-      (parseColConstTypeFunc parser)
-      (parseCreateFunc parser)
-      (parseDropFunc parser)
-      (parseTableNameFunc parser)
-      (parseTableRefFunc parser)
-      (parseTableRefAsFunc parser)
-      (parseColFunc parser)
-      (parseColDefFunc parser)
-      (parseColRefDefFunc parser)
-      (parseColRefFunc parser)
-      (parseValueFunc parser)
-      (parseSelectFunc parser)
-      parseCombinationFunc
-      (parseSelectTypeFunc parser)
-      (parseSelectionFunc parser)
-      (parseFromFunc parser)
-      (parseJoinFunc parser)
-      (parseJoinClauseFunc parser)
-      parseJoinTColFunc
-      parseJoinTTableFunc
-      (parseWhereFunc parser)
-      (parseGroupByFunc parser)
-      (parseHavingFunc parser)
-      (parseOrderByFunc parser)
-      (parseSortRefFunc parser)
-      parseSortOrderFunc
-      parseSortNullFunc
-      (parseAssgnmtFunc parser)
-      (parseInsertAssignFunc parser)
-      (parseDeleteFunc parser)
-      (parseInsertFunc parser)
-      (parseUpdateFunc parser)
-      quoteElemFunc
-      quoteValFunc
+  Parser
+    (parseStmtFunc parser)
+    (parseExprFunc parser)
+    (parseTableConstFunc parser)
+    (parseTableConstTypeFunc parser)
+    (parseFkFunc parser)
+    parseMatchFunc
+    (parseOnActionFunc parser)
+    parseActionFunc
+    parseConstTimingFunc
+    (parseViewFunc parser)
+    (parseColCreateFunc parser)
+    parseDataTypeFunc
+    (parseColConstFunc parser)
+    (parseColConstTypeFunc parser)
+    (parseCreateFunc parser)
+    (parseDropFunc parser)
+    (parseTableNameFunc parser)
+    (parseTableRefFunc parser)
+    (parseTableRefAsFunc parser)
+    (parseColFunc parser)
+    (parseColDefFunc parser)
+    (parseColRefDefFunc parser)
+    (parseColRefFunc parser)
+    (parseValueFunc parser)
+    (parseSelectFunc parser)
+    parseCombinationFunc
+    (parseSelectTypeFunc parser)
+    (parseSelectionFunc parser)
+    (parseFromFunc parser)
+    (parseJoinFunc parser)
+    (parseJoinClauseFunc parser)
+    parseJoinTColFunc
+    parseJoinTTableFunc
+    (parseWhereFunc parser)
+    (parseGroupByFunc parser)
+    (parseHavingFunc parser)
+    (parseOrderByFunc parser)
+    (parseSortRefFunc parser)
+    parseSortOrderFunc
+    parseSortNullFunc
+    (parseAssgnmtFunc parser)
+    (parseInsertAssignFunc parser)
+    (parseDeleteFunc parser)
+    (parseInsertFunc parser)
+    (parseUpdateFunc parser)
+    quoteElemFunc
+    quoteValFunc
 
 ----------------------------------------
 -- Interface
@@ -182,9 +188,9 @@ Defines the different computation's steps of the conversion of the AST
 to a 'Doc'.
 -}
 data Parser a = Parser
-    { _parseStmt :: Statement a -> Doc
+    { _parseStmt           :: Statement a -> Doc
 
-    , _parseExpr :: ExprWrap a -> Doc
+    , _parseExpr           :: ExprWrap a -> Doc
 
       -- | Parse a table for a CREATE TABLE statement.
     , _parseTableConst     :: TableConstraint     a -> Doc
@@ -195,70 +201,70 @@ data Parser a = Parser
     , _parseAction         :: SqlAction           a -> Doc
     , _parseConstTiming    :: ConstraintTiming    a -> Doc
 
-    , _parseView :: View a -> Doc
+    , _parseView           :: View a -> Doc
 
       -- | Parse a column for a CREATE TABLE statement.
-    , _parseColCreate    :: Int -> ColWrap    a -> Doc
-    , _parseDataType     :: DataTypeWrap      a -> Doc
-    , _parseColConst     :: ColConstraint     a -> Doc
-    , _parseColConstType :: ColConstraintType a -> Doc
+    , _parseColCreate      :: Int -> ColWrap    a -> Doc
+    , _parseDataType       :: DataTypeWrap      a -> Doc
+    , _parseColConst       :: ColConstraint     a -> Doc
+    , _parseColConstType   :: ColConstraintType a -> Doc
 
-    , _parseCreate :: Create a -> Doc
-    , _parseDrop   :: Drop   a -> Doc
+    , _parseCreate         :: Create a -> Doc
+    , _parseDrop           :: Drop   a -> Doc
 
       -- | Parse a table for a data manipulation statement
       --   (SELECT, INSERT, UPDATE).
-    , _parseTableName  :: Table      a -> Doc
-    , _parseTableRef   :: TableRef   a -> Doc
-    , _parseTableRefAs :: TableRefAs a -> Doc
+    , _parseTableName      :: Table      a -> Doc
+    , _parseTableRef       :: TableRef   a -> Doc
+    , _parseTableRefAs     :: TableRefAs a -> Doc
 
       -- | Parse a column for a data manipulation statement
       --   (SELECT, INSERT, UPDATE).
-    , _parseCol       :: ColWrap    a -> Doc
-    , _parseColDef    :: ColDefWrap a -> Doc
+    , _parseCol            :: ColWrap    a -> Doc
+    , _parseColDef         :: ColDefWrap a -> Doc
 
       -- | Parse a column reference definition (selection of a SELECT query
       --   when the selection is defined.
       --   Example: ""Table1"."col1" AS "colA"
-    , _parseColRefDef :: ColRefWrap a -> Doc
+    , _parseColRefDef      :: ColRefWrap a -> Doc
 
       -- | Parse a column reference when used in a SELECT query, using its
       --   alias if applicable.
-    , _parseColRef :: ColRefWrap a -> Doc
+    , _parseColRef         :: ColRefWrap a -> Doc
 
-    , _parseValue :: ValueWrap a -> Doc
+    , _parseValue          :: ValueWrap a -> Doc
 
-    , _parseSelect      :: SelectWrap    a -> Doc
-    , _parseCombination :: Combination   a -> Doc
-    , _parseSelectType  :: SelectType    a -> Doc
-    , _parseSelection   :: SelectionWrap a -> Doc
-    , _parseFrom        :: From          a -> Doc
-    , _parseJoin        :: Join          a -> Doc
-    , _parseJoinClause  :: JoinClause    a -> Doc
-    , _parseJoinTCol    :: JoinTypeCol   a -> Doc
-    , _parseJoinTTable  :: JoinTypeTable a -> Doc
-    , _parseWhere       :: Where         a -> Doc
-    , _parseGroupBy     :: GroupBy       a -> Doc
-    , _parseHaving      :: Having        a -> Doc
-    , _parseOrderBy     :: OrderBy       a -> Doc
-    , _parseSortRef     :: SortRef       a -> Doc
-    , _parseSortOrder   :: SortOrder     a -> Doc
-    , _parseSortNull    :: SortNulls     a -> Doc
+    , _parseSelect         :: SelectWrap    a -> Doc
+    , _parseCombination    :: Combination   a -> Doc
+    , _parseSelectType     :: SelectType    a -> Doc
+    , _parseSelection      :: SelectionWrap a -> Doc
+    , _parseFrom           :: From          a -> Doc
+    , _parseJoin           :: Join          a -> Doc
+    , _parseJoinClause     :: JoinClause    a -> Doc
+    , _parseJoinTCol       :: JoinTypeCol   a -> Doc
+    , _parseJoinTTable     :: JoinTypeTable a -> Doc
+    , _parseWhere          :: Where         a -> Doc
+    , _parseGroupBy        :: GroupBy       a -> Doc
+    , _parseHaving         :: Having        a -> Doc
+    , _parseOrderBy        :: OrderBy       a -> Doc
+    , _parseSortRef        :: SortRef       a -> Doc
+    , _parseSortOrder      :: SortOrder     a -> Doc
+    , _parseSortNull       :: SortNulls     a -> Doc
 
       -- | Parse an assignment for an UPDATE statement.
-    , _parseAssgnmt :: Assignment a -> Doc
+    , _parseAssgnmt        :: Assignment a -> Doc
 
       -- | Parse many assignments for an INSERT statement.
-    , _parseInsertAssign :: [Assignment a] -> Doc
-    , _parseDelete  :: Delete a -> Doc
-    , _parseInsert  :: Insert a -> Doc
-    , _parseUpdate  :: Update a -> Doc
+    , _parseInsertAssign   :: [Assignment a] -> Doc
+    , _parseDelete         :: Delete a -> Doc
+    , _parseInsert         :: Insert a -> Doc
+    , _parseUpdate         :: Update a -> Doc
 
       -- | Quote an element (table or column reference).
-    , _quoteElem :: String -> Doc
+    , _quoteElem           :: String -> Doc
 
       -- | Quote a value.
-    , _quoteVal  :: String -> Doc
+    , _quoteVal            :: String -> Doc
     }
 
 ----------------------------------------
@@ -276,17 +282,17 @@ parseActionFunc SetNull    = "SET NULL"
 -- | Parse a column which can be used for a CREATE statement.
 parseColCreateFunc :: Parser a -> Int -> ColWrap a -> Doc
 parseColCreateFunc parser longestName col = hsep
-  [ _quoteElem parser cName
-  , indent n $ _parseDataType parser (col^.colWrapType)
-  , consts $ col^.colWrapConstraints
-  ]
-  where
-    consts []   = empty
-    consts cols = csep $ map (_parseColConst parser) cols
+    [ _quoteElem parser cName
+    , indent n $ _parseDataType parser (col^.colWrapType)
+    , consts $ col^.colWrapConstraints
+    ]
+    where
+        consts []   = empty
+        consts cols = csep $ map (_parseColConst parser) cols
 
-    n = longestName - length cName
+        n = longestName - length cName
 
-    cName = col^.colWrapName
+        cName = col^.colWrapName
 
 -- | Parse a column constraint type.
 parseColConstTypeFunc :: Parser a -> ColConstraintType a -> Doc
@@ -323,13 +329,13 @@ parseColConstTypeFunc parser cst =
 -- | Parse a column constraint.
 parseColConstFunc :: Parser a -> ColConstraint a -> Doc
 parseColConstFunc parser colConstraint =
-        parseName                (colConstraint^.colConstraintName)
-     <> _parseColConstType parser (colConstraint^.colConstraintType)
-        where
-            parseName (Just name) = "CONSTRAINT "
-                                    <> _quoteElem parser name
-                                    <> space
-            parseName  Nothing    = empty
+       parseName                 (colConstraint^.colConstraintName)
+    <> _parseColConstType parser (colConstraint^.colConstraintType)
+    where
+        parseName (Just name) = "CONSTRAINT "
+                                <> _quoteElem parser name
+                                <> space
+        parseName  Nothing    = empty
 
 -- | Parse a timing constraint.
 parseConstTimingFunc :: ConstraintTiming  a -> Doc
@@ -341,34 +347,34 @@ parseConstTimingFunc timing =
 -- | Create a CREATE statement.
 parseCreateFunc :: Parser a -> Create a -> Doc
 parseCreateFunc parser create =
-  case create of
-    CreateTable ifNotExists table ->
-          "CREATE TABLE"
-      <+> notExists ifNotExists
-      <+> (_parseTableName parser $ table)
-      <+> "("
-      <$$> indent 2
-             ( vsep
-             $ punctuate comma
-             $ map (_parseColCreate parser $ longestName table)
-             $ table^.tableCols
-             )
-      <> (consts $ map (_parseTableConst parser) $ table^.tableConsts)
-      <$$>  ")"
-    CreateView ifNotExists v ->
-      hsep
-        [ "CREATE VIEW"
-        , notExists ifNotExists
-        , _parseView parser v
-        ]
-  where
-    notExists cond = if cond then "IF NOT EXISTS" else empty
+    case create of
+        CreateTable ifNotExists table ->
+                 "CREATE TABLE"
+            <+>  notExists ifNotExists
+            <+>  (_parseTableName parser $ table)
+            <+>  "("
+            <$$> indent 2
+                     ( vsep
+                     $ punctuate comma
+                     $ map (_parseColCreate parser $ longestName table)
+                     $ table^.tableCols
+                     )
+            <>   (consts $ map (_parseTableConst parser) $ table^.tableConsts)
+            <$$> ")"
+        CreateView ifNotExists v ->
+            hsep
+                [ "CREATE VIEW"
+                , notExists ifNotExists
+                , _parseView parser v
+                ]
+    where
+      notExists cond = if cond then "IF NOT EXISTS" else empty
 
-    consts [] = empty
-    consts l  = ", " <> csep l
+      consts [] = empty
+      consts l  = ", " <> csep l
 
-    longestName table =
-      foldr (\x -> max (length $ x^.colWrapName)) 0 (table^.tableCols)
+      longestName table =
+          foldr (\x -> max (length $ x^.colWrapName)) 0 (table^.tableCols)
 
 -- | Create the VIEW clause of a CREATE statement.
 parseViewFunc :: Parser a -> View a -> Doc
@@ -392,16 +398,16 @@ parseDataTypeFunc (DataTypeWrap Undef)          = empty
 -- | Parse a FOREIGN KEY clause.
 parseFkFunc :: Parser a -> ForeignKey a -> Doc
 parseFkFunc parser fk = hsep
-        [ _parseTableName parser $ fk^.foreignKeyTable
-        , parens $ csep $ map (_parseCol parser) $ fk^.foreignKeyCols
-        , makeMatch  $ fk^.foreignKeyMatch
-        , makeAction $ fk^.foreignKeyAction
-        ]
-        where
-            makeMatch (Just match) = _parseMatch parser match
-            makeMatch  Nothing     = empty
-            makeAction (Just action) = _parseOnAction parser action
-            makeAction  Nothing      = empty
+    [ _parseTableName parser $ fk^.foreignKeyTable
+    , parens $ csep $ map (_parseCol parser) $ fk^.foreignKeyCols
+    , makeMatch  $ fk^.foreignKeyMatch
+    , makeAction $ fk^.foreignKeyAction
+    ]
+    where
+        makeMatch (Just match) = _parseMatch parser match
+        makeMatch  Nothing     = empty
+        makeAction (Just action) = _parseOnAction parser action
+        makeAction  Nothing      = empty
 
 -- | Parse a MATCH clause.
 parseMatchFunc :: Match a -> Doc
@@ -456,48 +462,48 @@ parseTableConstTypeFunc parser cond =
 -- | Parse a DELETE statement.
 parseDeleteFunc :: Parser a -> Delete a -> Doc
 parseDeleteFunc parser statement =
-  "DELETE FROM"
-  <+> (_parseTableName parser) (statement ^. deleteTable)
-  <$> parseM (_parseWhere parser) (statement ^. deleteWhere)
+        "DELETE FROM"
+    <+> (_parseTableName parser) (statement ^. deleteTable)
+    <$> parseM (_parseWhere parser) (statement ^. deleteWhere)
 
 -- | Parse a DROP TABLE statement.
 parseDropFunc :: Parser a -> Drop a -> Doc
 parseDropFunc parser dropClause =
-  "DROP" <+>
-  case dropClause of
-       DropTable ifExists stmt -> hsep
-         [ "TABLE"
-         ,  exists ifExists
-         ,  _parseTableName parser stmt
-         ]
-       DropView ifExists stmt -> hsep
-         [ "VIEW"
-         , exists ifExists
-         , _parseView parser stmt
-         ]
-  where
-    exists x = if x then "IF EXISTS" else empty
+    "DROP" <+>
+    case dropClause of
+        DropTable ifExists stmt -> hsep
+            [ "TABLE"
+            ,  exists ifExists
+            ,  _parseTableName parser stmt
+            ]
+        DropView ifExists stmt -> hsep
+            [ "VIEW"
+            , exists ifExists
+            , _parseView parser stmt
+            ]
+    where
+        exists x = if x then "IF EXISTS" else empty
 
 -- | Parse an INSERT statement.
 parseInsertFunc :: Parser a -> Insert a -> Doc
 parseInsertFunc parser insert =
-      "INSERT INTO"
-  <+> (_quoteElem parser) (insert ^. insertTable.tableName)
-  <+> (_parseInsertAssign parser) (insert ^. insertAssign)
+        "INSERT INTO"
+    <+> (_quoteElem parser) (insert ^. insertTable.tableName)
+    <+> (_parseInsertAssign parser) (insert ^. insertAssign)
 
 -- | Parse INSERT assignments.
 parseInsertAssignFunc :: Parser a -> [Assignment a] -> Doc
 parseInsertAssignFunc parser assigns =
-      "("
-  <$$> indent 2 (vsep $ punctuate comma cols)
-  <> ")"
-  <$> "VALUES"
-  <+> "("
-  <$$> indent 2 (vsep $ punctuate comma vals)
-  <> ")"
-  where
-    cols = map (_parseCol parser . getAssignCol) assigns
-    vals = map (_parseExpr parser . getAssignExpr) assigns
+         "("
+    <$$> indent 2 (vsep $ punctuate comma cols)
+    <>   ")"
+    <$>  "VALUES"
+    <+>  "("
+    <$$> indent 2 (vsep $ punctuate comma vals)
+    <>   ")"
+    where
+        cols = map (_parseCol parser . getAssignCol) assigns
+        vals = map (_parseExpr parser . getAssignExpr) assigns
 
 -- | Parse a SELECT query.
 parseSelectFunc :: Parser a -> SelectWrap a -> Doc
@@ -510,23 +516,23 @@ parseSelectFunc parser (SelectWrap (Combined combination queries)) =
         encapsulate q@(_)        = parens $ parseQuery q
 
 parseSelectFunc parser (SelectWrap (Single select)) =
-      "SELECT"
-  <+> (_parseSelectType parser (select^.selectType))
-  $+> (_parseSelection parser  (SelectionWrap $ select^.selectCols))
-  <$> parseM (_parseFrom parser)    (select^.selectFrom)
-  <$> parseM (_parseWhere parser)   (select^.selectWhere)
-  <$> parseM (_parseGroupBy parser) (select^.selectGroupBy)
-  <$> parseM (_parseHaving parser)  (select^.selectHaving)
-  <$> parseM (_parseOrderBy parser) (select^.selectOrderBy)
-  <$> parseM (\(Limit v)  -> "LIMIT"  <+> int v) (select^.selectLimit)
-  <+> parseM (\(Offset v) -> "OFFSET" <+> int v) (select^.selectOffset)
-  where
+        "SELECT"
+    <+> (_parseSelectType parser (select^.selectType))
+    $+> (_parseSelection parser  (SelectionWrap $ select^.selectCols))
+    <$> parseM (_parseFrom parser)    (select^.selectFrom)
+    <$> parseM (_parseWhere parser)   (select^.selectWhere)
+    <$> parseM (_parseGroupBy parser) (select^.selectGroupBy)
+    <$> parseM (_parseHaving parser)  (select^.selectHaving)
+    <$> parseM (_parseOrderBy parser) (select^.selectOrderBy)
+    <$> parseM (\(Limit v)  -> "LIMIT"  <+> int v) (select^.selectLimit)
+    <+> parseM (\(Offset v) -> "OFFSET" <+> int v) (select^.selectOffset)
+    where
 
-    -- Columns flow in the SELECT clause.
-    infixl 4 $+> -- Infix 5 is important to get things properly aligned!
-    ($+>) = if (length $ getSelectedCols $ select^.selectCols) > 1
-            then (<$>)
-            else (<+>)
+        -- Columns flow in the SELECT clause.
+        infixl 4 $+> -- Infix 5 is important to get things properly aligned!
+        ($+>) = if (length $ getSelectedCols $ select^.selectCols) > 1
+                then (<$>)
+                else (<+>)
 
 {-|
 Parse the columns of a SELECT clause.
@@ -589,13 +595,13 @@ parseStmtFunc parser stmt =
 -- | Parse an UPDATE statement.
 parseUpdateFunc :: Parser a -> Update a -> Doc
 parseUpdateFunc parser update =
-      "UPDATE"
-  <+> _quoteElem parser (update^.updateTable.tableName)
-  <$>  "SET"
-  <+> csep (map (_parseAssgnmt parser) assignments)
-  <$> parseM (_parseWhere parser) (update^.updateWhere)
-  where
-     assignments = update^.updateAssignments
+        "UPDATE"
+    <+> _quoteElem parser (update^.updateTable.tableName)
+    <$>  "SET"
+    <+> csep (map (_parseAssgnmt parser) assignments)
+    <$> parseM (_parseWhere parser) (update^.updateWhere)
+    where
+        assignments = update^.updateAssignments
 
 {-|
 Parse the assignment of an UPDATE statement.
@@ -606,10 +612,10 @@ for this only purpose wouldn't make a lot of sense.
 -}
 parseAssgnmtFunc :: Parser a -> Assignment a -> Doc
 parseAssgnmtFunc parser (Assignment col val) = hsep
-  [ _parseCol parser $ ColWrap col
-  , "="
-  , _parseExpr parser $ ExprWrap val
-  ]
+    [ _parseCol parser $ ColWrap col
+    , "="
+    , _parseExpr parser $ ExprWrap val
+    ]
 
 -- | Parse the name of a column.
 parseColFunc :: Parser a -> ColWrap a -> Doc
@@ -749,19 +755,19 @@ parseExprFunc parser (ExprWrap expr) =
             <>  if p then text ")" else empty
 
         parseBetweens func colRef lower higher = hsep
-                [ _parseColRefDef parser colRef
-                , if func then empty else "NOT"
-                , "BETWEEN"
-                , _parseColRefDef parser lower
-                , "AND"
-                , _parseColRefDef parser higher
-                ]
+            [ _parseColRefDef parser colRef
+            , if func then empty else "NOT"
+            , "BETWEEN"
+            , _parseColRefDef parser lower
+            , "AND"
+            , _parseColRefDef parser higher
+            ]
 
         parseInfix name colRef1 colRef2 = hsep
-                [ _parseColRefDef parser colRef1
-                , name
-                , _parseColRefDef parser colRef2
-                ]
+            [ _parseColRefDef parser colRef1
+            , name
+            , _parseColRefDef parser colRef2
+            ]
 
         -- Parse an operator.
         parseOp name colRef1 colRef2 =
@@ -796,11 +802,10 @@ parseExprFunc parser (ExprWrap expr) =
         makeExpr str colRef =
             str <> ref
             where
-                ref =
-                    let cRef = renderRaw $ _parseColRefDef parser colRef in
-                    if head cRef == '(' && last cRef == ')'
-                    then text $ pack $ cRef
-                    else parens $ text $ pack $ cRef
+                ref = let cRef = renderRaw $ _parseColRefDef parser colRef in
+                      if head cRef == '(' && last cRef == ')'
+                      then text $ pack $ cRef
+                      else parens $ text $ pack $ cRef
 
 -- | Parse a FROM clause.
 parseFromFunc :: Parser a -> From a -> Doc
@@ -891,9 +896,9 @@ parseSortOrderFunc Desc = "DESC"
 -- | Parse a sort reference.
 parseSortRefFunc :: Parser a -> SortRef a -> Doc
 parseSortRefFunc parser sortRef =
-                      (_parseColRefDef parser)    (sortRef^.sortRefColRef)
-        <> parseMaybe (_parseSortOrder parser) (sortRef^.sortRefOrder)
-        <> parseMaybe (_parseSortNull parser)  (sortRef^.sortRefNulls)
+       (_parseColRefDef parser)    (sortRef^.sortRefColRef)
+   <+> parseM (_parseSortOrder parser) (sortRef^.sortRefOrder)
+   <+> parseM (_parseSortNull parser)  (sortRef^.sortRefNulls)
 
 -- | Parse the name of a table.
 parseTableNameFunc :: Parser a -> Table a -> Doc
@@ -1039,13 +1044,3 @@ Separate a list of 'Doc' with a comma and a space.
 -}
 csep :: [Doc] -> Doc
 csep = hsep . punctuate comma
-
--- | Map all the elements of a list but the last one.
-mapButLast :: (a -> a) -> [a] -> [a]
-mapButLast _ []     = []
-mapButLast _ [x]    = [x]
-mapButLast f (x:xs) = f x : mapButLast f xs
-
-parseM :: (a -> Doc) -> Maybe a -> Doc
-parseM f (Just x) = f x
-parseM _ _        = empty

@@ -1,6 +1,6 @@
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE OverloadedStrings     #-}
 
 {-|
 Module      : Database/Hedsql/Drivers/SqLite/Parser.hs
@@ -22,14 +22,14 @@ module Database.Hedsql.Drivers.SqLite.Parser
 -- IMPORTS
 --------------------------------------------------------------------------------
 
-import Database.Hedsql.Common.AST
-import Database.Hedsql.Common.Constructor
-import Database.Hedsql.Common.Parser
-import Database.Hedsql.Drivers.SqLite.Driver
+import           Database.Hedsql.Common.AST
+import           Database.Hedsql.Common.Constructor
+import           Database.Hedsql.Common.Parser
+import           Database.Hedsql.Drivers.SqLite.Driver
 
-import Data.Char
-import Data.Text.Lazy(pack)
-import Database.Hedsql.Common.PrettyPrint
+import           Data.Char
+import           Data.Text.Lazy                        (pack)
+import           Database.Hedsql.Common.PrettyPrint
 
 --------------------------------------------------------------------------------
 -- PRIVATE
@@ -60,55 +60,54 @@ sqLiteExprFunc e = parseExprFunc sqLiteParser e
 
 -- | Create the SqLite parser.
 sqLiteParser :: Parser SqLite
-sqLiteParser =
-    Parser
-      (parseStmtFunc sqLiteParser)
-      sqLiteExprFunc
-      (parseTableConstFunc sqLiteParser)
-      (parseTableConstTypeFunc sqLiteParser)
-      (parseFkFunc sqLiteParser)
-      parseMatchFunc
-      (parseOnActionFunc sqLiteParser)
-      parseActionFunc
-      parseConstTimingFunc
-      (parseViewFunc sqLiteParser)
-      (parseColCreateFunc sqLiteParser)
-      sqLiteDataTypeFunc
-      (parseColConstFunc sqLiteParser)
-      (parseColConstTypeFunc sqLiteParser)
-      (parseCreateFunc sqLiteParser)
-      (parseDropFunc sqLiteParser)
-      (parseTableNameFunc sqLiteParser)
-      (parseTableRefFunc sqLiteParser)
-      (parseTableRefAsFunc sqLiteParser)
-      (parseColFunc sqLiteParser)
-      (parseColDefFunc sqLiteParser)
-      (parseColRefDefFunc sqLiteParser)
-      (parseColRefFunc sqLiteParser)
-      sqLiteParseValueFunc
-      (parseSelectFunc sqLiteParser)
-      parseCombinationFunc
-      (parseSelectTypeFunc sqLiteParser)
-      (parseSelectionFunc sqLiteParser)
-      (parseFromFunc sqLiteParser)
-      (parseJoinFunc sqLiteParser)
-      (parseJoinClauseFunc sqLiteParser)
-      parseJoinTColFunc
-      parseJoinTTableFunc
-      (parseWhereFunc sqLiteParser)
-      (parseGroupByFunc sqLiteParser)
-      (parseHavingFunc sqLiteParser)
-      (parseOrderByFunc sqLiteParser)
-      (parseSortRefFunc sqLiteParser)
-      parseSortOrderFunc
-      parseSortNullFunc
-      (parseAssgnmtFunc sqLiteParser)
-      (parseInsertAssignFunc sqLiteParser)
-      (parseDeleteFunc sqLiteParser)
-      (parseInsertFunc sqLiteParser)
-      (parseUpdateFunc sqLiteParser)
-      quoteElemFunc
-      quoteValFunc
+sqLiteParser = Parser
+    (parseStmtFunc sqLiteParser)
+    sqLiteExprFunc
+    (parseTableConstFunc sqLiteParser)
+    (parseTableConstTypeFunc sqLiteParser)
+    (parseFkFunc sqLiteParser)
+    parseMatchFunc
+    (parseOnActionFunc sqLiteParser)
+    parseActionFunc
+    parseConstTimingFunc
+    (parseViewFunc sqLiteParser)
+    (parseColCreateFunc sqLiteParser)
+    sqLiteDataTypeFunc
+    (parseColConstFunc sqLiteParser)
+    (parseColConstTypeFunc sqLiteParser)
+    (parseCreateFunc sqLiteParser)
+    (parseDropFunc sqLiteParser)
+    (parseTableNameFunc sqLiteParser)
+    (parseTableRefFunc sqLiteParser)
+    (parseTableRefAsFunc sqLiteParser)
+    (parseColFunc sqLiteParser)
+    (parseColDefFunc sqLiteParser)
+    (parseColRefDefFunc sqLiteParser)
+    (parseColRefFunc sqLiteParser)
+    sqLiteParseValueFunc
+    (parseSelectFunc sqLiteParser)
+    parseCombinationFunc
+    (parseSelectTypeFunc sqLiteParser)
+    (parseSelectionFunc sqLiteParser)
+    (parseFromFunc sqLiteParser)
+    (parseJoinFunc sqLiteParser)
+    (parseJoinClauseFunc sqLiteParser)
+    parseJoinTColFunc
+    parseJoinTTableFunc
+    (parseWhereFunc sqLiteParser)
+    (parseGroupByFunc sqLiteParser)
+    (parseHavingFunc sqLiteParser)
+    (parseOrderByFunc sqLiteParser)
+    (parseSortRefFunc sqLiteParser)
+    parseSortOrderFunc
+    parseSortNullFunc
+    (parseAssgnmtFunc sqLiteParser)
+    (parseInsertAssignFunc sqLiteParser)
+    (parseDeleteFunc sqLiteParser)
+    (parseInsertFunc sqLiteParser)
+    (parseUpdateFunc sqLiteParser)
+    quoteElemFunc
+    quoteValFunc
 
 --------------------------------------------------------------------------------
 -- PUBLIC

@@ -1,4 +1,4 @@
-{-# LANGUAGE EmptyDataDecls #-} 
+{-# LANGUAGE EmptyDataDecls #-}
 
 {-|
 Module      : Database/Hedsql/Drivers/PostgreSQL/Driver.hs
