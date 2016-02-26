@@ -764,7 +764,7 @@ data DataType b a where
     Bool :: DataType Bool a
 
     -- Types related to time.
-    Date :: DataType a Time
+    Date :: DataType a Time -- TODO: inspect, this is probably wrong!
 
     -- Textual types.
     Char    :: Int -> DataType String a
@@ -776,10 +776,10 @@ data DataType b a where
     SmallInt :: DataType Int a
 
     -- | 4 bytes integer – range from -2147483648 to +2147483647.
-    Integer  :: DataType Int a -- ^
+    Integer  :: DataType Int a -- TODO: change the name to Int.
 
     -- | 8 bytes integer
-    --   – range from -9223372036854775808 to +9223372036854775807.
+    -- – range from -9223372036854775808 to +9223372036854775807.
     BigInt   :: DataType Int a
 
     -- Undefined type.

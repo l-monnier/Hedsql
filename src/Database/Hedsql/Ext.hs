@@ -49,36 +49,36 @@ module Database.Hedsql.Ext
       -}
       ToTable
     , ToTableRef
-    
+
       -- * Column and column reference
       {-|
       Extra instances for creating columns, columns references and column
       references in a wrapper directly using 'String'.
-      
+
       Such columns will be of generic type.
       -}
     , ToCol
     , ToColRef
-    
+
       -- * Generic Values
     , (/?)
     , genVal
     , genQVal
     , null
-    
+
       -- * SELECT
       {-|
       Additional instances which allow to construct a SELECT clause directly
       from 'String'.
       -}
     , SelectConstr
-    
+
       -- * FROM
     , ToJoinClause
-    
+
       -- * ORDER BY
     , ToSortRef
-    
+
       -- * Utility functions
     ) where
 
@@ -95,12 +95,14 @@ import Prelude hiding (null)
 -- Table and table reference
 --------------------------------------------------------------------------------
 
+-- TODO: add support for Text.
+
 type SqlString a = String
 
 -- | Create a table from its name.
 instance ToTable (SqlString a) (Table a) where
     table name = Table name [] []
-    
+
 {-|
 Convert a table reference to a table.
 If the table reference is a table, then use that table.
@@ -112,7 +114,7 @@ instance ToTable (TableRef a) (Table a) where
             TableRef t _ -> t
             _            -> Table (getTableRefName ref) [] []
 
--- | Create a table reference using its name.            
+-- | Create a table reference using its name.
 instance ToTableRef (SqlString a) (TableRef a) where
     tableRef name = TableRef (table name) Nothing
 
@@ -122,14 +124,14 @@ instance ToTableRef (SqlString a) (TableRef a) where
 
 instance ToCol (SqlString a) (Column Undefined a) where
     toCol name = Column name Undef []
-    
+
 instance ToColRef (SqlString a) (ColRef Undefined a) where
     colRef name = ColRef (ColExpr $ ColDef (toCol name) Nothing) Nothing
-    
+
 --------------------------------------------------------------------------------
 -- Generic values
 --------------------------------------------------------------------------------
-    
+
 -- | Create a placeholder "?" of undefined type for a prepared statement.
 (/?) :: Value b a
 (/?) = Placeholder
@@ -184,20 +186,20 @@ list a = [a]
 -- | Create an USING join clause from a string which is a column name.
 instance ToJoinClause (SqlString a) (JoinClause a) where
     joinClause = JoinClauseUsing . list . ColWrap . toCol
-    
+
 ----------------------------------------
 -- ORDER BY
-----------------------------------------    
+----------------------------------------
 
 instance ToSortRef (SqlString a) (SortRef a) where
     sortRef name = SortRef (ColRefWrap $ colRef name) Nothing Nothing
-        
+
 --------------------------------------------------------------------------------
 -- Utility functions
 --------------------------------------------------------------------------------
 
 instance ToList String [String] where
     toList x = [x]
-    
+
 instance ToList [String] [String] where
     toList = id

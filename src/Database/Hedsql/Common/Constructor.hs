@@ -363,6 +363,10 @@ import Unsafe.Coerce
 class ToTable a b | a -> b where
     table :: a -> b
 
+-- TODO: without an additional instance, it is currently not possible
+-- to create a table to be used in deleteFrom for example, at all...
+-- add a String instance?
+
 -- | Create a table from itself.
 instance ToTable (Table a) (Table a) where
     table = id
