@@ -26,7 +26,7 @@ testBasicQuoteElem = testCase "Quote basic element" assertGoodQuote
         assertGoodQuote = assertEqual
             "Basic element not correctly quoted"
             "\"test\""
-            (_quoteElem parser "test")
+            (show $ _quoteElem parser "test")
 
 testBasicQuoteVal :: Test
 testBasicQuoteVal = testCase "Quote basic value" assertGoodQuote
@@ -35,7 +35,7 @@ testBasicQuoteVal = testCase "Quote basic value" assertGoodQuote
         assertGoodQuote = assertEqual
             "Basic value not correctly quoted"
             "'test'"
-            (_quoteVal parser "test")
+            (show $ _quoteVal parser "test")
 
 testQuotedQuoteElem :: Test
 testQuotedQuoteElem = testCase "Quote a quoted element" assertGoodQuote
@@ -44,8 +44,8 @@ testQuotedQuoteElem = testCase "Quote a quoted element" assertGoodQuote
         assertGoodQuote = assertEqual
             "Quoted element not correctly quoted"
             "\"\"\"test\"\"\""
-            (_quoteElem parser "\"test\"")
-            
+            (show $ _quoteElem parser "\"test\"")
+
 testQuotedQuoteVal :: Test
 testQuotedQuoteVal = testCase "Quote quoted value" assertGoodQuote
     where
@@ -53,5 +53,4 @@ testQuotedQuoteVal = testCase "Quote quoted value" assertGoodQuote
         assertGoodQuote = assertEqual
             "Quoted value not correctly quoted"
             "'''test'''"
-            (_quoteVal parser "'test'")
-                     
+            (show $ _quoteVal parser "'test'")
