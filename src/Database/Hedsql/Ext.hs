@@ -53,7 +53,7 @@ module Database.Hedsql.Ext
       -- * Column and column reference
       {-|
       Extra instances for creating columns, columns references and column
-      references in a wrapper directly using 'String'.
+      references in a wrapper directly using 'String' or 'Text'.
 
       Such columns will be of generic type.
       -}
@@ -64,12 +64,13 @@ module Database.Hedsql.Ext
     , (/?)
     , genVal
     , genQVal
+    , genQValT
     , null
 
       -- * SELECT
       {-|
       Additional instances which allow to construct a SELECT clause directly
-      from 'String'.
+      from 'String' or 'Text'.
       -}
     , SelectConstr
 
@@ -86,18 +87,20 @@ module Database.Hedsql.Ext
 -- IMPORTS
 --------------------------------------------------------------------------------
 
+import Prelude hiding (null)
+
+import qualified Data.Text as T
+
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor
-
-import Prelude hiding (null)
 
 --------------------------------------------------------------------------------
 -- Table and table reference
 --------------------------------------------------------------------------------
 
--- TODO: add support for Text.
-
 type SqlString a = String
+
+type SqlText a = T.Text
 
 -- | Create a table from its name.
 instance ToTable (SqlString a) (Table a) where
@@ -114,9 +117,13 @@ instance ToTable (TableRef a) (Table a) where
             TableRef t _ -> t
             _            -> Table (getTableRefName ref) [] []
 
--- | Create a table reference using its name.
+-- | Create a table reference using its name provided as 'String'.
 instance ToTableRef (SqlString a) (TableRef a) where
     tableRef name = TableRef (table name) Nothing
+
+-- | Create a table reference using its name provided as 'Text'.
+instance ToTableRef (SqlText a) (TableRef a) where
+    tableRef name = TableRef (table $ T.unpack name) Nothing
 
 --------------------------------------------------------------------------------
 -- Column and column reference
@@ -125,8 +132,16 @@ instance ToTableRef (SqlString a) (TableRef a) where
 instance ToCol (SqlString a) (Column Undefined a) where
     toCol name = Column name Undef []
 
+instance ToCol (SqlText a) (Column Undefined a) where
+    toCol name = Column (T.unpack name) Undef []
+
 instance ToColRef (SqlString a) (ColRef Undefined a) where
     colRef name = ColRef (ColExpr $ ColDef (toCol name) Nothing) Nothing
+
+instance ToColRef (SqlText a) (ColRef Undefined a) where
+    colRef name = ColRef (ColExpr $ ColDef columnName Nothing) Nothing
+        where
+            columnName = toCol $ T.unpack name
 
 --------------------------------------------------------------------------------
 -- Generic values
@@ -163,17 +178,31 @@ genVal = GenVal
 genQVal :: String -> Value b a
 genQVal = GenQVal
 
+-- | Same as 'genQVal' but for 'Text'.
+genQValT :: T.Text -> Value b a
+genQValT = GenQVal . T.unpack
+
 --------------------------------------------------------------------------------
 -- SELECT
 --------------------------------------------------------------------------------
 
 type SqlString' b a = String
 
+type SqlText' b a = T.Text
+
 instance SelectConstr (SqlString' b a) (Query [Undefined] a) where
     select c = simpleSelect $ USelection $ ColRefWrap $ colRef c
 
+instance SelectConstr (SqlText' b a) (Query [Undefined] a) where
+    select c = simpleSelect $ USelection $ ColRefWrap $ colRef $ T.unpack c
+
 instance SelectConstr [SqlString' b a] (Query [[Undefined]] a) where
-    select c = simpleSelect $ UsSelection $ map (ColRefWrap . colRef) c
+    select cs = simpleSelect $ UsSelection $ map (ColRefWrap . colRef) cs
+
+instance SelectConstr [SqlText' b a] (Query [[Undefined]] a) where
+    select cs = simpleSelect $ UsSelection $ map toColRef cs
+        where
+            toColRef = ColRefWrap . colRef . T.unpack
 
 --------------------------------------------------------------------------------
 -- FROM
@@ -187,12 +216,18 @@ list a = [a]
 instance ToJoinClause (SqlString a) (JoinClause a) where
     joinClause = JoinClauseUsing . list . ColWrap . toCol
 
+instance ToJoinClause (SqlText a) (JoinClause a) where
+    joinClause = JoinClauseUsing . list . ColWrap . toCol . T.unpack
+
 ----------------------------------------
 -- ORDER BY
 ----------------------------------------
 
 instance ToSortRef (SqlString a) (SortRef a) where
     sortRef name = SortRef (ColRefWrap $ colRef name) Nothing Nothing
+
+instance ToSortRef (SqlText a) (SortRef a) where
+    sortRef name = SortRef (ColRefWrap $ colRef $ T.unpack name) Nothing Nothing
 
 --------------------------------------------------------------------------------
 -- Utility functions
@@ -201,5 +236,11 @@ instance ToSortRef (SqlString a) (SortRef a) where
 instance ToList String [String] where
     toList x = [x]
 
+instance ToList T.Text [T.Text] where
+    toList x = [x]
+
 instance ToList [String] [String] where
+    toList = id
+
+instance ToList [T.Text] [T.Text] where
     toList = id
