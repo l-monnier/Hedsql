@@ -1,7 +1,7 @@
 {-|
-Module      : Database/Hedsql/Drivers/SqLite.hs
+Module      : Database/Hedsql/SqLite.hs
 Description : SqLite implementation.
-Copyright   : (c) Leonard Monnier, 2014
+Copyright   : (c) Leonard Monnier, 2016
 License     : GPL-3
 Maintainer  : leonard.monnier@gmail.com
 Stability   : experimental
