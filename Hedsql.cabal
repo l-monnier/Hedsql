@@ -17,6 +17,7 @@ library
   hs-source-dirs:   src
   ghc-options:      -Wall
   exposed-modules:
+                    Database.Hedsql
                     Database.Hedsql.Drivers.MariaDB.Constructor,
                     Database.Hedsql.Drivers.PostgreSQL.Constructor,
                     Database.Hedsql.MariaDB,
