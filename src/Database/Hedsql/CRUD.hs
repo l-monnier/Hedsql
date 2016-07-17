@@ -104,7 +104,7 @@ insertOne ::
        )
     => table    -- ^ Table or name of the table.
     -> [column] -- ^ Columns or names of the columns.
-    -> Insert dbVendor
+    -> InsertStmt dbVendor
 insertOne table values =
     insert table $ assignPlaceholders values
 
