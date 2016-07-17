@@ -469,6 +469,7 @@ parseDeleteFunc parser statement =
         "DELETE FROM"
     <+> (_parseTableName parser) (statement ^. deleteTable)
     <$> parseM (_parseWhere parser) (statement ^. deleteWhere)
+    <$> parseM (_parseReturning parser) (statement ^. deleteReturning)
 
 -- | Parse a DROP TABLE statement.
 parseDropFunc :: Parser a -> Drop a -> Doc
@@ -604,9 +605,10 @@ parseUpdateFunc parser update =
     <+> _quoteElem parser (update^.updateTable.tableName)
     <$>  "SET"
     <+> csep (map (_parseAssgnmt parser) assignments)
-    <$> parseM (_parseWhere parser) (update^.updateWhere)
+    <$> parseM (_parseWhere parser) (update ^. updateWhere)
+    <$> parseM (_parseReturning parser) (update ^. updateReturning)
     where
-        assignments = update^.updateAssignments
+        assignments = update ^. updateAssignments
 
 {-|
 Parse the assignment of an UPDATE statement.
