@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
@@ -16,7 +18,7 @@ module Database.Hedsql.Drivers.MariaDB.Constructor
     , foundRows
     ) where
 
-import Control.Lens hiding (assign, coerce, from)
+import Control.Lens hiding (assign, from)
 import Control.Monad.State.Lazy
 
 import Database.Hedsql.Common.AST

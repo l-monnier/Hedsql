@@ -354,7 +354,7 @@ module Database.Hedsql.Common.Constructor
 
 import Database.Hedsql.Common.AST
 
-import Control.Lens hiding (assign, coerce, from)
+import Control.Lens hiding (assign, from)
 import Control.Monad.State.Lazy
 import Data.Maybe
 import Unsafe.Coerce

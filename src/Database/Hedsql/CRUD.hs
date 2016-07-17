@@ -67,9 +67,9 @@ selectAll ::
     => table   -- ^ Table(s) or name of the table(s).
     -> columns -- ^ Column(s) or name of the column(s).
     -> Query [[Undefined]] dbVendor
-selectAll table columns = do
+selectAll tb columns = do
     select columns
-    from table
+    from tb
 
 {-|
 Select query with a placedholder for the expected matching key.
@@ -87,8 +87,8 @@ selectOne ::
     -> columns -- ^ Columns or names of the columns.
     -> key     -- ^ Primary key which has to be matched by the placeholder.
     -> Query [[Undefined]] dbVendor
-selectOne table columns key = do
-    selectAll table columns
+selectOne tb columns key = do
+    selectAll tb columns
     where_ $ key /== (/?)
 
 {-|
@@ -105,8 +105,8 @@ insertOne ::
     => table    -- ^ Table or name of the table.
     -> [column] -- ^ Columns or names of the columns.
     -> InsertStmt dbVendor
-insertOne table values =
-    insert table $ assignPlaceholders values
+insertOne tb values =
+    insert tb $ assignPlaceholders values
 
 {-|
 Generic update statement using placeholders.
@@ -124,8 +124,8 @@ updateOne ::
     -> [column] -- ^ Columns or names of the columns.
     -> key
     -> UpdateStmt dbVendor
-updateOne table values key = do
-    update table $ assignPlaceholders values
+updateOne tb values key = do
+    update tb $ assignPlaceholders values
     where_ $ key /== (/?)
 
 {-|
@@ -141,6 +141,6 @@ deleteOne ::
     => table -- ^ Table or name of the table.
     -> key   -- ^ Primary key which has to be matched by the placeholder.
     -> DeleteStmt dbVendor
-deleteOne table key = do
-    deleteFrom table
+deleteOne tb key = do
+    deleteFrom tb
     where_ $ key /== (/?)

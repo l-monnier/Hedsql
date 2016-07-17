@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -19,7 +21,7 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     , returning
     ) where
 
-import Control.Lens hiding (assign, coerce, from)
+import Control.Lens hiding (assign, from)
 import Control.Monad.State.Lazy
 
 import Database.Hedsql.Common.Constructor
