@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-|
 Module      : Database/Hedsql/Drivers/MariaDB/Parser.hs
@@ -37,9 +38,16 @@ import Database.Hedsql.Common.PrettyPrint
 mariaDBDataTypeFunc :: DataTypeWrap MariaDB -> Doc
 mariaDBDataTypeFunc = text . pack . map toUpper . show . parseDataTypeFunc
 
+mariaDBExprFunc :: ExprWrap MariaDB -> Doc
+mariaDBExprFunc (ExprWrap LastInsertId) = "LAST_INSERT_ID()"
+mariaDBExprFunc e = parseExprFunc mariaDBParser e
+
 -- | Create the MariaDB parser.
 mariaDBParser :: Parser MariaDB
-mariaDBParser = getParser mariaDBParser {_parseDataType = mariaDBDataTypeFunc}
+mariaDBParser = getParser mariaDBParser {
+      _parseDataType = mariaDBDataTypeFunc
+    , _parseExpr     = mariaDBExprFunc
+    }
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -49,12 +57,12 @@ mariaDBParser = getParser mariaDBParser {_parseDataType = mariaDBDataTypeFunc}
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: ToStmt (a MariaDB) (Statement MariaDB) => a MariaDB -> String
+parse :: ToStmt a (Statement MariaDB) => a -> String
 parse = renderRaw . _parseStmt mariaDBParser . statement
 
 {-|
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string in pretty print mode.
 -}
-parseP :: ToStmt (a MariaDB) (Statement MariaDB) => a MariaDB -> String
+parseP :: ToStmt a (Statement MariaDB) => a -> String
 parseP = show . _parseStmt mariaDBParser . statement

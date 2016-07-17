@@ -607,6 +607,11 @@ data Expression b a where
     -- | RANDOM number function.
     Random :: Num b => Expression b a
 
+    {-|
+    Function returning the primary key of the last inserted row.
+    -}
+    LastInsertId :: Expression b a
+
     -- - Date functions.
 
     -- | CURRENT DATE.

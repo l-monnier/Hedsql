@@ -747,6 +747,9 @@ parseExprFunc parser (ExprWrap expr) =
         Random        -> "random()"
         Sum         e -> makeExpr "SUM" (ColRefWrap e)
 
+        -- Utils
+        LastInsertId -> "lastval()"
+
         -- MariaDB functions.
         CalcFoundRows -> error $
                "SQL_CALC_FOUND_ROWS is specific to MariaDB."

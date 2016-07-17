@@ -323,6 +323,9 @@ module Database.Hedsql.Common.Constructor
     , random
     , sum_
 
+    -- ** Utils
+    , lastInsertId
+
     -- ** Dates
     , currentDate
 
@@ -1713,6 +1716,20 @@ Create a function which will return the current date.
 -}
 currentDate :: Expression Time a
 currentDate = CurrentDate
+
+---------------------------------------
+-- Utils
+---------------------------------------
+
+{-|
+Create a function which will return the primary key value of the last inserted
+row.
+
+This function differs from one database vendor from another.
+Note that with PostgreSQL you may prefer to use the RETURNING clause instead.
+-}
+lastInsertId :: Expression b a
+lastInsertId = LastInsertId
 
 --------------------------------------------------------------------------------
 -- Statement

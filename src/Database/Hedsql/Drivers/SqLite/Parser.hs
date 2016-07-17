@@ -57,6 +57,7 @@ sqLiteParseValueFunc val = parseValueFunc sqLiteParser val
 -- | Create the SqLite function parser.
 sqLiteExprFunc :: ExprWrap SqLite -> Doc
 sqLiteExprFunc (ExprWrap CurrentDate) = "Date('now')"
+sqLiteExprFunc (ExprWrap LastInsertId) = "last_insert_rowid()"
 sqLiteExprFunc e = parseExprFunc sqLiteParser e
 
 -- | Create the SqLite parser.
