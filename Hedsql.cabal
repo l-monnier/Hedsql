@@ -24,6 +24,7 @@ library
                     Database.Hedsql.PostgreSQL,
                     Database.Hedsql.SqLite
                     Database.Hedsql.Ext
+                    Database.Hedsql.CRUD
   build-depends:
                     base,
                     lens,
@@ -41,7 +42,8 @@ library
                     Database.Hedsql.Common.AST,
                     Database.Hedsql.Common.Parser,
                     Database.Hedsql.Common.PrettyPrint,
-                    Database.Hedsql.Common.Constructor
+                    Database.Hedsql.Common.Constructor,
+                    Database.Hedsql.Specific.Constructor
 
 test-suite tests
   type:            exitcode-stdio-1.0

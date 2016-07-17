@@ -29,6 +29,7 @@ import           Database.Hedsql.Drivers.SqLite.Driver
 
 import           Data.Char
 import           Data.Text.Lazy                        (pack)
+
 import           Database.Hedsql.Common.PrettyPrint
 
 --------------------------------------------------------------------------------
@@ -106,6 +107,7 @@ sqLiteParser = Parser
     (parseDeleteFunc sqLiteParser)
     (parseInsertFunc sqLiteParser)
     (parseUpdateFunc sqLiteParser)
+    (parseReturningFunc sqLiteParser)
     quoteElemFunc
     quoteValFunc
 

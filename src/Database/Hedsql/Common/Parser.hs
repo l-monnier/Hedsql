@@ -70,6 +70,7 @@ module Database.Hedsql.Common.Parser
     , parseDeleteFunc
     , parseInsertFunc
     , parseUpdateFunc
+    , parseReturningFunc
     , quoteElemFunc
     , quoteValFunc
     , genQuote
@@ -174,6 +175,7 @@ getParser parser =
     (parseDeleteFunc parser)
     (parseInsertFunc parser)
     (parseUpdateFunc parser)
+    (parseReturningFunc parser)
     quoteElemFunc
     quoteValFunc
 
@@ -259,6 +261,8 @@ data Parser a = Parser
     , _parseDelete         :: Delete a -> Doc
     , _parseInsert         :: Insert a -> Doc
     , _parseUpdate         :: Update a -> Doc
+
+    , _parseReturning      :: Returning a -> Doc
 
       -- | Quote an element (table or column reference).
     , _quoteElem           :: String -> Doc
@@ -490,6 +494,7 @@ parseInsertFunc parser insert =
         "INSERT INTO"
     <+> (_quoteElem parser) (insert ^. insertTable.tableName)
     <+> (_parseInsertAssign parser) (insert ^. insertAssign)
+    <$> parseM (_parseReturning parser) (insert ^. insertReturning)
 
 -- | Parse INSERT assignments.
 parseInsertAssignFunc :: Parser a -> [Assignment a] -> Doc
@@ -958,6 +963,10 @@ parseWhereFunc parser (Where e) =
             Or  _ _ _ -> ((<$>), indent 2)
             _         -> ((<+>), id)
     in (fst args) "WHERE" $ snd args $ _parseExpr parser $ ExprWrap e
+
+parseReturningFunc :: Parser a -> Returning a -> Doc
+parseReturningFunc parser (Returning col) =
+    "RETURNING " <> (_parseColRef parser $ col)
 
 -- | Parse the ON or USING clause of a JOIN.
 parseJoinClauseFunc :: Parser a -> JoinClause a -> Doc

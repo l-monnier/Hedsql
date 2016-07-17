@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleContexts #-} 
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
 Module      : Database/Hedsql/Drivers/PostgreSQL/Constructor.hs
@@ -15,12 +16,15 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     ( default_
     , lateral
     , selectDistinctOn
+    , returning
     ) where
 
+import Control.Lens hiding (assign, coerce, from)
 import Control.Monad.State.Lazy
-    
+
 import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.AST
+import Database.Hedsql.Specific.Constructor
 import Database.Hedsql.Drivers.PostgreSQL.Driver
 
 -- Public.
@@ -57,3 +61,15 @@ selectDistinctOn ::
     -> Query c PostgreSQL                  -- ^ Select query.
 selectDistinctOn dExpr clause =
     modify (\_ -> setSelects selectType (DistinctOn dExpr) $ execStmt $ select clause)
+
+-- | Create a RETURNING clause for an INSERT statement.
+instance ReturningState Insert PostgreSQL where
+    returning = modify . set insertReturning . Just . Returning
+
+-- | Create a RETURNING clause for an UPDATE statement.
+instance ReturningState Update PostgreSQL where
+    returning = modify . set updateReturning . Just . Returning
+
+-- | Create a RETURNING clause for a DELETE statement.
+instance ReturningState Delete PostgreSQL where
+    returning = modify . set deleteReturning . Just . Returning

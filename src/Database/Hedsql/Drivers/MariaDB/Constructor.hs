@@ -1,7 +1,9 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 {-|
 Module      : Database/Hedsql/Drivers/MariaDB/Constructor.hs
 Description : MariaDB specific constructors.
-Copyright   : (c) Leonard Monnier, 2014
+Copyright   : (c) Leonard Monnier, 2016
 License     : GPL-3
 Maintainer  : leonard.monnier@gmail.com
 Stability   : experimental
@@ -13,8 +15,12 @@ module Database.Hedsql.Drivers.MariaDB.Constructor
     ( calcFoundRows
     , foundRows
     ) where
-    
+
+import Control.Lens hiding (assign, coerce, from)
+import Control.Monad.State.Lazy
+
 import Database.Hedsql.Common.AST
+import Database.Hedsql.Specific.Constructor
 import Database.Hedsql.Drivers.MariaDB.Driver
 
 -- Public.
@@ -26,3 +32,7 @@ calcFoundRows = CalcFoundRows
 -- | FOUND_ROWS function.
 foundRows :: Expression MariaDB Int
 foundRows = FoundRows
+
+-- | Create a RETURNING clause for a DELETE statement.
+instance ReturningState Delete MariaDB where
+    returning = modify . set deleteReturning . Just . Returning

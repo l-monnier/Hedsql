@@ -168,6 +168,7 @@ module Database.Hedsql.Common.Constructor
       -}
     , CreateStmt
     , Query
+    , InsertStmt
     , DeleteStmt
     , UpdateStmt
 
@@ -573,6 +574,8 @@ type CreateStmt a = State (Create a) ()
 
 type Query b a = State (Select b a) ()
 
+type InsertStmt a = State (Insert a) ()
+
 type DeleteStmt a = State (Delete a) ()
 
 type UpdateStmt a = State (Update a) ()
@@ -598,17 +601,23 @@ instance ToExec (Select b a) (Select b a) where
 instance ToExec (Query b a) (Select b a) where
     execStmt q = execState q $ simpleSelect' $ TsSelection []
 
+instance ToExec (Insert a) (Insert a) where
+    execStmt = id
+
+instance ToExec (InsertStmt a) (Insert a) where
+    execStmt q = execState q $ Insert (Table "" [] []) [] Nothing
+
 instance ToExec (Delete a) (Delete a) where
     execStmt = id
 
 instance ToExec (DeleteStmt a) (Delete a) where
-    execStmt q = execState q $ Delete (Table "" [] []) Nothing
+    execStmt q = execState q $ Delete (Table "" [] []) Nothing Nothing
 
 instance ToExec (Update a) (Update a) where
     execStmt = id
 
 instance ToExec (UpdateStmt a) (Update a) where
-    execStmt q = execState q $ Update (Table "" [] []) [] Nothing
+    execStmt q = execState q $ Update (Table "" [] []) [] Nothing Nothing
 
 -- TODO: use do notation for the columns as well.
 
@@ -1163,13 +1172,13 @@ class WhereState a where
 
 -- | Create a WHERE clause for a SELECT query.
 instance WhereState (Select b) where
-    where_ cond = modify (\s -> setSelects selectWhere (Just $ Where cond) s)
-
-instance WhereState Delete where
-    where_ cond = modify (\d -> set deleteWhere (Just $ Where cond) d)
+    where_ = modify . setSelects selectWhere . Just . Where
 
 instance WhereState Update where
-    where_ cond = modify (\u -> set updateWhere (Just $ Where cond) u)
+    where_ = modify . set updateWhere . Just . Where
+
+instance WhereState Delete where
+    where_ = modify . set deleteWhere . Just . Where
 
 ----------------------------------------
 -- ORDER BY
@@ -1332,12 +1341,12 @@ The values to insert are a list of list of assignments because you may insert
 more than one row in the database.
 -}
 insert ::
-    ( ToTable a (Table e)
+    ( ToTable a (Table b)
     )
     => a              -- ^ Table or name of the table to insert the data into.
-    -> [Assignment e] -- ^ Values to insert.
-    -> Insert e
-insert = Insert . table
+    -> [Assignment b] -- ^ Values to insert.
+    -> InsertStmt b
+insert tRef assignments = modify (\_ -> Insert (table tRef) assignments Nothing)
 
 --------------------------------------------------------------------------------
 -- UPDATE
@@ -1349,7 +1358,8 @@ update ::
     => a              -- ^ Table to update.
     -> [Assignment b] -- ^ Column/value assignments.
     -> UpdateStmt b
-update t assignments = modify (\_ -> Update (table t) assignments Nothing)
+update t assignments =
+    modify (\_ -> Update (table t) assignments Nothing Nothing)
 
 --------------------------------------------------------------------------------
 -- DELETE
@@ -1360,7 +1370,7 @@ deleteFrom ::
        ToTable a (Table b)
     => a
     -> DeleteStmt b
-deleteFrom t = modify (\_ -> Delete (table t) Nothing)
+deleteFrom t = modify (\_ -> Delete (table t) Nothing Nothing)
 
 --------------------------------------------------------------------------------
 -- Values
@@ -1737,6 +1747,9 @@ instance ToStmt (Update a) (Statement a) where
     statement = UpdateStmt
 
 instance ToStmt (Query b a) (Statement a) where
+    statement = statement . execStmt
+
+instance ToStmt (InsertStmt a) (Statement a) where
     statement = statement . execStmt
 
 instance ToStmt (UpdateStmt a) (Statement a) where

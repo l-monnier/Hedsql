@@ -249,17 +249,23 @@ module Database.Hedsql.Common.AST
     , Insert(Insert)
     , insertTable
     , insertAssign
+    , insertReturning
+
+      -- *** RETURNING clause
+    , Returning(Returning)
 
       -- ** UPDATE
     , Update(Update)
     , updateTable
     , updateAssignments
     , updateWhere
+    , updateReturning
 
       -- ** DELETE
     , Delete (Delete)
     , deleteTable
     , deleteWhere
+    , deleteReturning
 
     ) where
 
@@ -1360,7 +1366,23 @@ data Insert a = Insert
 
       -- | Column / value assignments for the insertion.
     , _insertAssign :: [Assignment a]
+
+      -- | Optional RETURNING clause.
+    , _insertReturning :: Maybe (Returning a)
     }
+
+-- RETURNING clause
+--------------------
+
+{-|
+RETURNING clause.
+
+This is specific to PostgreSQL for INSERT, UPDATE and DELETE statements.
+It can be used in MariaDB for DELETE statements only.
+
+It does not exists in SQLite.
+-}
+data Returning a = Returning (ColRefWrap a)
 
 --------------------
 -- UPDATE
@@ -1375,8 +1397,11 @@ data Update a = Update
       -- | Values to update in the specified columns.
     , _updateAssignments :: [Assignment a]
 
-      -- | WHERE clause.
+      -- | Optional WHERE clause.
     , _updateWhere :: Maybe (Where a)
+
+      -- | Optional RETURNING clause.
+    , _updateReturning :: Maybe (Returning a)
     }
 
 --------------------
@@ -1391,6 +1416,9 @@ data Delete a = Delete
 
       -- | Optional WHERE clause.
     , _deleteWhere :: Maybe (Where a)
+
+      -- | Optional RETURNING clause.
+    , _deleteReturning :: Maybe (Returning a)
     }
 
 ----------------------------------------
