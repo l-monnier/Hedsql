@@ -22,6 +22,9 @@ You can then write queries as for example:
 > SELECT * CALC_FOUND_ROWS FROM `table1`
 -}
 module Database.Hedsql.MariaDB (module M) where
-import Database.Hedsql.Drivers.MariaDB.Parser as M
-import Database.Hedsql.Common.Constructor     as M
-import Database.Hedsql.Common.AST             as M
+
+import Database.Hedsql.Drivers.MariaDB.Constructor as M
+import Database.Hedsql.Drivers.MariaDB.Driver      as M
+import Database.Hedsql.Drivers.MariaDB.Parser      as M
+import Database.Hedsql.Common.Constructor          as M
+import Database.Hedsql.Common.AST                  as M
