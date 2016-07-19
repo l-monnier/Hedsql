@@ -6,13 +6,14 @@
 
 {-|
 Module      : Database/Hedsql/Common/Constructor.hs
-Description : Constructor functions for SQL SELECT queries.
+Description : Constructor functions for SQL statements.
 Copyright   : (c) Leonard Monnier, 2014
 License     : GPL-3
 Maintainer  : leonard.monnier@gmail.com
 Stability   : experimental
 Portability : portable
-Constructor functions for SQL SELECT queries.
+
+Constructor functions for SQL statements.
 
 They provide a flexible and natural way to create the SQL AST.
 
@@ -37,11 +38,11 @@ mySelect =
         age = col "age" integer
 @
 
-The additional FROM clause can be added using the do notation.
+The additional FROM clause can be added using do notation.
 The monad in which the query is stored is a 'State' monad.
 As we are now using a monad, the returned type of the SELECT query will change.
 In our case, it will be 'Query' instead of 'Select'.
-Note that in our previous example we could also have used a do and thus the
+Note that in our previous example we could also have used a monad and thus the
 same 'Query' type.
 
 Adding a FROM clause to our previous example leads to:
@@ -68,7 +69,7 @@ Both above examples are valid.
 We can first see that it's possible to pass a single argument or a list to
 the 'select' function.
 It would also be possible to pass arguments of type 'String' using the extension
-module.
+('Ext') module.
 
 ==Type signature
 The signatures of the returned types are composed of one to two phantom types.
@@ -1738,6 +1739,9 @@ lastInsertId = LastInsertId
 -- | Convert a value to a 'Statement'.
 class ToStmt a b | a -> b where
     statement :: a -> b
+
+instance ToStmt [Statement a] (Statement a) where
+    statement = Statements
 
 instance ToStmt (Create a) (Statement a) where
     statement = CreateStmt
