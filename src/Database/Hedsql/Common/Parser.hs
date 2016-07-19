@@ -3,9 +3,9 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 {-|
-Module      : Database/Hedsql/Common/Parser/Query.hs
-Description : Implementation of the SQL query parsers.
-Copyright   : (c) Leonard Monnier, 2014
+Module      : Database/Hedsql/Common/Parser.hs
+Description : Generic SQL parser.
+Copyright   : (c) Leonard Monnier, 2016
 License     : GPL-3
 Maintainer  : leonard.monnier@gmail.com
 Stability   : experimental
