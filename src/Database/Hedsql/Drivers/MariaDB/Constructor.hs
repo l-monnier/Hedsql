@@ -23,6 +23,7 @@ import Control.Lens hiding (assign, from)
 import Control.Monad.State.Lazy
 
 import Database.Hedsql.Common.AST
+import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Specific.Constructor
 import Database.Hedsql.Drivers.MariaDB.Driver
 
@@ -38,4 +39,5 @@ foundRows = FoundRows
 
 -- | Create a RETURNING clause for a DELETE statement.
 instance ReturningState Delete MariaDB where
-    returning = modify . set deleteReturning . Just . Returning
+    returning =
+        modify . set deleteReturning . Just . Returning . head . map colRefWrap . toList

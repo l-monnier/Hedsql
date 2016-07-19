@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -20,6 +21,7 @@ module Database.Hedsql.Specific.Constructor
 import Control.Monad.State.Lazy
 
 import Database.Hedsql.Common.AST
+import Database.Hedsql.Common.Constructor
 
 {-|
 Create a RETURNING clause.
@@ -28,5 +30,8 @@ This clause is specific to PostgreSQL for INSERT, UPDATE and DELETE statements.
 In MariaDB it can be used for DELETE statements only.
 It is not available for SQLite.
 -}
-class ReturningState a b where
-    returning :: ColRefWrap b -> State (a b) ()
+class ReturningState stmt dbVendor where
+    returning ::
+           (ToList a [b], ToColRef b (ColRef c dbVendor))
+        => a -- ^ Reference to a column or list of columns.
+        -> State (stmt dbVendor) ()
