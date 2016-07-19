@@ -14,7 +14,8 @@ Portability : portable
 SqLite parser implementation.
 -}
 module Database.Hedsql.Drivers.SqLite.Parser
-    ( parse
+    ( T.Parser
+    , parse
     , parseP
     ) where
 
@@ -26,6 +27,7 @@ import           Database.Hedsql.Common.AST
 import           Database.Hedsql.Common.Constructor
 import           Database.Hedsql.Common.Parser
 import           Database.Hedsql.Drivers.SqLite.Driver
+import qualified Database.Hedsql.Common.Parser.Type as T
 
 import           Data.Char
 import           Data.Text.Lazy                        (pack)
@@ -120,12 +122,12 @@ sqLiteParser = Parser
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: ToStmt a (Statement SqLite) => a -> String
+parse :: T.Parser SqLite
 parse = renderRaw ._parseStmt sqLiteParser . statement
 
 {-|
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string in pretty print mode.
 -}
-parseP :: ToStmt a (Statement SqLite) => a -> String
+parseP :: T.Parser SqLite
 parseP = show ._parseStmt sqLiteParser . statement

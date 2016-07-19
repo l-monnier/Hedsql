@@ -13,7 +13,8 @@ Portability : portable
 MariaDB parser implementation.
 -}
 module Database.Hedsql.Drivers.MariaDB.Parser
-    ( parse
+    ( T.Parser
+    , parse
     , parseP
     ) where
 
@@ -25,6 +26,7 @@ import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Parser
 import Database.Hedsql.Drivers.MariaDB.Driver
+import qualified Database.Hedsql.Common.Parser.Type as T
 
 import Data.Char
 import Data.Text.Lazy(pack)
@@ -57,12 +59,12 @@ mariaDBParser = getParser mariaDBParser {
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: ToStmt a (Statement MariaDB) => a -> String
+parse :: T.Parser MariaDB
 parse = renderRaw . _parseStmt mariaDBParser . statement
 
 {-|
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string in pretty print mode.
 -}
-parseP :: ToStmt a (Statement MariaDB) => a -> String
+parseP :: T.Parser MariaDB
 parseP = show . _parseStmt mariaDBParser . statement

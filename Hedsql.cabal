@@ -41,6 +41,7 @@ library
                     Database.Hedsql.Drivers.SqLite.Parser,
                     Database.Hedsql.Common.AST,
                     Database.Hedsql.Common.Parser,
+                    Database.Hedsql.Common.Parser.Type
                     Database.Hedsql.Common.PrettyPrint,
                     Database.Hedsql.Common.Constructor,
                     Database.Hedsql.Specific.Constructor

@@ -14,7 +14,8 @@ Portability : portable
 PostgreSQL parser implementation.
 -}
 module Database.Hedsql.Drivers.PostgreSQL.Parser
-    ( parse
+    ( T.Parser
+    , parse
     , parseP
     ) where
 
@@ -26,6 +27,7 @@ import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.Parser
 import Database.Hedsql.Drivers.PostgreSQL.Driver
+import qualified Database.Hedsql.Common.Parser.Type as T
 
 import Control.Lens
 import Database.Hedsql.Common.PrettyPrint
@@ -98,12 +100,12 @@ parsePostgreSqlColCreateFunc parser _ (ColWrap c) =
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: ToStmt a (Statement PostgreSQL) => a -> String
+parse :: T.Parser PostgreSQL
 parse = renderRaw . _parseStmt postgreSQLParser . statement
 
 {-|
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string in pretty print mode.
 -}
-parseP :: ToStmt a (Statement PostgreSQL) => a -> String
+parseP :: T.Parser PostgreSQL
 parseP = show . _parseStmt postgreSQLParser . statement
