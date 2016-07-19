@@ -16,6 +16,7 @@ MariaDB specific constructors for functions/clauses specific to this vendor.
 module Database.Hedsql.Drivers.MariaDB.Constructor
     ( calcFoundRows
     , foundRows
+    , returning
     ) where
 
 import Control.Lens hiding (assign, from)
