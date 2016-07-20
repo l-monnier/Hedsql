@@ -66,13 +66,12 @@ selectDistinctOn dExpr clause =
 
 -- | Create a RETURNING clause for an INSERT statement.
 instance ReturningState Insert PostgreSQL where
-    returning =
-        modify . set insertReturning . Just . Returning . head . map colRefWrap . toList
+    returning = modify . set insertReturning . Just . Returning . selection
 
 -- | Create a RETURNING clause for an UPDATE statement.
 instance ReturningState Update PostgreSQL where
-    returning = modify . set updateReturning . Just . Returning . head . map colRefWrap . toList
+    returning = modify . set updateReturning . Just . Returning . selection
 
 -- | Create a RETURNING clause for a DELETE statement.
 instance ReturningState Delete PostgreSQL where
-    returning = modify . set deleteReturning . Just . Returning . head . map colRefWrap . toList
+    returning = modify . set deleteReturning . Just . Returning . selection

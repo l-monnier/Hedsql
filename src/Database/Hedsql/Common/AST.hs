@@ -250,9 +250,11 @@ module Database.Hedsql.Common.AST
     , insertTable
     , insertAssign
     , insertReturning
+    , InsertWrap(InsertWrap)
 
       -- *** RETURNING clause
     , Returning(Returning)
+    , ReturningWrap(ReturningWrap)
 
       -- ** UPDATE
     , Update(Update)
@@ -260,12 +262,14 @@ module Database.Hedsql.Common.AST
     , updateAssignments
     , updateWhere
     , updateReturning
+    , UpdateWrap(UpdateWrap)
 
       -- ** DELETE
     , Delete (Delete)
     , deleteTable
     , deleteWhere
     , deleteReturning
+    , DeleteWrap(DeleteWrap)
 
     ) where
 
@@ -289,29 +293,29 @@ import Control.Lens
 A statement stands at the top of the AST.
 It can represent all the offered options by Hedsql as an eDSL for SQL.
 -}
-data Statement a =
+data Statement dbVendor =
 
       -- | CREATE statement.
-      CreateStmt (Create a)
+      CreateStmt (Create dbVendor)
 
       -- | DROP statement.
-    | DropStmt (Drop a)
+    | DropStmt (Drop dbVendor)
 
       -- | SELECT query.
-    | SelectStmt (SelectWrap a)
+    | SelectStmt (SelectWrap dbVendor)
 
       -- | INSERT statement.
-    | InsertStmt (Insert a)
+    | InsertStmt (InsertWrap dbVendor)
 
       -- | UPDATE statement.
-    | UpdateStmt (Update a)
+    | UpdateStmt (UpdateWrap dbVendor)
 
       -- | DELETE statement.
-    | DeleteStmt (Delete a)
+    | DeleteStmt (DeleteWrap dbVendor)
 
       -- | Combination of multiple statements (which shall be executed one
       --   after the other).
-    | Statements [Statement a]
+    | Statements [Statement dbVendor]
 
 ----------------------------------------
 -- Language elements
@@ -374,7 +378,7 @@ data Undefined = Undefined
 data Void = Void
 
 -- | Types which can be ordered in SQL.
-class SQLOrd a where
+class SQLOrd dbVendor where
 instance SQLOrd Bool where
 instance SQLOrd Double where
 instance SQLOrd Float where
@@ -390,7 +394,7 @@ instance SQLOrd Undefined where
 Values which can be used "raw" and don't need to be quoted when used in a
 statement.
 -}
-class Raw a where
+class Raw dbVendor where
 instance Raw Bool where
 instance Raw Double where
 instance Raw Float where
@@ -398,7 +402,7 @@ instance Raw Numeric where
 instance Raw Int where
 
 -- | Types which can be used as PRIMARY key or for an UNIQUE constraint.
-class SQLUniq a where
+class SQLUniq dbVendor where
 instance SQLUniq Int where
 instance SQLUniq Numeric where
 instance SQLUniq String where
@@ -416,214 +420,214 @@ An expression can either be:
 - a select query
 - a value.
 -}
-data Expression b a where
+data Expression b dbVendor where
 
     -- Values
-    Value       :: Value b a   -> Expression b a
-    Values      :: [Value b a] -> Expression [b] a
+    Value       :: Value b dbVendor   -> Expression b dbVendor
+    Values      :: [Value b dbVendor] -> Expression [b] dbVendor
 
     -- Column
-    ColExpr     :: ColDef b a -> Expression b a
+    ColExpr     :: ColDef b dbVendor -> Expression b dbVendor
 
     {-|
     * sign. Note: as it is not possible to know the number of columns returned,
     it is assumed that many are.
     -}
-    Joker       :: Expression [Undefined] a
+    Joker       :: Expression [Undefined] dbVendor
 
     -- Select
-    SelectExpr :: Select b a -> Expression b a
+    SelectExpr :: Select b dbVendor -> Expression b dbVendor
 
     -- Conditions
     And ::
-           Expression Bool a -- ^ Left part of the 'And'.
-        -> Expression Bool a -- ^ Right part of the 'And'.
+           Expression Bool dbVendor -- ^ Left part of the 'And'.
+        -> Expression Bool dbVendor -- ^ Right part of the 'And'.
         -> Bool              -- ^ If 'True' the 'And' is encapsulated in
                              --   Parenthesis.
-        -> Expression Bool a
+        -> Expression Bool dbVendor
     Or  ::
-           Expression Bool a -- ^ Left part of the 'Or'.
-        -> Expression Bool a -- ^ Right part of the 'Or'.
+           Expression Bool dbVendor -- ^ Left part of the 'Or'.
+        -> Expression Bool dbVendor -- ^ Right part of the 'Or'.
         -> Bool
-        -> Expression Bool a -- ^ If 'True' the 'Or' is encapsulated in
+        -> Expression Bool dbVendor -- ^ If 'True' the 'Or' is encapsulated in
                              --   Parenthesis.
 
     -- Functions
     -- - Boolean functions
     -- | BETWEEN. Note: it can also apply for textual values.
     Between ::
-           ColRef b a
-        -> ColRef b a
-        -> ColRef b a
-        -> Expression Bool a
+           ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression Bool dbVendor
 
     -- | EXISTS.
-    Exists :: ColRef b a -> Expression Bool a
+    Exists :: ColRef b dbVendor -> Expression Bool dbVendor
 
     -- | IS FALSE.
-    IsFalse :: ColRef Bool a -> Expression Bool a
+    IsFalse :: ColRef Bool dbVendor -> Expression Bool dbVendor
 
     -- | IS NOT FALSE.
-    IsNotFalse :: ColRef Bool a -> Expression Bool a
+    IsNotFalse :: ColRef Bool dbVendor -> Expression Bool dbVendor
 
     -- | IS NOT NULL.
-    IsNotNull :: ColRef b a -> Expression Bool a
+    IsNotNull :: ColRef b dbVendor -> Expression Bool dbVendor
 
     -- | IS NOT TRUE.
-    IsNotTrue :: ColRef Bool a -> Expression Bool a
+    IsNotTrue :: ColRef Bool dbVendor -> Expression Bool dbVendor
 
     -- | IS NOT UNKNOWN
-    IsNotUnknown :: ColRef b a -> Expression Bool a
+    IsNotUnknown :: ColRef b dbVendor -> Expression Bool dbVendor
 
     -- | IS NULL.
-    IsNull :: ColRef b a -> Expression Bool a
+    IsNull :: ColRef b dbVendor -> Expression Bool dbVendor
 
     -- | IS TRUE.
-    IsTrue :: ColRef Bool a -> Expression Bool a
+    IsTrue :: ColRef Bool dbVendor -> Expression Bool dbVendor
 
     -- | IS UNKNOWN.
-    IsUnknown :: ColRef b a -> Expression Bool a
+    IsUnknown :: ColRef b dbVendor -> Expression Bool dbVendor
 
     -- | BETWEEN. Note: it can also apply for textual values.
     NotBetween ::
-            ColRef b a
-         -> ColRef b a
-         -> ColRef b a
-         -> Expression Bool a
+            ColRef b dbVendor
+         -> ColRef b dbVendor
+         -> ColRef b dbVendor
+         -> Expression Bool dbVendor
 
     -- | Equality ("=") operator.
-    Equal :: ColRef b a -> ColRef b a ->Expression Bool a
+    Equal :: ColRef b dbVendor -> ColRef b dbVendor ->Expression Bool dbVendor
 
     -- | Greater than (">") operator.
-    GreaterThan :: ColRef b a -> ColRef b a ->Expression Bool a
+    GreaterThan :: ColRef b dbVendor -> ColRef b dbVendor ->Expression Bool dbVendor
 
     -- | Greater than or equal to (">=") operator.
-    GreaterThanOrEqTo :: ColRef b a -> ColRef b a ->Expression Bool a
+    GreaterThanOrEqTo :: ColRef b dbVendor -> ColRef b dbVendor ->Expression Bool dbVendor
 
     -- | IN.
-    In :: ColRef b a -> ColRef [b] a -> Expression Bool a
+    In :: ColRef b dbVendor -> ColRef [b] dbVendor -> Expression Bool dbVendor
 
     -- | IS DISTINCT FROM.
-    IsDistinctFrom  :: ColRef b a -> ColRef b a -> Expression Bool a
+    IsDistinctFrom  :: ColRef b dbVendor -> ColRef b dbVendor -> Expression Bool dbVendor
 
     -- | IS NOT DISTINCT FROM.
-    IsNotDistinctFrom :: ColRef b a -> ColRef b a -> Expression Bool a
+    IsNotDistinctFrom :: ColRef b dbVendor -> ColRef b dbVendor -> Expression Bool dbVendor
 
     -- | LIKE.
-    Like :: ColRef String a -> ColRef String a -> Expression Bool a
+    Like :: ColRef String dbVendor -> ColRef String dbVendor -> Expression Bool dbVendor
 
     -- | Unequality ("<>") operator.
-    NotEqual :: ColRef b a -> ColRef b a -> Expression Bool a
+    NotEqual :: ColRef b dbVendor -> ColRef b dbVendor -> Expression Bool dbVendor
 
     -- | NOT IN. Note: it can be any types but no arrays.
-    NotIn :: ColRef b a -> ColRef [b] a -> Expression Bool a
+    NotIn :: ColRef b dbVendor -> ColRef [b] dbVendor -> Expression Bool dbVendor
 
     -- | Smaller than ("<") operator.
-    SmallerThan :: ColRef b a -> ColRef b a -> Expression Bool a
+    SmallerThan :: ColRef b dbVendor -> ColRef b dbVendor -> Expression Bool dbVendor
 
     -- | Smaller than or equal to ("<=") operator.
     SmallerThanOrEqTo ::
            SQLOrd b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression Bool a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression Bool dbVendor
 
     -- - Numeric functions
     -- | Addition ("+") operator.
     Add ::
            Num b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression b a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression b dbVendor
 
     -- | Bitwise AND ("&") operator.
     BitAnd ::
            Num b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression b a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression b dbVendor
 
     -- | Bitwise OR ("|") operator.
     BitOr ::
            Num b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression b a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression b dbVendor
 
     -- | Bitwise shift left  ("<<") operator.
     BitShiftLeft  ::
            Num b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression b a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression b dbVendor
 
     -- | Bitwise shift right  (">>") operator.
     BitShiftRight ::
            Num b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression b a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression b dbVendor
 
     -- | Division ("/") operator.
     Divide ::
            Num b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression b a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression b dbVendor
 
     -- | Modulo - remainer - ("%") operator.
     Modulo ::
            Num b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression b a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression b dbVendor
 
     -- | "*" Multiplication operator.
     Multiply ::
            Num b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression b a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression b dbVendor
 
     -- | Subtraction "-" operator.
     Substract ::
            Num b
-        => ColRef b a
-        -> ColRef b a
-        -> Expression b a
+        => ColRef b dbVendor
+        -> ColRef b dbVendor
+        -> Expression b dbVendor
 
     -- | COUNT function.
-    Count :: ColRef b a -> Expression Int a
+    Count :: ColRef b dbVendor -> Expression Int dbVendor
 
     -- | MAX function. Note: it can also operates on strings in SQL.
-    Max :: Num b => ColRef b a -> Expression b a
+    Max :: Num b => ColRef b dbVendor -> Expression b dbVendor
 
     -- | MIN function. Note: it can also operates on strings in SQL.
-    Min :: Num b => ColRef b a -> Expression b a
+    Min :: Num b => ColRef b dbVendor -> Expression b dbVendor
 
     -- | SUM function.
-    Sum :: Num b => ColRef b a -> Expression b a
+    Sum :: Num b => ColRef b dbVendor -> Expression b dbVendor
 
     -- | RANDOM number function.
-    Random :: Num b => Expression b a
+    Random :: Num b => Expression b dbVendor
 
     {-|
     Function returning the primary key of the last inserted row.
     -}
-    LastInsertId :: Expression b a
+    LastInsertId :: Expression b dbVendor
 
     -- - Date functions.
 
     -- | CURRENT DATE.
-    CurrentDate :: Expression Time a
+    CurrentDate :: Expression Time dbVendor
 
     -- MariaDB specific functions.
     CalcFoundRows :: Expression MariaDB Void
     FoundRows     :: Expression MariaDB Int
 
 -- | Expression wrapper "hiding" the types of an expression.
-data ExprWrap a where
-    ExprWrap :: Expression b a -> ExprWrap a
+data ExprWrap dbVendor where
+    ExprWrap :: Expression b dbVendor -> ExprWrap dbVendor
 
 ----------------------------------------
 -- Data definition
@@ -634,75 +638,75 @@ data ExprWrap a where
 --------------------
 
 -- | Representation of table.
-data Table a = Table
+data Table dbVendor = Table
     {
       -- | Table name.
       _tableName :: String
 
       -- | Table's columns.
-    , _tableCols :: [ColWrap a]
+    , _tableCols :: [ColWrap dbVendor]
 
       -- | Table's constraints.
-    , _tableConsts :: [TableConstraint a]
+    , _tableConsts :: [TableConstraint dbVendor]
     }
 
 -- | Constraints to be applied at the table level.
-data TableConstraint a = TableConstraint
+data TableConstraint dbVendor = TableConstraint
     {
       -- | Optional: name of the constraint.
       _tableConstraintName :: Maybe String
 
       -- | Kind of constraint.
-    , _tableConstraintType :: TableConstraintType a
+    , _tableConstraintType :: TableConstraintType dbVendor
 
       -- | Timing of the constraint.
-    , _tableConstraintTiming :: Maybe (ConstraintTiming a)
+    , _tableConstraintTiming :: Maybe (ConstraintTiming dbVendor)
     }
 
 -- | Table constraints types used in CREATE statement.
-data TableConstraintType a =
+data TableConstraintType dbVendor =
 
       -- | Foreign key.
-      TCForeignKey [ColWrap a] (ForeignKey a)
+      TCForeignKey [ColWrap dbVendor] (ForeignKey dbVendor)
 
       -- | Primary key.
-    | TCPrimaryKey [ColWrap a ]
+    | TCPrimaryKey [ColWrap dbVendor ]
 
       -- | Unique.
-    | TCUnique [ColWrap a]
+    | TCUnique [ColWrap dbVendor]
 
       -- | Check.
-    | TCCheck (Expression Bool a)
+    | TCCheck (Expression Bool dbVendor)
 
 -- | Foreign key clause to be used in a table constraint of a CREATE statement.
-data ForeignKey a = ForeignKey
+data ForeignKey dbVendor = ForeignKey
     {
       -- | Table on witch the foreign key applies.
-      _foreignKeyTable :: Table a
+      _foreignKeyTable :: Table dbVendor
 
       -- | Columns on witch the foreign key applies.
-    , _foreignKeyCols :: [ColWrap a]
+    , _foreignKeyCols :: [ColWrap dbVendor]
 
       -- | Kind of match (FULL, PARTIAL or SIMPLE).
-    , _foreignKeyMatch :: Maybe (Match a)
+    , _foreignKeyMatch :: Maybe (Match dbVendor)
 
       -- | ON clauses (DELETE, UPDATE).
-    , _foreignKeyAction :: Maybe (OnAction a)
+    , _foreignKeyAction :: Maybe (OnAction dbVendor)
     }
 
 -- | Foreign key match type.
-data Match a =
+data Match dbVendor =
       Full
     | Partial
     | Simple
 
 -- | Actions to be performed on foreign keys.
-data OnAction a =
-      OnDelete (SqlAction a)
-    | OnUpdate (SqlAction a)
+data OnAction dbVendor =
+      OnDelete (SqlAction dbVendor)
+    | OnUpdate (SqlAction dbVendor)
 
 -- | Action to perform when an entry in a table is updated or deleted.
-data SqlAction a =
+data SqlAction dbVendor =
       Cascade
     | NoAction
     | Restrict
@@ -710,7 +714,7 @@ data SqlAction a =
     | SetNull
 
 -- | Timing of a constraint.
-data ConstraintTiming a = ConstraintTiming
+data ConstraintTiming dbVendor = ConstraintTiming
     {
       -- | If 'True' the constraint is deferable.
       --   If 'False' the constraint is not deferable.
@@ -722,39 +726,39 @@ data ConstraintTiming a = ConstraintTiming
     }
 
 -- | Representation of view.
-data View a = View
+data View dbVendor = View
     {
       -- | View name.
       _viewName :: String
 
       -- | SELECT query generating the view.
-    , _viewSelect :: SelectWrap a
+    , _viewSelect :: SelectWrap dbVendor
     }
 
 -- | A column in a table.
-data Column b a = Column
+data Column b dbVendor = Column
     {
       -- | Name.
       _colName :: String
 
       -- | Data type.
-    , _colType :: DataType b a
+    , _colType :: DataType b dbVendor
 
       -- | Constraints.
-    , _colConstraints :: [ColConstraint a]
+    , _colConstraints :: [ColConstraint dbVendor]
     }
 
 -- | Column wrapper "hiding" the types "b" of different columns.
-data ColWrap a where ColWrap :: Column b a -> ColWrap a
+data ColWrap dbVendor where ColWrap :: Column b dbVendor -> ColWrap dbVendor
 
-colWrapName :: Lens' (ColWrap a ) String
+colWrapName :: Lens' (ColWrap dbVendor ) String
 colWrapName =
     lens getter setter
     where
         getter (ColWrap col) = _colName col
         setter (ColWrap col) name = ColWrap $ col {_colName = name}
 
-colWrapType :: Lens' (ColWrap a) (DataTypeWrap a)
+colWrapType :: Lens' (ColWrap dbVendor) (DataTypeWrap dbVendor)
 colWrapType =
     lens getter setter
     where
@@ -762,7 +766,7 @@ colWrapType =
         setter (ColWrap col) (DataTypeWrap dType) =
             ColWrap $ col {_colType = dType}
 
-colWrapConstraints :: Lens' (ColWrap a) [ColConstraint a]
+colWrapConstraints :: Lens' (ColWrap dbVendor) [ColConstraint dbVendor]
 colWrapConstraints =
     lens getter setter
     where
@@ -770,80 +774,80 @@ colWrapConstraints =
         setter (ColWrap col) name = ColWrap $ col {_colConstraints = name}
 
 -- | SQL data types. Used to define the type of a column.
-data DataType b a where
+data DataType b dbVendor where
 
-    Bool :: DataType Bool a
+    Bool :: DataType Bool dbVendor
 
     -- Types related to time.
-    Date :: DataType a Time -- TODO: inspect, this is probably wrong!
+    Date :: DataType dbVendor Time -- TODO: inspect, this is probably wrong!
 
     -- Textual types.
-    Char    :: Int -> DataType String a
-    Varchar :: Int -> DataType String a
+    Char    :: Int -> DataType String dbVendor
+    Varchar :: Int -> DataType String dbVendor
 
     -- Numeric types.
 
     -- | 2 bytes integer – range from -32768 to +32767.
-    SmallInt :: DataType Int a
+    SmallInt :: DataType Int dbVendor
 
     -- | 4 bytes integer – range from -2147483648 to +2147483647.
-    Integer  :: DataType Int a -- TODO: change the name to Int.
+    Integer  :: DataType Int dbVendor -- TODO: change the name to Int.
 
     -- | 8 bytes integer
     -- – range from -9223372036854775808 to +9223372036854775807.
-    BigInt   :: DataType Int a
+    BigInt   :: DataType Int dbVendor
 
     -- Undefined type.
-    Undef :: DataType Undefined a
+    Undef :: DataType Undefined dbVendor
 
 -- | Data type wrapper "hidding" the "b" type.
-data DataTypeWrap a where
-    DataTypeWrap :: DataType b a -> DataTypeWrap a
+data DataTypeWrap dbVendor where
+    DataTypeWrap :: DataType b dbVendor -> DataTypeWrap dbVendor
 
 -- | Constraint on a column.
-data ColConstraint a = ColConstraint
+data ColConstraint dbVendor = ColConstraint
     {
       -- | Optional: name of the constraint.
       _colConstraintName :: Maybe String
 
       -- | Type of the constraint.
-    , _colConstraintType :: ColConstraintType a
+    , _colConstraintType :: ColConstraintType dbVendor
     }
 
 -- | Column constraints types.
-data ColConstraintType a where
+data ColConstraintType dbVendor where
     -- TODO: | Collate
 
     -- | CHECK.
-    Check :: Expression Bool a -> ColConstraintType a
+    Check :: Expression Bool dbVendor -> ColConstraintType dbVendor
 
     -- | DEFAULT (value).
-    Default :: Expression b a -> ColConstraintType a
+    Default :: Expression b dbVendor -> ColConstraintType dbVendor
 
     -- | NOT NULL.
-    NotNull :: ColConstraintType a
+    NotNull :: ColConstraintType dbVendor
 
     -- | NULL.
-    Null :: ColConstraintType a
+    Null :: ColConstraintType dbVendor
 
     -- ^ Primary key.
     Primary ::
            -- | If 'True', the primary key will have an AUTOINCREMENT.
            Bool
-        -> ColConstraintType a
+        -> ColConstraintType dbVendor
 
     -- ^ Foreign key.
-    Reference :: ForeignKey a -> ColConstraintType a
+    Reference :: ForeignKey dbVendor -> ColConstraintType dbVendor
 
     -- | Unique.
-    Unique :: ColConstraintType a
+    Unique :: ColConstraintType dbVendor
 
 --------------------
 -- CREATE
 --------------------
 
 -- | CREATE statement.
-data Create a =
+data Create dbVendor =
 
       -- | CREATE TABLE statement.
       CreateTable
@@ -852,7 +856,7 @@ data Create a =
           _createTableIfNotExists :: Bool
 
           -- | Table to create.
-        , _createT :: Table a
+        , _createT :: Table dbVendor
         }
 
       -- | CREATE VIEW statement.
@@ -862,7 +866,7 @@ data Create a =
           _createViewIfNotExists :: Bool
 
           -- | View to create.
-        , _createV :: View a
+        , _createV :: View dbVendor
         }
 
 --------------------
@@ -870,7 +874,7 @@ data Create a =
 --------------------
 
 -- | DROP statement.
-data Drop a =
+data Drop dbVendor =
 
       -- | DROP TABLE statement.
       DropTable
@@ -879,7 +883,7 @@ data Drop a =
           _dropTIfExists :: Bool
 
           -- | Table to delete.
-        , _dropT :: Table a
+        , _dropT :: Table dbVendor
         }
       -- | DROP VIEW statement.
     | DropView
@@ -887,7 +891,7 @@ data Drop a =
           -- | If true, an IF EXISTS clause is added.
           _dropVIfExists :: Bool
 
-        , _dropV :: View a
+        , _dropV :: View dbVendor
         }
 
 ----------------------------------------
@@ -903,25 +907,25 @@ A table reference can be a real table, or a derived table such as
 a table join or a sub-query.
 Table references are usually used in FROM clauses and joins.
 -}
-data TableRef a =
+data TableRef dbVendor =
 
       -- | Reference to a table.
-      TableRef (Table a) (Maybe (TableRefAs a))
+      TableRef (Table dbVendor) (Maybe (TableRefAs dbVendor))
 
       -- | Reference to a join.
-    | JoinRef (Join a) (Maybe (TableRefAs a))
+    | JoinRef (Join dbVendor) (Maybe (TableRefAs dbVendor))
 
       -- | Reference to a lateral join.
-    | LateralRef (SelectWrap a) (TableRefAs a)
+    | LateralRef (SelectWrap dbVendor) (TableRefAs dbVendor)
 
       -- | Reference to a SELECT.
-    | SelectRef (SelectWrap a) (TableRefAs a)
+    | SelectRef (SelectWrap dbVendor) (TableRefAs dbVendor)
 
 {-|
 Return the alias of a table reference if there is one.
 Otherwise return Nothing.
 -}
-getTableRefAlias :: TableRef a -> Maybe (TableRefAs a)
+getTableRefAlias :: TableRef dbVendor -> Maybe (TableRefAs dbVendor)
 getTableRefAlias (LateralRef _ ref) = Just ref
 getTableRefAlias (SelectRef  _ ref) = Just ref
 getTableRefAlias (JoinRef    _ ref) =      ref
@@ -935,7 +939,7 @@ Otherwise, if this is a table, use that table's name. Else, this is a join
 without alias clause: return the names of the two table references
 separated by "_". For examples: "Table1_Table2".
 -}
-getTableRefName :: TableRef a -> String
+getTableRefName :: TableRef dbVendor -> String
 getTableRefName ref = maybe name _tableRefAsName $ getTableRefAlias ref
     where
         name = case ref of
@@ -953,7 +957,7 @@ getTableRefName ref = maybe name _tableRefAsName $ getTableRefAlias ref
                 error "This is a bug, this pattern shouldn't been reached!"
 
 -- | Table reference (table or join) alias.
-data TableRefAs a = TableRefAs
+data TableRefAs dbVendor = TableRefAs
     {
       -- | Name of the table alias.
       _tableRefAsName ::  String
@@ -966,136 +970,136 @@ data TableRefAs a = TableRefAs
 Column definition, which includes a reference to a table for qualified
 column names.
 -}
-data ColDef b a = ColDef
+data ColDef b dbVendor = ColDef
     {
       -- | Column.
-      _colExpr :: (Column b a)
+      _colExpr :: (Column b dbVendor)
 
       -- | Table which will be used for the qualified column name.
-    , _colExprTableLabel :: Maybe (TableRef a)
+    , _colExprTableLabel :: Maybe (TableRef dbVendor)
     }
 
 -- | Column definition wrapper "hidding" the type "b".
-data ColDefWrap a where ColDefWrap :: ColDef b a -> ColDefWrap a
+data ColDefWrap dbVendor where ColDefWrap :: ColDef b dbVendor -> ColDefWrap dbVendor
 
 {-|
 Generic definition of a column reference used in SELECT queries or in the WHERE
 clause of UPDATE statements.
 -}
-data ColRef b a = ColRef
+data ColRef b dbVendor = ColRef
     {
       -- | Expression of the column reference
       --   (which is not necesserely a column).
-      _colRefExpr  :: Expression b a
+      _colRefExpr  :: Expression b dbVendor
 
       -- | Label used to reference the column reference (AS).
     , _colRefLabel :: Maybe String
     }
 
 -- | Column reference wrapper "hidding" the type "b".
-data ColRefWrap a where ColRefWrap :: ColRef b a -> ColRefWrap a
+data ColRefWrap dbVendor where ColRefWrap :: ColRef b dbVendor -> ColRefWrap dbVendor
 
 -- | Values which can be used in data manipulation statements.
-data Value b a where
+data Value b dbVendor where
 
     -- | Boolean value.
-    BoolVal :: Bool -> Value Bool a
+    BoolVal :: Bool -> Value Bool dbVendor
 
     -- | Numeric value.
-    NumericVal :: (Show b, Num b) => b -> Value Numeric a
+    NumericVal :: (Show b, Num b) => b -> Value Numeric dbVendor
 
     -- | Float value.
-    FloatVal :: Float -> Value Float a
+    FloatVal :: Float -> Value Float dbVendor
 
     -- | Double value.
-    DoubleVal :: Double -> Value Double a
+    DoubleVal :: Double -> Value Double dbVendor
 
     -- | Integer value.
-    IntVal :: Int -> Value Int a
+    IntVal :: Int -> Value Int dbVendor
 
     -- | String value.
-    StringVal :: String -> Value String a
+    StringVal :: String -> Value String dbVendor
 
     -- | Value of generic type which does not need to be quoted.
-    GenVal :: (Raw c, Show c) => c -> Value b a
+    GenVal :: (Raw c, Show c) => c -> Value b dbVendor
 
     -- | Value of generic type which needs must quoted.
-    GenQVal :: String -> Value b a
+    GenQVal :: String -> Value b dbVendor
 
     -- | Default value (for INSERT, UPDATE or CREATE TABLE statements).
-    DefaultVal  :: Value b a
+    DefaultVal  :: Value b dbVendor
 
     -- Null values.
 
     -- | NULL value of generic type.
-    NullVal :: Value b a
+    NullVal :: Value b dbVendor
 
     -- Placeholders
 
     -- | Placeholder for a value of generic type.
-    Placeholder :: Value b a
+    Placeholder :: Value b dbVendor
 
     -- | Placeholder for a boolean value.
-    PlaceBool :: Value Bool a
+    PlaceBool :: Value Bool dbVendor
 
     -- | Placeholder for a numeric value.
-    PlaceNum :: Value Numeric a
+    PlaceNum :: Value Numeric dbVendor
 
     -- | Placeholder for a floating number value.
-    PlaceFloat :: Value Float a
+    PlaceFloat :: Value Float dbVendor
 
     -- | Placeholder for a double precision number value.
-    PlaceDouble :: Value Double a
+    PlaceDouble :: Value Double dbVendor
 
     -- | Placeholder for a integer value.
-    PlaceInt :: Value Int a
+    PlaceInt :: Value Int dbVendor
 
     -- | Placeholder for a string value.
-    PlaceString :: Value String a
+    PlaceString :: Value String dbVendor
 
 -- | Value wrapper to hide the type "b".
 data ValueWrap a where
-    ValueWrap :: Value b a -> ValueWrap a
+    ValueWrap :: Value b dbVendor -> ValueWrap dbVendor
 
 --------------------
 -- SELECT
 --------------------
 
 -- | SELECT statement.
-data Select b a =
+data Select b dbVendor =
 
       -- | SELECT query.
-      Single (SelectQ b a)
+      Single (SelectQ b dbVendor)
 
       -- | Combined query such as UNION.
-    | Combined (Combination a) [Select b a]
+    | Combined (Combination dbVendor) [Select b dbVendor]
 
 -- | Set a specific clause of all select queries of a SELECT statement.
 setSelects ::
 
        -- | Lens.
-       ASetter (SelectQ b a) (SelectQ b a) d c
+       ASetter (SelectQ b dbVendor) (SelectQ b dbVendor) d c
 
        -- | Value to set.
     -> c
 
        -- | Original SELECT query.
-    -> Select b a
+    -> Select b dbVendor
 
        -- | SELECT query with the newly set value.
-    -> Select b a
+    -> Select b dbVendor
 setSelects l val query =
     case query of
         Single sq -> Single $ set l val sq
         Combined combi sqs -> Combined combi $ map (setSelects l val) sqs
 
 -- | Return the select queries of a SELECT statement.
-getSelects :: Select b a -> [SelectQ b a]
+getSelects :: Select b dbVendor -> [SelectQ b dbVendor]
 getSelects (Single s) = [s]
 getSelects (Combined _ selects) = concat $ map getSelects selects
 
 -- | The different possible combinations of SELECT queries.
-data Combination a =
+data Combination dbVendor =
       Except
     | ExceptAll
     | Intersect
@@ -1114,99 +1118,99 @@ More concretely, they are:
   - HAVING which is part of the GROUP BY clause;
   - OFFSET and LIMIT part of the ORDER BY clause.
 -}
-data SelectQ b a = SelectQ
+data SelectQ b dbVendor = SelectQ
     {
       -- | Type of the SELECT (ALL or DISTINCT).
-      _selectType :: SelectType a
+      _selectType :: SelectType dbVendor
 
       -- | Selected columns
-    , _selectCols :: Selection b a
+    , _selectCols :: Selection b dbVendor
 
       -- | FROM clause.
-    , _selectFrom :: Maybe (From a)
+    , _selectFrom :: Maybe (From dbVendor)
 
       -- | WHERE clause.
-    , _selectWhere :: Maybe (Where a)
+    , _selectWhere :: Maybe (Where dbVendor)
 
       -- | Having clause.
-    , _selectHaving :: Maybe (Having a)
+    , _selectHaving :: Maybe (Having dbVendor)
 
       -- | GROUP BY clause.
-    , _selectGroupBy :: Maybe (GroupBy a)
+    , _selectGroupBy :: Maybe (GroupBy dbVendor)
 
       -- | ORDER BY clause.
-    , _selectOrderBy :: Maybe (OrderBy a)
+    , _selectOrderBy :: Maybe (OrderBy dbVendor)
 
       -- | LIMIT clause.
-    , _selectLimit :: Maybe (Limit a)
+    , _selectLimit :: Maybe (Limit dbVendor)
 
       -- | OFFSET clause.
-    , _selectOffset :: Maybe (Offset a)
+    , _selectOffset :: Maybe (Offset dbVendor)
     }
 
 -- | SELECT statement wrapper.
-data SelectWrap a where
-    SelectWrap :: Select b a -> SelectWrap a
+data SelectWrap dbVendor where
+    SelectWrap :: Select b dbVendor -> SelectWrap dbVendor
 
 -- Selection clause
 --------------------
 
 -- | Type of SELECT query (ALL or DISTINCT).
-data SelectType a =
+data SelectType dbVendor =
      All
    | Distinct
-   | DistinctOn [ColRefWrap a]
+   | DistinctOn [ColRefWrap dbVendor]
 
 -- | Columns selected by a SELECT query.
-data Selection b a where
+data Selection b dbVendor where
 
     -- | A single column.
     --   The returned type is a list representation of the type of that column.
     --   For example, if the column is a Numeric type
     --   then the returned type "b" is [Numeric].
-    TSelection :: ColRef b a -> Selection b a
+    TSelection :: ColRef b dbVendor -> Selection b dbVendor
 
     -- | Multiple columns of the same type.
     --   The returned type is a list of list representation of the type of
     --   the columns.
     --   For example, if the columns are of type Numeric the return type "b"
     --   will be [[Numeric]].
-    TsSelection :: [ColRef b a] -> Selection b a
+    TsSelection :: [ColRef b dbVendor] -> Selection b dbVendor
 
     -- | A single column of undefined type.
     --   The returned type is [Undefined].
-    USelection  :: ColRefWrap a -> Selection [Undefined] a
+    USelection  :: ColRefWrap dbVendor -> Selection [Undefined] dbVendor
 
     -- | Multiple columns of different or undefined types.
     --   The return type is [[Undefined]].
-    UsSelection :: [ColRefWrap a] -> Selection [[Undefined]] a
+    UsSelection :: [ColRefWrap dbVendor] -> Selection [[Undefined]] dbVendor
 
     -- | Single column containing an aggregate value (see 'Aggregate' to get
     --   more information).
     --   The returned type is Numeric.
-    ASelection :: ColRef Aggregate a -> Selection Numeric a
+    ASelection :: ColRef Aggregate dbVendor -> Selection Numeric dbVendor
 
     -- | Multiple columns containing aggregate values (see 'Aggregate' to get
     --   more information).
     --   The returned type is [Numeric].
-    AsSelection :: [ColRef Aggregate a] -> Selection [Numeric] a
+    AsSelection :: [ColRef Aggregate dbVendor] -> Selection [Numeric] dbVendor
 
     -- | Single column containing an aggregate predicate
     --   (see 'AggrPred' to get more information).
     --   The returned type is Bool.
-    APSelection :: ColRef AggrPred a -> Selection Bool a
+    APSelection :: ColRef AggrPred dbVendor -> Selection Bool dbVendor
 
     -- | Multiple columns containing aggregate predicates
     --   (see 'AggrPred' to get more information).
     --   The returned type is [Bool].
-    APsSelection :: [ColRef AggrPred a] -> Selection [Bool] a
+    APsSelection :: [ColRef AggrPred dbVendor] -> Selection [Bool] dbVendor
 
 -- | Selection wrapper.
-data SelectionWrap a where
-    SelectionWrap :: Selection b a -> SelectionWrap a
+data SelectionWrap dbVendor where
+    SelectionWrap :: Selection b dbVendor -> SelectionWrap dbVendor
 
 -- | Return the selected columns of a Selection.
-getSelectedCols :: Selection b a -> [ColRefWrap a]
+getSelectedCols :: Selection b dbVendor -> [ColRefWrap dbVendor]
 getSelectedCols (TSelection   col)  = [ColRefWrap col]
 getSelectedCols (TsSelection  cols) = map ColRefWrap cols
 getSelectedCols (USelection   col)  = [col]
@@ -1220,45 +1224,45 @@ getSelectedCols (APsSelection cols) = map ColRefWrap cols
 --------------------
 
 -- | FROM clause.
-data From a = From {_fromTableRefs :: [TableRef a]}
+data From dbVendor = From {_fromTableRefs :: [TableRef dbVendor]}
 
 -- | A JOIN between two tables.
-data Join a =
+data Join dbVendor =
 
       -- | A join which takes only tables references as parameter
       --   – CROSS and NATURAL joins.
       JoinTable
-        { _joinTableType   :: JoinTypeTable a
-        , _joinTableTable1 :: TableRef a
-        , _joinTableTable2 :: TableRef a
+        { _joinTableType   :: JoinTypeTable dbVendor
+        , _joinTableTable1 :: TableRef dbVendor
+        , _joinTableTable2 :: TableRef dbVendor
         }
 
       -- | A join which has an ON or USING clause.
     | JoinCol
-        { _joinColType   :: JoinTypeCol a
-        , _joinColTable1 :: TableRef a
-        , _joinColTable2 :: TableRef a
-        , _joinColClause :: JoinClause a
+        { _joinColType   :: JoinTypeCol dbVendor
+        , _joinColTable1 :: TableRef dbVendor
+        , _joinColTable2 :: TableRef dbVendor
+        , _joinColClause :: JoinClause dbVendor
         }
 
 -- | JOIN clause.
-data JoinClause a =
+data JoinClause dbVendor =
 
       -- | ON clause.
-      JoinClauseOn (Expression Bool a)
+      JoinClauseOn (Expression Bool dbVendor)
 
       -- | USING clause.
-    | JoinClauseUsing [ColWrap a]
+    | JoinClauseUsing [ColWrap dbVendor]
 
 -- | JOIN between two columns references.
-data JoinTypeCol a =
+data JoinTypeCol dbVendor =
       FullJoin
     | LeftJoin
     | InnerJoin
     | RightJoin
 
 -- | JOIN between two tables references.
-data JoinTypeTable a =
+data JoinTypeTable dbVendor =
       CrossJoin
     | NaturalInnerJoin
     | NaturalLeftJoin
@@ -1269,73 +1273,73 @@ data JoinTypeTable a =
 --------------------
 
 -- | WHERE clause.
-data Where a = Where
+data Where dbVendor = Where
     {
       -- | Predicate.
-      _whereExpr :: Expression Bool a
+      _whereExpr :: Expression Bool dbVendor
     }
 
 -- GROUP BY and HAVING clauses
 --------------------
 
 -- | GROUP BY clause.
-data GroupBy a = GroupBy
+data GroupBy dbVendor = GroupBy
     {
       -- | Columns references of the GROUP BY clause.
-      _groupByColRefs :: [ColRefWrap a]
+      _groupByColRefs :: [ColRefWrap dbVendor]
     }
 
 -- | HAVING clause.
-data Having a =
+data Having dbVendor =
 
       -- | Predicate.
-      HavingPred (Expression Bool a)
+      HavingPred (Expression Bool dbVendor)
 
       -- | Aggregated predicate (see 'AggrPred' to get more information).
-    | HavingAggrPred (Expression AggrPred a)
+    | HavingAggrPred (Expression AggrPred dbVendor)
 
 -- | Return the expression of a HAVING clause in an expression wrapper.
-getHavingExpr :: Having a -> ExprWrap a
+getHavingExpr :: Having dbVendor -> ExprWrap dbVendor
 getHavingExpr (HavingPred expr)     = ExprWrap expr
 getHavingExpr (HavingAggrPred expr) = ExprWrap expr
 
 -- | ORDER BY clause.
-data OrderBy a = OrderBy
+data OrderBy dbVendor = OrderBy
     {
       -- | Definition of the sorting order of the columns.
-      _orderBySortSpecList :: [SortRef a]
+      _orderBySortSpecList :: [SortRef dbVendor]
     }
 
 -- | Defines how a given column is sorted.
-data SortRef a = SortRef
+data SortRef dbVendor = SortRef
     {
       -- | Sorted column reference.
       --   A wrapper is used since the type of the column does not matter here.
       --   SQL is able to sort any type, even NULL values.
-      _sortRefColRef :: ColRefWrap a
+      _sortRefColRef :: ColRefWrap dbVendor
 
       -- | Sorting order (ASC or DESC).
-    , _sortRefOrder :: Maybe (SortOrder a)
+    , _sortRefOrder :: Maybe (SortOrder dbVendor)
 
       -- | NULL values in first or last position.
-    , _sortRefNulls :: Maybe (SortNulls a)
+    , _sortRefNulls :: Maybe (SortNulls dbVendor)
     }
 
 -- | Sorting order (ASC or DESC).
-data SortOrder a =
+data SortOrder dbVendor =
       Asc
     | Desc
 
 -- | NULLS FIRST and NULLS LAST parameters for sorting the NULL values.
-data SortNulls a =
+data SortNulls dbVendor =
       NullsFirst
     | NullsLast
 
 -- | OFFSET clause.
-data Offset a = Offset {_offsetVal :: Int}
+data Offset dbVendor = Offset {_offsetVal :: Int}
 
 -- | LIMIT clause.
-data Limit a = Limit {_limitVal :: Int}
+data Limit dbVendor = Limit {_limitVal :: Int}
 
 --------------------
 -- INSERT
@@ -1347,34 +1351,38 @@ Both must be of the same type (the "b" phantom types must be the same).
 
 Used in UPDATE or INSERT statements.
 -}
-data Assignment a where
+data Assignment dbVendor where
     Assignment ::
         {
           -- | Column to which the value is assigned.
-          _assignCol :: Column b a
+          _assignCol :: Column b dbVendor
 
           -- | Assigned value.
-        , _assignExpr :: Expression b a
-        } -> Assignment a
+        , _assignExpr :: Expression b dbVendor
+        } -> Assignment dbVendor
 
-getAssignCol :: Assignment a -> ColWrap a
+getAssignCol :: Assignment dbVendor -> ColWrap dbVendor
 getAssignCol (Assignment col _) = ColWrap col
 
-getAssignExpr :: Assignment a -> ExprWrap a
+getAssignExpr :: Assignment dbVendor -> ExprWrap dbVendor
 getAssignExpr (Assignment _ expr) = ExprWrap expr
 
 -- | INSERT statement.
-data Insert a = Insert
+data Insert colType dbVendor = Insert
     {
       -- | Table in which to insert the values.
-      _insertTable :: Table a
+      _insertTable :: Table dbVendor
 
       -- | Column / value assignments for the insertion.
-    , _insertAssign :: [Assignment a]
+    , _insertAssign :: [Assignment dbVendor]
 
       -- | Optional RETURNING clause.
-    , _insertReturning :: Maybe (Returning a)
+    , _insertReturning :: Maybe (Returning colType dbVendor)
     }
+
+-- | INSERT statement wrapper.
+data InsertWrap dbVendor where
+    InsertWrap :: Insert colType dbVendor -> InsertWrap dbVendor
 
 -- RETURNING clause
 --------------------
@@ -1387,44 +1395,56 @@ It can be used in MariaDB for DELETE statements only.
 
 It does not exists in SQLite.
 -}
-data Returning a = Returning (ColRefWrap a)
+data Returning colType dbVendor = Returning (Selection colType dbVendor)
+
+-- | RETURNING clause wrapper.
+data ReturningWrap dbVendor where
+    ReturningWrap :: Returning colType dbVendor -> ReturningWrap dbVendor
 
 --------------------
 -- UPDATE
 --------------------
 
 -- | UPDATE statement.
-data Update a = Update
+data Update colType dbVendor = Update
     {
       -- | Table to update.
-      _updateTable :: Table a
+      _updateTable :: Table dbVendor
 
       -- | Values to update in the specified columns.
-    , _updateAssignments :: [Assignment a]
+    , _updateAssignments :: [Assignment dbVendor]
 
       -- | Optional WHERE clause.
-    , _updateWhere :: Maybe (Where a)
+    , _updateWhere :: Maybe (Where dbVendor)
 
       -- | Optional RETURNING clause.
-    , _updateReturning :: Maybe (Returning a)
+    , _updateReturning :: Maybe (Returning colType dbVendor)
     }
+
+-- | UPDATE statement wrapper.
+data UpdateWrap dbVendor where
+    UpdateWrap :: Update colType dbVendor -> UpdateWrap dbVendor
 
 --------------------
 -- DELETE
 --------------------
 
 -- | DELETE statement.
-data Delete a = Delete
+data Delete colType dbVendor = Delete
     {
       -- | Table to delete.
-      _deleteTable :: Table a
+      _deleteTable :: Table dbVendor
 
       -- | Optional WHERE clause.
-    , _deleteWhere :: Maybe (Where a)
+    , _deleteWhere :: Maybe (Where dbVendor)
 
       -- | Optional RETURNING clause.
-    , _deleteReturning :: Maybe (Returning a)
+    , _deleteReturning :: Maybe (Returning colType dbVendor)
     }
+
+-- | DELETE statement wrapper.
+data DeleteWrap dbVendor where
+    DeleteWrap :: Delete colType dbVendor -> DeleteWrap dbVendor
 
 ----------------------------------------
 -- Lenses

@@ -206,6 +206,8 @@ module Database.Hedsql.Common.Constructor
     , simpleSelect
     , isDistinctFrom
     , isNotDistinctFrom
+    , SelectionConstr
+    , selection
     , (//*)
 
       -- ** FROM clause
@@ -578,11 +580,11 @@ type CreateStmt a = State (Create a) ()
 
 type Query b a = State (Select b a) ()
 
-type InsertStmt a = State (Insert a) ()
+type InsertStmt colType dbVendor = State (Insert colType dbVendor) ()
 
-type DeleteStmt a = State (Delete a) ()
+type DeleteStmt colType dbVendor = State (Delete colType dbVendor) ()
 
-type UpdateStmt a = State (Update a) ()
+type UpdateStmt colType dbVendor = State (Update colType dbVendor) ()
 
 {-|
 Execute the state of the 'State' monad.
@@ -605,22 +607,22 @@ instance ToExec (Select b a) (Select b a) where
 instance ToExec (Query b a) (Select b a) where
     execStmt q = execState q $ simpleSelect' $ TsSelection []
 
-instance ToExec (Insert a) (Insert a) where
+instance ToExec (Insert b a) (Insert b a) where
     execStmt = id
 
-instance ToExec (InsertStmt a) (Insert a) where
+instance ToExec (InsertStmt b a) (Insert b a) where
     execStmt q = execState q $ Insert (Table "" [] []) [] Nothing
 
-instance ToExec (Delete a) (Delete a) where
+instance ToExec (Delete b a) (Delete b a) where
     execStmt = id
 
-instance ToExec (DeleteStmt a) (Delete a) where
+instance ToExec (DeleteStmt b a) (Delete b a) where
     execStmt q = execState q $ Delete (Table "" [] []) Nothing Nothing
 
-instance ToExec (Update a) (Update a) where
+instance ToExec (Update b a) (Update b a) where
     execStmt = id
 
-instance ToExec (UpdateStmt a) (Update a) where
+instance ToExec (UpdateStmt b a) (Update b a) where
     execStmt q = execState q $ Update (Table "" [] []) [] Nothing Nothing
 
 -- TODO: use do notation for the columns as well.
@@ -916,10 +918,10 @@ tableJoin joinType tableRef1 tableRef2 =
 
 -- | Create a Select query with only a column selection clause.
 simpleSelect' :: Selection b a -> Select b a
-simpleSelect' selection =
+simpleSelect' sel =
     Single $ SelectQ
         All
-        selection
+        sel
         Nothing
         Nothing
         Nothing
@@ -929,8 +931,8 @@ simpleSelect' selection =
         Nothing
 
 simpleSelect :: Selection b a -> Query b a
-simpleSelect selection =
-    modify (\(Single _) -> simpleSelect' selection)
+simpleSelect sel =
+    modify (\(Single _) -> simpleSelect' sel)
 
 {-|
 Allow the creation of SELECT queries with correct types.
@@ -949,58 +951,31 @@ instance SelectConstr (Select b a) (Query b a) where
     select s = modify (\_ -> s)
 
 instance SelectConstr (ColRefWrap a) (Query [Undefined] a) where
-    select = simpleSelect . USelection
+    select = simpleSelect . selection
 
 instance SelectConstr [ColRefWrap a] (Query [[Undefined]] a) where
-    select = simpleSelect . UsSelection
+    select = simpleSelect . selection
 
 instance SelectConstr (Column b a) (Query [b] a) where
-    select c =
-        simpleSelect $ TSelection (colRef column)
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            column :: Column [b] a
-            column = unsafeCoerce c
+    select = simpleSelect . selection
 
 instance SelectConstr [Column b a] (Query [[b]] a) where
-    select cs =
-        simpleSelect $ TsSelection $ map colRef columns
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            columns :: [Column [[b]] a]
-            columns = unsafeCoerce cs
+    select = simpleSelect . selection
 
 instance SelectConstr (ColWrap a) (Query [Undefined] a) where
-    select (ColWrap c) = simpleSelect $ USelection $ ColRefWrap $ colRef c
+    select = simpleSelect . selection
 
 instance SelectConstr [ColWrap a] (Query [[Undefined]] a) where
-    select cs =
-        simpleSelect $ UsSelection $ map toColRef cs
-        where
-            toColRef (ColWrap c) = ColRefWrap $ colRef c
+    select = simpleSelect . selection
 
 instance SelectConstr (ColRef b a) (Query [b] a) where
-    select c = simpleSelect $ TSelection cRef
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            cRef :: ColRef [b] a
-            cRef = unsafeCoerce c
+    select = simpleSelect . selection
 
 instance SelectConstr [ColRef b a] (Query [[b]] a) where
-    select cs =
-        simpleSelect $ TsSelection cRefs
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            cRefs :: [ColRef [[b]] a]
-            cRefs = unsafeCoerce cs
+    select = simpleSelect . selection
 
 instance SelectConstr (Expression b a) (Query [b] a) where
-    select c =
-        simpleSelect $ TSelection (colRef cRef)
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            cRef :: Expression [b] a
-            cRef = unsafeCoerce c
+    select = simpleSelect . selection
 
 {-|
 Create a SELECT DISTINCT query.
@@ -1013,10 +988,10 @@ If that query is a combination of select queries (UNION, EXCEPT, etc.) then
 all the queries will become select distinct ones.
 -}
 selectDistinct :: SelectConstr a (Query c b) => a -> Query c b
-selectDistinct selection =
+selectDistinct sel =
     modify (\_ -> s)
     where
-        s = setSelects selectType Distinct $ execStmt $ select selection
+        s = setSelects selectType Distinct $ execStmt $ select sel
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
@@ -1039,6 +1014,71 @@ isNotDistinctFrom ::
     -> Expression Bool d
 isNotDistinctFrom colRef1 colRef2 =
     IsNotDistinctFrom (colRef colRef1) (colRef colRef2)
+
+{-|
+Allow the creation of output selection expressions with correct type.
+
+A selection with only one column will have type:
+> Selection [b] a
+
+A selection with many columns will have type:
+> Selection [[b]] a
+-}
+class SelectionConstr a b | a -> b where
+    selection :: a -> b
+
+instance SelectionConstr
+    (ColRefWrap dbVendor) (Selection [Undefined] dbVendor) where
+        selection = USelection
+
+instance SelectionConstr
+    [ColRefWrap dbVendor] (Selection [[Undefined]] dbVendor) where
+        selection = UsSelection
+
+instance SelectionConstr (Column b dbVendor) (Selection [b] dbVendor) where
+    selection c = TSelection $ colRef column
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            column :: Column [b] dbVendor
+            column = unsafeCoerce c
+
+instance SelectionConstr [Column b dbVendor] (Selection [[b]] dbVendor) where
+    selection cs = TsSelection $ map colRef columns
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            columns :: [Column [[b]] dbVendor]
+            columns = unsafeCoerce cs
+
+instance SelectionConstr
+    (ColWrap dbVendor) (Selection [Undefined] dbVendor) where
+        selection (ColWrap c) = USelection $ ColRefWrap $ colRef c
+
+instance SelectionConstr
+    [ColWrap dbVendor] (Selection [[Undefined]] dbVendor) where
+        selection = UsSelection . map toColRef
+            where
+                toColRef (ColWrap c) = ColRefWrap $ colRef c
+
+instance SelectionConstr (ColRef b dbVendor) (Selection [b] dbVendor) where
+    selection c = TSelection cRef
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            cRef :: ColRef [b] dbVendor
+            cRef = unsafeCoerce c
+
+instance SelectionConstr [ColRef b dbVendor] (Selection [[b]] dbVendor) where
+    selection cs = TsSelection cRefs
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            cRefs :: [ColRef [[b]] dbVendor]
+            cRefs = unsafeCoerce cs
+
+instance SelectionConstr (Expression b dbVendor) (Selection [b] dbVendor) where
+    selection c = TSelection $ colRef cRef
+        where
+            -- Unsafe coercion to the correct phantom types parameter.
+            cRef :: Expression [b] dbVendor
+            cRef = unsafeCoerce c
 
 -- | Create a joker - "*" - character.
 (//*) :: Expression [Undefined] a
@@ -1175,13 +1215,13 @@ class WhereState a where
     where_ :: Expression Bool b -> State (a b) ()
 
 -- | Create a WHERE clause for a SELECT query.
-instance WhereState (Select b) where
+instance WhereState (Select dbVendor) where
     where_ = modify . setSelects selectWhere . Just . Where
 
-instance WhereState Update where
+instance WhereState (Update dbVendor) where
     where_ = modify . set updateWhere . Just . Where
 
-instance WhereState Delete where
+instance WhereState (Delete dbVendor) where
     where_ = modify . set deleteWhere . Just . Where
 
 ----------------------------------------
@@ -1349,7 +1389,7 @@ insert ::
     )
     => a              -- ^ Table or name of the table to insert the data into.
     -> [Assignment b] -- ^ Values to insert.
-    -> InsertStmt b
+    -> InsertStmt colType b
 insert tRef assignments = modify (\_ -> Insert (table tRef) assignments Nothing)
 
 --------------------------------------------------------------------------------
@@ -1361,7 +1401,7 @@ update ::
        ToTable a (Table b)
     => a              -- ^ Table to update.
     -> [Assignment b] -- ^ Column/value assignments.
-    -> UpdateStmt b
+    -> UpdateStmt colType b
 update t assignments =
     modify (\_ -> Update (table t) assignments Nothing Nothing)
 
@@ -1373,7 +1413,7 @@ update t assignments =
 deleteFrom ::
        ToTable a (Table b)
     => a
-    -> DeleteStmt b
+    -> DeleteStmt colType b
 deleteFrom t = modify (\_ -> Delete (table t) Nothing Nothing)
 
 --------------------------------------------------------------------------------
@@ -1749,14 +1789,14 @@ instance ToStmt (Create a) (Statement a) where
 instance ToStmt (CreateStmt a) (Statement a) where
     statement = statement . execStmt
 
-instance ToStmt (Delete a) (Statement a) where
-    statement = DeleteStmt
+instance ToStmt (Delete colType dbVendor) (Statement dbVendor) where
+    statement = DeleteStmt . DeleteWrap
 
 instance ToStmt (Drop a) (Statement a) where
     statement = DropStmt
 
-instance ToStmt (Insert a) (Statement a) where
-    statement = InsertStmt
+instance ToStmt (Insert colType dbVendor) (Statement dbVendor) where
+    statement = InsertStmt . InsertWrap
 
 instance ToStmt (Select b a) (Statement a) where
     statement = SelectStmt . SelectWrap
@@ -1764,19 +1804,19 @@ instance ToStmt (Select b a) (Statement a) where
 instance ToStmt (SelectWrap a) (Statement a) where
     statement = SelectStmt
 
-instance ToStmt (Update a) (Statement a) where
-    statement = UpdateStmt
+instance ToStmt (Update colType dbVendor) (Statement dbVendor) where
+    statement = UpdateStmt . UpdateWrap
 
 instance ToStmt (Query b a) (Statement a) where
     statement = statement . execStmt
 
-instance ToStmt (InsertStmt a) (Statement a) where
+instance ToStmt (InsertStmt colType a) (Statement a) where
     statement = statement . execStmt
 
-instance ToStmt (UpdateStmt a) (Statement a) where
+instance ToStmt (UpdateStmt colType a) (Statement a) where
     statement = statement . execStmt
 
-instance ToStmt (DeleteStmt a) (Statement a) where
+instance ToStmt (DeleteStmt colType a) (Statement a) where
     statement = statement . execStmt
 
 --------------------------------------------------------------------------------

@@ -39,5 +39,4 @@ foundRows = FoundRows
 
 -- | Create a RETURNING clause for a DELETE statement.
 instance ReturningState Delete MariaDB where
-    returning =
-        modify . set deleteReturning . Just . Returning . head . map colRefWrap . toList
+    returning = modify . set deleteReturning . Just . Returning . selection

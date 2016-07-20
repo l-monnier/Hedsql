@@ -258,11 +258,11 @@ data Parser a = Parser
 
       -- | Parse many assignments for an INSERT statement.
     , _parseInsertAssign   :: [Assignment a] -> Doc
-    , _parseDelete         :: Delete a -> Doc
-    , _parseInsert         :: Insert a -> Doc
-    , _parseUpdate         :: Update a -> Doc
+    , _parseDelete         :: DeleteWrap a -> Doc
+    , _parseInsert         :: InsertWrap a -> Doc
+    , _parseUpdate         :: UpdateWrap a -> Doc
 
-    , _parseReturning      :: Returning a -> Doc
+    , _parseReturning      :: ReturningWrap a -> Doc
 
       -- | Quote an element (table or column reference).
     , _quoteElem           :: String -> Doc
@@ -464,12 +464,14 @@ parseTableConstTypeFunc parser cond =
         parseCols cols = csep $ map (_parseCol parser) cols
 
 -- | Parse a DELETE statement.
-parseDeleteFunc :: Parser a -> Delete a -> Doc
-parseDeleteFunc parser statement =
+parseDeleteFunc :: Parser a -> DeleteWrap a -> Doc
+parseDeleteFunc parser (DeleteWrap statement) =
         "DELETE FROM"
     <+> (_parseTableName parser) (statement ^. deleteTable)
     <$> parseM (_parseWhere parser) (statement ^. deleteWhere)
-    <$> parseM (_parseReturning parser) (statement ^. deleteReturning)
+    <$> parseM (_parseReturning parser) returningClause
+    where
+        returningClause = fmap ReturningWrap (statement ^. deleteReturning)
 
 -- | Parse a DROP TABLE statement.
 parseDropFunc :: Parser a -> Drop a -> Doc
@@ -490,12 +492,14 @@ parseDropFunc parser dropClause =
         exists x = if x then "IF EXISTS" else empty
 
 -- | Parse an INSERT statement.
-parseInsertFunc :: Parser a -> Insert a -> Doc
-parseInsertFunc parser insert =
+parseInsertFunc :: Parser a -> InsertWrap a -> Doc
+parseInsertFunc parser (InsertWrap insert) =
         "INSERT INTO"
     <+> (_quoteElem parser) (insert ^. insertTable.tableName)
     <+> (_parseInsertAssign parser) (insert ^. insertAssign)
-    <$> parseM (_parseReturning parser) (insert ^. insertReturning)
+    <$> parseM (_parseReturning parser) returningClause
+    where
+        returningClause = fmap ReturningWrap (insert ^. insertReturning)
 
 -- | Parse INSERT assignments.
 parseInsertAssignFunc :: Parser a -> [Assignment a] -> Doc
@@ -599,16 +603,17 @@ parseStmtFunc parser stmt =
         Statements  xs -> vcat $ punctuate semi $ map (_parseStmt parser) xs
 
 -- | Parse an UPDATE statement.
-parseUpdateFunc :: Parser a -> Update a -> Doc
-parseUpdateFunc parser update =
+parseUpdateFunc :: Parser a -> UpdateWrap a -> Doc
+parseUpdateFunc parser (UpdateWrap update) =
         "UPDATE"
     <+> _quoteElem parser (update^.updateTable.tableName)
     <$>  "SET"
     <+> csep (map (_parseAssgnmt parser) assignments)
     <$> parseM (_parseWhere parser) (update ^. updateWhere)
-    <$> parseM (_parseReturning parser) (update ^. updateReturning)
+    <$> parseM (_parseReturning parser) returningClause
     where
         assignments = update ^. updateAssignments
+        returningClause = fmap ReturningWrap (update ^. updateReturning)
 
 {-|
 Parse the assignment of an UPDATE statement.
@@ -969,9 +974,9 @@ parseWhereFunc parser (Where e) =
             _         -> ((<+>), id)
     in (fst args) "WHERE" $ snd args $ _parseExpr parser $ ExprWrap e
 
-parseReturningFunc :: Parser a -> Returning a -> Doc
-parseReturningFunc parser (Returning col) =
-    "RETURNING " <> (_parseColRef parser $ col)
+parseReturningFunc :: Parser dbVendor -> ReturningWrap dbVendor -> Doc
+parseReturningFunc parser (ReturningWrap (Returning sel)) =
+    "RETURNING " <> (_parseSelection parser $ SelectionWrap sel)
 
 -- | Parse the ON or USING clause of a JOIN.
 parseJoinClauseFunc :: Parser a -> JoinClause a -> Doc

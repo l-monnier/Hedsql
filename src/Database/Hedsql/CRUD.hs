@@ -104,7 +104,7 @@ insertOne ::
        )
     => table    -- ^ Table or name of the table.
     -> [column] -- ^ Columns or names of the columns.
-    -> InsertStmt dbVendor
+    -> InsertStmt Void dbVendor
 insertOne tb values =
     insert tb $ assignPlaceholders values
 
@@ -123,7 +123,7 @@ updateOne ::
     => table    -- ^ Table or name of the table.
     -> [column] -- ^ Columns or names of the columns.
     -> key
-    -> UpdateStmt dbVendor
+    -> UpdateStmt Void dbVendor
 updateOne tb values key = do
     update tb $ assignPlaceholders values
     where_ $ key /== (/?)
@@ -140,7 +140,7 @@ deleteOne ::
        )
     => table -- ^ Table or name of the table.
     -> key   -- ^ Primary key which has to be matched by the placeholder.
-    -> DeleteStmt dbVendor
+    -> DeleteStmt Void dbVendor
 deleteOne tb key = do
     deleteFrom tb
     where_ $ key /== (/?)
