@@ -625,8 +625,6 @@ instance ToExec (Update b a) (Update b a) where
 instance ToExec (UpdateStmt b a) (Update b a) where
     execStmt q = execState q $ Update (Table "" [] []) [] Nothing Nothing
 
--- TODO: use do notation for the columns as well.
-
 {-|
 Allow to easily add optional elements to data types using the '/++' infix
 function.
