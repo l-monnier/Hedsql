@@ -21,8 +21,10 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     , returning
     ) where
 
-import Control.Lens hiding (assign, from)
 import Control.Monad.State.Lazy
+import Unsafe.Coerce
+
+import Control.Lens hiding (assign, from)
 
 import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.AST
@@ -66,12 +68,19 @@ selectDistinctOn dExpr clause =
 
 -- | Create a RETURNING clause for an INSERT statement.
 instance ReturningState Insert PostgreSQL where
-    returning = modify . set insertReturning . Just . Returning . selection
+    returning =
+        modify . set insertReturning . Just . Returning . coerce . selection
 
 -- | Create a RETURNING clause for an UPDATE statement.
 instance ReturningState Update PostgreSQL where
-    returning = modify . set updateReturning . Just . Returning . selection
+    returning =
+        modify . set updateReturning . Just . Returning . coerce . selection
 
 -- | Create a RETURNING clause for a DELETE statement.
 instance ReturningState Delete PostgreSQL where
-    returning = modify . set deleteReturning . Just . Returning . selection
+    returning =
+        modify . set deleteReturning . Just . Returning . coerce . selection
+
+-- | Coerce the phantom type to a single value.
+coerce :: Selection [colType] dbVendor -> Selection colType dbVendor
+coerce = unsafeCoerce

@@ -19,6 +19,8 @@ module Database.Hedsql.Drivers.MariaDB.Constructor
     , returning
     ) where
 
+import Unsafe.Coerce
+
 import Control.Lens hiding (assign, from)
 import Control.Monad.State.Lazy
 
@@ -39,4 +41,9 @@ foundRows = FoundRows
 
 -- | Create a RETURNING clause for a DELETE statement.
 instance ReturningState Delete MariaDB where
-    returning = modify . set deleteReturning . Just . Returning . selection
+    returning =
+        modify . set deleteReturning . Just . Returning . coerce . selection
+        where
+            -- | Coerce back the phantom type to a single value.
+            coerce :: Selection [colType] dbVendor -> Selection colType dbVendor
+            coerce = unsafeCoerce

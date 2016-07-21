@@ -32,6 +32,6 @@ It is not available for SQLite.
 -}
 class ReturningState stmt dbVendor where
     returning ::
-           SelectionConstr a (Selection colType dbVendor)
+           SelectionConstr a (Selection [colType] dbVendor)
         => a -- ^ Reference to a column or list of columns.
         -> State (stmt colType dbVendor) ()
