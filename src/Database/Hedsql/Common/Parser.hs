@@ -189,80 +189,80 @@ Interface of the parser.
 Defines the different computation's steps of the conversion of the AST
 to a 'Doc'.
 -}
-data Parser a = Parser
-    { _parseStmt           :: Statement a -> Doc
+data Parser dbVendor = Parser
+    { _parseStmt           :: Statement dbVendor -> Doc
 
-    , _parseExpr           :: ExprWrap a -> Doc
+    , _parseExpr           :: ExprWrap dbVendor -> Doc
 
       -- | Parse a table for a CREATE TABLE statement.
-    , _parseTableConst     :: TableConstraint     a -> Doc
-    , _parseTableConstType :: TableConstraintType a -> Doc
-    , _parseFk             :: ForeignKey          a -> Doc
-    , _parseMatch          :: Match               a -> Doc
-    , _parseOnAction       :: OnAction            a -> Doc
-    , _parseAction         :: SqlAction           a -> Doc
-    , _parseConstTiming    :: ConstraintTiming    a -> Doc
+    , _parseTableConst     :: TableConstraint     dbVendor -> Doc
+    , _parseTableConstType :: TableConstraintType dbVendor -> Doc
+    , _parseFk             :: ForeignKey          dbVendor -> Doc
+    , _parseMatch          :: Match               dbVendor -> Doc
+    , _parseOnAction       :: OnAction            dbVendor -> Doc
+    , _parseAction         :: SqlAction           dbVendor -> Doc
+    , _parseConstTiming    :: ConstraintTiming    dbVendor -> Doc
 
-    , _parseView           :: View a -> Doc
+    , _parseView           :: View dbVendor -> Doc
 
       -- | Parse a column for a CREATE TABLE statement.
-    , _parseColCreate      :: Int -> ColWrap    a -> Doc
-    , _parseDataType       :: DataTypeWrap      a -> Doc
-    , _parseColConst       :: ColConstraint     a -> Doc
-    , _parseColConstType   :: ColConstraintType a -> Doc
+    , _parseColCreate      :: Int -> ColWrap    dbVendor -> Doc
+    , _parseDataType       :: DataTypeWrap      dbVendor -> Doc
+    , _parseColConst       :: ColConstraint     dbVendor -> Doc
+    , _parseColConstType   :: ColConstraintType dbVendor -> Doc
 
-    , _parseCreate         :: Create a -> Doc
-    , _parseDrop           :: Drop   a -> Doc
+    , _parseCreate         :: Create dbVendor -> Doc
+    , _parseDrop           :: Drop   dbVendor -> Doc
 
       -- | Parse a table for a data manipulation statement
       --   (SELECT, INSERT, UPDATE).
-    , _parseTableName      :: Table      a -> Doc
-    , _parseTableRef       :: TableRef   a -> Doc
-    , _parseTableRefAs     :: TableRefAs a -> Doc
+    , _parseTableName      :: Table      dbVendor -> Doc
+    , _parseTableRef       :: TableRef   dbVendor -> Doc
+    , _parseTableRefAs     :: TableRefAs dbVendor -> Doc
 
       -- | Parse a column for a data manipulation statement
       --   (SELECT, INSERT, UPDATE).
-    , _parseCol            :: ColWrap    a -> Doc
-    , _parseColDef         :: ColDefWrap a -> Doc
+    , _parseCol            :: ColWrap    dbVendor -> Doc
+    , _parseColDef         :: ColDefWrap dbVendor -> Doc
 
       -- | Parse a column reference definition (selection of a SELECT query
       --   when the selection is defined.
       --   Example: ""Table1"."col1" AS "colA"
-    , _parseColRefDef      :: ColRefWrap a -> Doc
+    , _parseColRefDef      :: ColRefWrap dbVendor -> Doc
 
       -- | Parse a column reference when used in a SELECT query, using its
       --   alias if applicable.
-    , _parseColRef         :: ColRefWrap a -> Doc
+    , _parseColRef         :: ColRefWrap dbVendor -> Doc
 
-    , _parseValue          :: ValueWrap a -> Doc
+    , _parseValue          :: ValueWrap dbVendor -> Doc
 
-    , _parseSelect         :: SelectWrap    a -> Doc
-    , _parseCombination    :: Combination   a -> Doc
-    , _parseSelectType     :: SelectType    a -> Doc
-    , _parseSelection      :: SelectionWrap a -> Doc
-    , _parseFrom           :: From          a -> Doc
-    , _parseJoin           :: Join          a -> Doc
-    , _parseJoinClause     :: JoinClause    a -> Doc
-    , _parseJoinTCol       :: JoinTypeCol   a -> Doc
-    , _parseJoinTTable     :: JoinTypeTable a -> Doc
-    , _parseWhere          :: Where         a -> Doc
-    , _parseGroupBy        :: GroupBy       a -> Doc
-    , _parseHaving         :: Having        a -> Doc
-    , _parseOrderBy        :: OrderBy       a -> Doc
-    , _parseSortRef        :: SortRef       a -> Doc
-    , _parseSortOrder      :: SortOrder     a -> Doc
-    , _parseSortNull       :: SortNulls     a -> Doc
+    , _parseSelect         :: SelectWrap    dbVendor -> Doc
+    , _parseCombination    :: Combination   dbVendor -> Doc
+    , _parseSelectType     :: SelectType    dbVendor -> Doc
+    , _parseSelection      :: SelectionWrap dbVendor -> Doc
+    , _parseFrom           :: From          dbVendor -> Doc
+    , _parseJoin           :: Join          dbVendor -> Doc
+    , _parseJoinClause     :: JoinClause    dbVendor -> Doc
+    , _parseJoinTCol       :: JoinTypeCol   dbVendor -> Doc
+    , _parseJoinTTable     :: JoinTypeTable dbVendor -> Doc
+    , _parseWhere          :: Where         dbVendor -> Doc
+    , _parseGroupBy        :: GroupBy       dbVendor -> Doc
+    , _parseHaving         :: Having        dbVendor -> Doc
+    , _parseOrderBy        :: OrderBy       dbVendor -> Doc
+    , _parseSortRef        :: SortRef       dbVendor -> Doc
+    , _parseSortOrder      :: SortOrder     dbVendor -> Doc
+    , _parseSortNull       :: SortNulls     dbVendor -> Doc
 
       -- | Parse an assignment for an UPDATE statement.
-    , _parseAssgnmt        :: Assignment a -> Doc
+    , _parseAssgnmt        :: Assignment dbVendor -> Doc
 
       -- | Parse many assignments for an INSERT statement.
-    , _parseInsertAssign   :: [Assignment a] -> Doc
-    , _parseDelete         :: DeleteWrap a -> Doc
-    , _parseInsert         :: InsertWrap a -> Doc
-    , _parseUpdate         :: UpdateWrap a -> Doc
+    , _parseInsertAssign   :: [Assignment dbVendor] -> Doc
+    , _parseDelete         :: DeleteWrap dbVendor -> Doc
+    , _parseInsert         :: InsertWrap dbVendor -> Doc
+    , _parseUpdate         :: UpdateWrap dbVendor -> Doc
 
-    , _parseReturning      :: ReturningWrap a -> Doc
+    , _parseReturning      :: ReturningWrap dbVendor -> Doc
 
       -- | Quote an element (table or column reference).
     , _quoteElem           :: String -> Doc
@@ -276,7 +276,7 @@ data Parser a = Parser
 ----------------------------------------
 
 -- | Parse a CASCADE or RESTRICT action.
-parseActionFunc :: SqlAction a -> Doc
+parseActionFunc :: SqlAction dbVendor -> Doc
 parseActionFunc Cascade    = "CASCADE"
 parseActionFunc NoAction   = empty
 parseActionFunc Restrict   = "RESTRICT"
@@ -284,7 +284,7 @@ parseActionFunc SetDefault = "SET DEFAULT"
 parseActionFunc SetNull    = "SET NULL"
 
 -- | Parse a column which can be used for a CREATE statement.
-parseColCreateFunc :: Parser a -> Int -> ColWrap a -> Doc
+parseColCreateFunc :: Parser dbVendor -> Int -> ColWrap dbVendor -> Doc
 parseColCreateFunc parser longestName col = hsep
     [ _quoteElem parser cName
     , indent n $ _parseDataType parser (col^.colWrapType)
@@ -299,7 +299,7 @@ parseColCreateFunc parser longestName col = hsep
         cName = col^.colWrapName
 
 -- | Parse a column constraint type.
-parseColConstTypeFunc :: Parser a -> ColConstraintType a -> Doc
+parseColConstTypeFunc :: Parser dbVendor -> ColConstraintType dbVendor -> Doc
 parseColConstTypeFunc parser cst =
     case cst of
         Check condition ->
@@ -331,7 +331,7 @@ parseColConstTypeFunc parser cst =
             "UNIQUE"
 
 -- | Parse a column constraint.
-parseColConstFunc :: Parser a -> ColConstraint a -> Doc
+parseColConstFunc :: Parser dbVendor -> ColConstraint dbVendor -> Doc
 parseColConstFunc parser colConstraint =
        parseName                 (colConstraint^.colConstraintName)
     <> _parseColConstType parser (colConstraint^.colConstraintType)
@@ -342,14 +342,14 @@ parseColConstFunc parser colConstraint =
         parseName  Nothing    = empty
 
 -- | Parse a timing constraint.
-parseConstTimingFunc :: ConstraintTiming  a -> Doc
+parseConstTimingFunc :: ConstraintTiming dbVendor -> Doc
 parseConstTimingFunc timing =
        if timing^.isConstraintDeferable then "DEFERABLE" else "NOT DEFERABLE"
     <> " INITIALLY "
     <> if timing^.isConstraintImmediate then "IMMEDIATE" else "DEFERRED"
 
 -- | Create a CREATE statement.
-parseCreateFunc :: Parser a -> Create a -> Doc
+parseCreateFunc :: Parser dbVendor -> Create dbVendor -> Doc
 parseCreateFunc parser create =
     case create of
         CreateTable ifNotExists table ->
@@ -381,7 +381,7 @@ parseCreateFunc parser create =
           foldr (\x -> max (length $ x^.colWrapName)) 0 (table^.tableCols)
 
 -- | Create the VIEW clause of a CREATE statement.
-parseViewFunc :: Parser a -> View a -> Doc
+parseViewFunc :: Parser dbVendor -> View dbVendor -> Doc
 parseViewFunc parser stmt = hsep
     [  _quoteElem parser $ stmt^.viewName
     , "AS"
@@ -389,7 +389,7 @@ parseViewFunc parser stmt = hsep
     ]
 
 -- | Parse SQL data types.
-parseDataTypeFunc :: DataTypeWrap a -> Doc
+parseDataTypeFunc :: DataTypeWrap dbVendor -> Doc
 parseDataTypeFunc (DataTypeWrap Bool)           = "boolean"
 parseDataTypeFunc (DataTypeWrap Date)           = "date"
 parseDataTypeFunc (DataTypeWrap (Char lenght))  = "char" <> parens (int lenght)
@@ -400,7 +400,7 @@ parseDataTypeFunc (DataTypeWrap (Varchar max')) = "varchar" <> parens (int max')
 parseDataTypeFunc (DataTypeWrap Undef)          = empty
 
 -- | Parse a FOREIGN KEY clause.
-parseFkFunc :: Parser a -> ForeignKey a -> Doc
+parseFkFunc :: Parser dbVendor -> ForeignKey dbVendor -> Doc
 parseFkFunc parser fk = hsep
     [ _parseTableName parser $ fk^.foreignKeyTable
     , parens $ csep $ map (_parseCol parser) $ fk^.foreignKeyCols
@@ -414,20 +414,20 @@ parseFkFunc parser fk = hsep
         makeAction  Nothing      = empty
 
 -- | Parse a MATCH clause.
-parseMatchFunc :: Match a -> Doc
+parseMatchFunc :: Match dbVendor -> Doc
 parseMatchFunc Full    = "FULL"
 parseMatchFunc Partial = "PARTIAL"
 parseMatchFunc Simple  = "SIMPLE"
 
 -- | Parse ON DELETE or ON UPDATE clauses.
-parseOnActionFunc :: Parser a -> OnAction a -> Doc
+parseOnActionFunc :: Parser dbVendor -> OnAction dbVendor -> Doc
 parseOnActionFunc parser (OnDelete action) =    "ON DELETE "
                                              <> _parseAction parser action
 parseOnActionFunc parser (OnUpdate action) =    "ON UPDATE "
                                              <> _parseAction parser action
 
 -- | Parse a table constraint.
-parseTableConstFunc :: Parser a -> TableConstraint a -> Doc
+parseTableConstFunc :: Parser dbVendor -> TableConstraint dbVendor -> Doc
 parseTableConstFunc parser table = hsep $ catMaybes
     [ fmap  parseName                    $ table^.tableConstraintName
     , Just $ _parseTableConstType parser $ table^.tableConstraintType
@@ -437,7 +437,7 @@ parseTableConstFunc parser table = hsep $ catMaybes
         parseName name = "CONSTRAINT " <> _quoteElem parser name <> empty
 
 -- | Parse a table constraint type.
-parseTableConstTypeFunc :: Parser a -> TableConstraintType a -> Doc
+parseTableConstTypeFunc :: Parser dbVendor -> TableConstraintType dbVendor -> Doc
 parseTableConstTypeFunc parser cond =
     case cond of
         TCCheck condition -> hsep
@@ -464,7 +464,7 @@ parseTableConstTypeFunc parser cond =
         parseCols cols = csep $ map (_parseCol parser) cols
 
 -- | Parse a DELETE statement.
-parseDeleteFunc :: Parser a -> DeleteWrap a -> Doc
+parseDeleteFunc :: Parser dbVendor -> DeleteWrap dbVendor -> Doc
 parseDeleteFunc parser (DeleteWrap statement) =
         "DELETE FROM"
     <+> (_parseTableName parser) (statement ^. deleteTable)
@@ -474,7 +474,7 @@ parseDeleteFunc parser (DeleteWrap statement) =
         returningClause = fmap ReturningWrap (statement ^. deleteReturning)
 
 -- | Parse a DROP TABLE statement.
-parseDropFunc :: Parser a -> Drop a -> Doc
+parseDropFunc :: Parser dbVendor -> Drop dbVendor -> Doc
 parseDropFunc parser dropClause =
     "DROP" <+>
     case dropClause of
@@ -492,7 +492,7 @@ parseDropFunc parser dropClause =
         exists x = if x then "IF EXISTS" else empty
 
 -- | Parse an INSERT statement.
-parseInsertFunc :: Parser a -> InsertWrap a -> Doc
+parseInsertFunc :: Parser dbVendor -> InsertWrap dbVendor -> Doc
 parseInsertFunc parser (InsertWrap insert) =
         "INSERT INTO"
     <+> (_quoteElem parser) (insert ^. insertTable.tableName)
@@ -502,7 +502,7 @@ parseInsertFunc parser (InsertWrap insert) =
         returningClause = fmap ReturningWrap (insert ^. insertReturning)
 
 -- | Parse INSERT assignments.
-parseInsertAssignFunc :: Parser a -> [Assignment a] -> Doc
+parseInsertAssignFunc :: Parser dbVendor -> [Assignment dbVendor] -> Doc
 parseInsertAssignFunc parser assigns =
          "("
     <$$> indent 2 (vsep $ punctuate comma cols)
@@ -516,7 +516,7 @@ parseInsertAssignFunc parser assigns =
         vals = map (_parseExpr parser . getAssignExpr) assigns
 
 -- | Parse a SELECT query.
-parseSelectFunc :: Parser a -> SelectWrap a -> Doc
+parseSelectFunc :: Parser dbVendor -> SelectWrap dbVendor -> Doc
 parseSelectFunc parser (SelectWrap (Combined combination queries)) =
     vsep $ intersperse combinator $ map encapsulate queries
     where
@@ -560,7 +560,7 @@ SELECT
   "age"
 @
 -}
-parseSelectionFunc :: Parser a -> SelectionWrap a -> Doc
+parseSelectionFunc :: Parser dbVendor -> SelectionWrap dbVendor -> Doc
 parseSelectionFunc parser (SelectionWrap selection)
     | nb == 0   = "*"
     | nb > 1    = indent 2 $ vsep $ mapButLast com $ map parse cols
@@ -572,7 +572,7 @@ parseSelectionFunc parser (SelectionWrap selection)
         parse = (_parseColRef parser)
 
 -- | Parse queries' combination clause such as "UNION", "EXCEPT", etc.
-parseCombinationFunc :: Combination a -> Doc
+parseCombinationFunc :: Combination dbVendor -> Doc
 parseCombinationFunc combination =
     case combination of
         Except       -> "EXCEPT"
@@ -582,7 +582,7 @@ parseCombinationFunc combination =
         Union        -> "UNION"
         UnionAll     -> "UNION ALL"
 
-parseSelectTypeFunc :: Parser a -> SelectType a -> Doc
+parseSelectTypeFunc :: Parser dbVendor -> SelectType dbVendor -> Doc
 parseSelectTypeFunc _ All                    = empty
 parseSelectTypeFunc _ Distinct               = "DISTINCT"
 parseSelectTypeFunc parser (DistinctOn refs) = hsep
@@ -591,7 +591,7 @@ parseSelectTypeFunc parser (DistinctOn refs) = hsep
     ]
 
 -- | Parse a SQL statement.
-parseStmtFunc :: Parser a -> Statement a -> Doc
+parseStmtFunc :: Parser dbVendor -> Statement dbVendor -> Doc
 parseStmtFunc parser stmt =
     case stmt of
         CreateStmt  s  -> _parseCreate parser s
@@ -603,7 +603,7 @@ parseStmtFunc parser stmt =
         Statements  xs -> vcat $ punctuate semi $ map (_parseStmt parser) xs
 
 -- | Parse an UPDATE statement.
-parseUpdateFunc :: Parser a -> UpdateWrap a -> Doc
+parseUpdateFunc :: Parser dbVendor -> UpdateWrap dbVendor -> Doc
 parseUpdateFunc parser (UpdateWrap update) =
         "UPDATE"
     <+> _quoteElem parser (update^.updateTable.tableName)
@@ -622,7 +622,7 @@ Note: this function is located in the Query Parser because it is the only
 one specific to the UPDATE statement. Thus, a dedicated UPDATE parser
 for this only purpose wouldn't make a lot of sense.
 -}
-parseAssgnmtFunc :: Parser a -> Assignment a -> Doc
+parseAssgnmtFunc :: Parser dbVendor -> Assignment dbVendor -> Doc
 parseAssgnmtFunc parser (Assignment col val) = hsep
     [ _parseCol parser $ ColWrap col
     , "="
@@ -630,11 +630,11 @@ parseAssgnmtFunc parser (Assignment col val) = hsep
     ]
 
 -- | Parse the name of a column.
-parseColFunc :: Parser a -> ColWrap a -> Doc
+parseColFunc :: Parser dbVendor -> ColWrap dbVendor -> Doc
 parseColFunc parser (ColWrap col) = _quoteElem parser $ col^.colName
 
 -- | Parse a column definition.
-parseColDefFunc :: Parser a -> ColDefWrap a -> Doc
+parseColDefFunc :: Parser dbVendor -> ColDefWrap dbVendor -> Doc
 parseColDefFunc parser (ColDefWrap colDef) = hsep
     [ maybe empty ((<>) "." . _parseTableRef parser) $ colDef^.colExprTableLabel
     , _parseCol parser $ ColWrap $ colDef^.colExpr
@@ -646,20 +646,20 @@ Parse a column reference using its alias if defined.
 If the column reference is a column and belongs to a specified table reference,
 then a qualified name will be returned (for example: "Table1"."col1").
 -}
-parseColRefDefFunc :: Parser a -> ColRefWrap a -> Doc
+parseColRefDefFunc :: Parser dbVendor -> ColRefWrap dbVendor -> Doc
 parseColRefDefFunc parser (ColRefWrap colRef) =
         maybe ifNothing (_quoteElem parser) (colRef^.colRefLabel)
     where
         ifNothing = _parseExpr parser $ ExprWrap $ colRef^.colRefExpr
 
 -- | Define a column reference including its alias definition if specified.
-parseColRefFunc :: Parser a -> ColRefWrap a -> Doc
+parseColRefFunc :: Parser dbVendor -> ColRefWrap dbVendor -> Doc
 parseColRefFunc parser (ColRefWrap colRef) =
        _parseExpr parser (ExprWrap $ colRef^.colRefExpr)
     <+> maybe empty ((<+>) "AS" . _quoteElem parser) (colRef^.colRefLabel)
 
 -- | Parse a SQL expression.
-parseExprFunc :: Parser a -> ExprWrap a -> Doc
+parseExprFunc :: Parser dbVendor -> ExprWrap dbVendor -> Doc
 parseExprFunc parser (ExprWrap expr) =
     case expr of
         ColExpr (ColDef col l) -> hcat
@@ -794,7 +794,7 @@ parseExprFunc parser (ExprWrap expr) =
                     else  _parseColRefDef parser c
 
         -- Return True if an expression is an operator.
-        isOperator :: ExprWrap a -> Bool
+        isOperator :: ExprWrap dbVendor -> Bool
         isOperator (ExprWrap e) =
             case e of
                 Add _ _           -> True
@@ -823,7 +823,7 @@ parseExprFunc parser (ExprWrap expr) =
                       else parens $ text $ pack $ cRef
 
 -- | Parse a FROM clause.
-parseFromFunc :: Parser a -> From a -> Doc
+parseFromFunc :: Parser dbVendor -> From dbVendor -> Doc
 parseFromFunc parser (From [tableRef]) =
     "FROM" <+> _parseTableRef parser tableRef
 
@@ -848,7 +848,7 @@ GROUP BY
   [etc.]
 @
 -}
-parseGroupByFunc :: Parser a -> GroupBy a -> Doc
+parseGroupByFunc :: Parser dbVendor -> GroupBy dbVendor -> Doc
 parseGroupByFunc parser clause =
     case clause of
         GroupBy [colRef] -> gb <+> parse colRef
@@ -861,7 +861,7 @@ parseGroupByFunc parser clause =
 
 -- | Parse a HAVING clause.
 -- TODO: correct this: should parse the global expression!!!
-parseHavingFunc :: Parser a -> Having a -> Doc
+parseHavingFunc :: Parser dbVendor -> Having dbVendor -> Doc
 parseHavingFunc parser havingClause =
     let
         e = getHavingExpr havingClause
@@ -872,7 +872,7 @@ parseHavingFunc parser havingClause =
     in (fst args) "HAVING" $ snd args $ _parseExpr parser $ e
 
 -- | Parse joins.
-parseJoinFunc :: Parser a -> Join a -> Doc
+parseJoinFunc :: Parser dbVendor -> Join dbVendor -> Doc
 parseJoinFunc parser join =
     case join of
         JoinCol joinType table1 table2 clause ->
@@ -888,7 +888,7 @@ parseJoinFunc parser join =
             <$> fromMaybe empty (fmap (_parseJoinClause parser) clause)
 
 -- | Parse an ORDER BY clause.
-parseOrderByFunc :: Parser a -> OrderBy a -> Doc
+parseOrderByFunc :: Parser dbVendor -> OrderBy dbVendor -> Doc
 parseOrderByFunc parser clause =
     getResult (clause^.orderBySortSpecList)
     where
@@ -899,28 +899,28 @@ parseOrderByFunc parser clause =
       parse = _parseSortRef parser
 
 -- | Parse the NULLS FIRST or NULLS LAST of a the sorting clause.
-parseSortNullFunc :: SortNulls a -> Doc
+parseSortNullFunc :: SortNulls dbVendor -> Doc
 parseSortNullFunc NullsFirst = "NULLS FIRST"
 parseSortNullFunc NullsLast  = "NULLS LAST"
 
 -- | Parse the ASC or DESC clauses.
-parseSortOrderFunc :: SortOrder a -> Doc
+parseSortOrderFunc :: SortOrder dbVendor -> Doc
 parseSortOrderFunc Asc  = "ASC"
 parseSortOrderFunc Desc = "DESC"
 
 -- | Parse a sort reference.
-parseSortRefFunc :: Parser a -> SortRef a -> Doc
+parseSortRefFunc :: Parser dbVendor -> SortRef dbVendor -> Doc
 parseSortRefFunc parser sortRef =
        (_parseColRefDef parser)    (sortRef^.sortRefColRef)
    <+> parseM (_parseSortOrder parser) (sortRef^.sortRefOrder)
    <+> parseM (_parseSortNull parser)  (sortRef^.sortRefNulls)
 
 -- | Parse the name of a table.
-parseTableNameFunc :: Parser a -> Table a -> Doc
+parseTableNameFunc :: Parser dbVendor -> Table dbVendor -> Doc
 parseTableNameFunc parser table = _quoteElem parser $ table^.tableName
 
 -- | Parse a table reference for the use in a FROM clause.
-parseTableRefFunc :: Parser a -> TableRef a -> Doc
+parseTableRefFunc :: Parser dbVendor -> TableRef dbVendor -> Doc
 parseTableRefFunc parser join =
     case join of
         JoinRef ref alias -> hsep
@@ -943,12 +943,12 @@ parseTableRefFunc parser join =
         pAlias alias = _parseTableRefAs parser alias
 
 -- | Parse a table alias.
-parseTableRefAsFunc :: Parser a -> TableRefAs a -> Doc
+parseTableRefAsFunc :: Parser dbVendor -> TableRefAs dbVendor -> Doc
 parseTableRefAsFunc parser alias =
     "AS" <+> _quoteElem parser (alias^.tableRefAsName)
 
 -- | Parse an input values.
-parseValueFunc :: Parser a -> ValueWrap a -> Doc
+parseValueFunc :: Parser dbVendor -> ValueWrap dbVendor -> Doc
 parseValueFunc parser (ValueWrap val) =
     case val of
         BoolVal True     -> "TRUE"
@@ -965,7 +965,7 @@ parseValueFunc parser (ValueWrap val) =
         _                -> "?"
 
 -- | Parse a WHERE clause.
-parseWhereFunc :: Parser a -> Where a -> Doc
+parseWhereFunc :: Parser dbVendor -> Where dbVendor -> Doc
 parseWhereFunc parser (Where e) =
     let
         args = case e of
@@ -979,7 +979,7 @@ parseReturningFunc parser (ReturningWrap (Returning sel)) =
     "RETURNING " <> (_parseSelection parser $ SelectionWrap sel)
 
 -- | Parse the ON or USING clause of a JOIN.
-parseJoinClauseFunc :: Parser a -> JoinClause a -> Doc
+parseJoinClauseFunc :: Parser dbVendor -> JoinClause dbVendor -> Doc
 parseJoinClauseFunc parser jClause =
     case jClause of
         JoinClauseOn predicate ->
@@ -991,13 +991,13 @@ parseJoinClauseFunc parser jClause =
      where
         makeCond predicate = _parseExpr parser $ ExprWrap predicate
 
-        encapsulate :: Expression Bool a -> Doc -> Doc
+        encapsulate :: Expression Bool dbVendor -> Doc -> Doc
         encapsulate (And _ _ _) str  = parens str
         encapsulate (Or  _ _ _) str  = parens str
         encapsulate _           str = str
 
 -- | Parser a join on a column.
-parseJoinTColFunc :: JoinTypeCol a -> Doc
+parseJoinTColFunc :: JoinTypeCol dbVendor -> Doc
 parseJoinTColFunc join =
     case join of
         FullJoin  -> "FULL JOIN"
@@ -1006,7 +1006,7 @@ parseJoinTColFunc join =
         RightJoin -> "RIGHT JOIN"
 
 -- | Parser a join on a table.
-parseJoinTTableFunc :: JoinTypeTable a -> Doc
+parseJoinTTableFunc :: JoinTypeTable dbVendor -> Doc
 parseJoinTTableFunc joinType =
     case joinType of
         CrossJoin        -> "CROSS JOIN"

@@ -420,14 +420,14 @@ An expression can either be:
 - a select query
 - a value.
 -}
-data Expression b dbVendor where
+data Expression colType dbVendor where
 
     -- Values
-    Value       :: Value b dbVendor   -> Expression b dbVendor
-    Values      :: [Value b dbVendor] -> Expression [b] dbVendor
+    Value       :: Value colType dbVendor   -> Expression colType dbVendor
+    Values      :: [Value colType dbVendor] -> Expression [colType] dbVendor
 
     -- Column
-    ColExpr     :: ColDef b dbVendor -> Expression b dbVendor
+    ColExpr     :: ColDef colType dbVendor -> Expression colType dbVendor
 
     {-|
     * sign. Note: as it is not possible to know the number of columns returned,
@@ -436,33 +436,33 @@ data Expression b dbVendor where
     Joker       :: Expression [Undefined] dbVendor
 
     -- Select
-    SelectExpr :: Select b dbVendor -> Expression b dbVendor
+    SelectExpr :: Select colType dbVendor -> Expression colType dbVendor
 
     -- Conditions
     And ::
            Expression Bool dbVendor -- ^ Left part of the 'And'.
         -> Expression Bool dbVendor -- ^ Right part of the 'And'.
-        -> Bool              -- ^ If 'True' the 'And' is encapsulated in
-                             --   Parenthesis.
+        -> Bool                     -- ^ If 'True' the 'And' is encapsulated in
+                                    --   Parenthesis.
         -> Expression Bool dbVendor
     Or  ::
            Expression Bool dbVendor -- ^ Left part of the 'Or'.
         -> Expression Bool dbVendor -- ^ Right part of the 'Or'.
         -> Bool
         -> Expression Bool dbVendor -- ^ If 'True' the 'Or' is encapsulated in
-                             --   Parenthesis.
+                                    --   Parenthesis.
 
     -- Functions
     -- - Boolean functions
     -- | BETWEEN. Note: it can also apply for textual values.
     Between ::
-           ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> ColRef b dbVendor
+           ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> ColRef colType dbVendor
         -> Expression Bool dbVendor
 
     -- | EXISTS.
-    Exists :: ColRef b dbVendor -> Expression Bool dbVendor
+    Exists :: ColRef colType dbVendor -> Expression Bool dbVendor
 
     -- | IS FALSE.
     IsFalse :: ColRef Bool dbVendor -> Expression Bool dbVendor
@@ -471,22 +471,22 @@ data Expression b dbVendor where
     IsNotFalse :: ColRef Bool dbVendor -> Expression Bool dbVendor
 
     -- | IS NOT NULL.
-    IsNotNull :: ColRef b dbVendor -> Expression Bool dbVendor
+    IsNotNull :: ColRef colType dbVendor -> Expression Bool dbVendor
 
     -- | IS NOT TRUE.
     IsNotTrue :: ColRef Bool dbVendor -> Expression Bool dbVendor
 
     -- | IS NOT UNKNOWN
-    IsNotUnknown :: ColRef b dbVendor -> Expression Bool dbVendor
+    IsNotUnknown :: ColRef colType dbVendor -> Expression Bool dbVendor
 
     -- | IS NULL.
-    IsNull :: ColRef b dbVendor -> Expression Bool dbVendor
+    IsNull :: ColRef colType dbVendor -> Expression Bool dbVendor
 
     -- | IS TRUE.
     IsTrue :: ColRef Bool dbVendor -> Expression Bool dbVendor
 
     -- | IS UNKNOWN.
-    IsUnknown :: ColRef b dbVendor -> Expression Bool dbVendor
+    IsUnknown :: ColRef colType dbVendor -> Expression Bool dbVendor
 
     -- | BETWEEN. Note: it can also apply for textual values.
     NotBetween ::
@@ -496,125 +496,155 @@ data Expression b dbVendor where
          -> Expression Bool dbVendor
 
     -- | Equality ("=") operator.
-    Equal :: ColRef b dbVendor -> ColRef b dbVendor ->Expression Bool dbVendor
+    Equal ::
+           ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression Bool dbVendor
 
     -- | Greater than (">") operator.
-    GreaterThan :: ColRef b dbVendor -> ColRef b dbVendor ->Expression Bool dbVendor
+    GreaterThan ::
+           ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression Bool dbVendor
 
     -- | Greater than or equal to (">=") operator.
-    GreaterThanOrEqTo :: ColRef b dbVendor -> ColRef b dbVendor ->Expression Bool dbVendor
+    GreaterThanOrEqTo ::
+           ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression Bool dbVendor
 
     -- | IN.
-    In :: ColRef b dbVendor -> ColRef [b] dbVendor -> Expression Bool dbVendor
+    In ::
+           ColRef colType dbVendor
+        -> ColRef [colType] dbVendor
+        -> Expression Bool dbVendor
 
     -- | IS DISTINCT FROM.
-    IsDistinctFrom  :: ColRef b dbVendor -> ColRef b dbVendor -> Expression Bool dbVendor
+    IsDistinctFrom  ::
+           ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression Bool dbVendor
 
     -- | IS NOT DISTINCT FROM.
-    IsNotDistinctFrom :: ColRef b dbVendor -> ColRef b dbVendor -> Expression Bool dbVendor
+    IsNotDistinctFrom ::
+           ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression Bool dbVendor
 
     -- | LIKE.
-    Like :: ColRef String dbVendor -> ColRef String dbVendor -> Expression Bool dbVendor
+    Like ::
+           ColRef String dbVendor
+        -> ColRef String dbVendor
+        -> Expression Bool dbVendor
 
     -- | Unequality ("<>") operator.
-    NotEqual :: ColRef b dbVendor -> ColRef b dbVendor -> Expression Bool dbVendor
+    NotEqual ::
+          ColRef colType dbVendor
+       -> ColRef colType dbVendor
+       -> Expression Bool dbVendor
 
     -- | NOT IN. Note: it can be any types but no arrays.
-    NotIn :: ColRef b dbVendor -> ColRef [b] dbVendor -> Expression Bool dbVendor
+    NotIn ::
+          ColRef colType dbVendor
+       -> ColRef [colType] dbVendor
+       -> Expression Bool dbVendor
 
     -- | Smaller than ("<") operator.
-    SmallerThan :: ColRef b dbVendor -> ColRef b dbVendor -> Expression Bool dbVendor
+    SmallerThan ::
+          ColRef colType dbVendor
+       -> ColRef colType dbVendor
+       -> Expression Bool dbVendor
 
     -- | Smaller than or equal to ("<=") operator.
     SmallerThanOrEqTo ::
-           SQLOrd b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
+           SQLOrd colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
         -> Expression Bool dbVendor
 
     -- - Numeric functions
     -- | Addition ("+") operator.
     Add ::
-           Num b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> Expression b dbVendor
+           Num colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression colType dbVendor
 
     -- | Bitwise AND ("&") operator.
     BitAnd ::
-           Num b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> Expression b dbVendor
+           Num colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression colType dbVendor
 
     -- | Bitwise OR ("|") operator.
     BitOr ::
-           Num b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> Expression b dbVendor
+           Num colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression colType dbVendor
 
     -- | Bitwise shift left  ("<<") operator.
     BitShiftLeft  ::
-           Num b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> Expression b dbVendor
+           Num colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression colType dbVendor
 
     -- | Bitwise shift right  (">>") operator.
     BitShiftRight ::
-           Num b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> Expression b dbVendor
+           Num colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression colType dbVendor
 
     -- | Division ("/") operator.
     Divide ::
-           Num b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> Expression b dbVendor
+           Num colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression colType dbVendor
 
     -- | Modulo - remainer - ("%") operator.
     Modulo ::
-           Num b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> Expression b dbVendor
+           Num colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression colType dbVendor
 
     -- | "*" Multiplication operator.
     Multiply ::
-           Num b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> Expression b dbVendor
+           Num colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression colType dbVendor
 
     -- | Subtraction "-" operator.
     Substract ::
-           Num b
-        => ColRef b dbVendor
-        -> ColRef b dbVendor
-        -> Expression b dbVendor
+           Num colType
+        => ColRef colType dbVendor
+        -> ColRef colType dbVendor
+        -> Expression colType dbVendor
 
     -- | COUNT function.
-    Count :: ColRef b dbVendor -> Expression Int dbVendor
+    Count :: ColRef colType dbVendor -> Expression Int dbVendor
 
     -- | MAX function. Note: it can also operates on strings in SQL.
-    Max :: Num b => ColRef b dbVendor -> Expression b dbVendor
+    Max :: Num colType => ColRef colType dbVendor -> Expression colType dbVendor
 
     -- | MIN function. Note: it can also operates on strings in SQL.
-    Min :: Num b => ColRef b dbVendor -> Expression b dbVendor
+    Min :: Num colType => ColRef colType dbVendor -> Expression colType dbVendor
 
     -- | SUM function.
-    Sum :: Num b => ColRef b dbVendor -> Expression b dbVendor
+    Sum :: Num colType => ColRef colType dbVendor -> Expression colType dbVendor
 
     -- | RANDOM number function.
-    Random :: Num b => Expression b dbVendor
+    Random :: Num colType => Expression colType dbVendor
 
     {-|
     Function returning the primary key of the last inserted row.
     -}
-    LastInsertId :: Expression b dbVendor
+    LastInsertId :: Expression colType dbVendor
 
     -- - Date functions.
 
@@ -627,7 +657,7 @@ data Expression b dbVendor where
 
 -- | Expression wrapper "hiding" the types of an expression.
 data ExprWrap dbVendor where
-    ExprWrap :: Expression b dbVendor -> ExprWrap dbVendor
+    ExprWrap :: Expression colType dbVendor -> ExprWrap dbVendor
 
 ----------------------------------------
 -- Data definition
@@ -736,20 +766,21 @@ data View dbVendor = View
     }
 
 -- | A column in a table.
-data Column b dbVendor = Column
+data Column colType dbVendor = Column
     {
       -- | Name.
       _colName :: String
 
       -- | Data type.
-    , _colType :: DataType b dbVendor
+    , _colType :: DataType colType dbVendor
 
       -- | Constraints.
     , _colConstraints :: [ColConstraint dbVendor]
     }
 
 -- | Column wrapper "hiding" the types "b" of different columns.
-data ColWrap dbVendor where ColWrap :: Column b dbVendor -> ColWrap dbVendor
+data ColWrap dbVendor where
+    ColWrap :: Column colType dbVendor -> ColWrap dbVendor
 
 colWrapName :: Lens' (ColWrap dbVendor ) String
 colWrapName =
@@ -774,7 +805,7 @@ colWrapConstraints =
         setter (ColWrap col) name = ColWrap $ col {_colConstraints = name}
 
 -- | SQL data types. Used to define the type of a column.
-data DataType b dbVendor where
+data DataType colType dbVendor where
 
     Bool :: DataType Bool dbVendor
 
@@ -802,7 +833,7 @@ data DataType b dbVendor where
 
 -- | Data type wrapper "hidding" the "b" type.
 data DataTypeWrap dbVendor where
-    DataTypeWrap :: DataType b dbVendor -> DataTypeWrap dbVendor
+    DataTypeWrap :: DataType colType dbVendor -> DataTypeWrap dbVendor
 
 -- | Constraint on a column.
 data ColConstraint dbVendor = ColConstraint
@@ -822,7 +853,7 @@ data ColConstraintType dbVendor where
     Check :: Expression Bool dbVendor -> ColConstraintType dbVendor
 
     -- | DEFAULT (value).
-    Default :: Expression b dbVendor -> ColConstraintType dbVendor
+    Default :: Expression colType dbVendor -> ColConstraintType dbVendor
 
     -- | NOT NULL.
     NotNull :: ColConstraintType dbVendor
@@ -970,43 +1001,48 @@ data TableRefAs dbVendor = TableRefAs
 Column definition, which includes a reference to a table for qualified
 column names.
 -}
-data ColDef b dbVendor = ColDef
+data ColDef colType dbVendor = ColDef
     {
       -- | Column.
-      _colExpr :: (Column b dbVendor)
+      _colExpr :: (Column colType dbVendor)
 
       -- | Table which will be used for the qualified column name.
     , _colExprTableLabel :: Maybe (TableRef dbVendor)
     }
 
 -- | Column definition wrapper "hidding" the type "b".
-data ColDefWrap dbVendor where ColDefWrap :: ColDef b dbVendor -> ColDefWrap dbVendor
+data ColDefWrap dbVendor where
+    ColDefWrap :: ColDef colType dbVendor -> ColDefWrap dbVendor
 
 {-|
 Generic definition of a column reference used in SELECT queries or in the WHERE
 clause of UPDATE statements.
 -}
-data ColRef b dbVendor = ColRef
+data ColRef colType dbVendor = ColRef
     {
       -- | Expression of the column reference
       --   (which is not necesserely a column).
-      _colRefExpr  :: Expression b dbVendor
+      _colRefExpr  :: Expression colType dbVendor
 
       -- | Label used to reference the column reference (AS).
     , _colRefLabel :: Maybe String
     }
 
 -- | Column reference wrapper "hidding" the type "b".
-data ColRefWrap dbVendor where ColRefWrap :: ColRef b dbVendor -> ColRefWrap dbVendor
+data ColRefWrap dbVendor where
+    ColRefWrap :: ColRef colType dbVendor -> ColRefWrap dbVendor
 
 -- | Values which can be used in data manipulation statements.
-data Value b dbVendor where
+data Value colType dbVendor where
 
     -- | Boolean value.
     BoolVal :: Bool -> Value Bool dbVendor
 
     -- | Numeric value.
-    NumericVal :: (Show b, Num b) => b -> Value Numeric dbVendor
+    NumericVal ::
+          (Show colType, Num colType)
+        => colType
+        -> Value Numeric dbVendor
 
     -- | Float value.
     FloatVal :: Float -> Value Float dbVendor
@@ -1021,23 +1057,23 @@ data Value b dbVendor where
     StringVal :: String -> Value String dbVendor
 
     -- | Value of generic type which does not need to be quoted.
-    GenVal :: (Raw c, Show c) => c -> Value b dbVendor
+    GenVal :: (Raw c, Show c) => c -> Value colType dbVendor
 
     -- | Value of generic type which needs must quoted.
-    GenQVal :: String -> Value b dbVendor
+    GenQVal :: String -> Value colType dbVendor
 
     -- | Default value (for INSERT, UPDATE or CREATE TABLE statements).
-    DefaultVal  :: Value b dbVendor
+    DefaultVal  :: Value colType dbVendor
 
     -- Null values.
 
     -- | NULL value of generic type.
-    NullVal :: Value b dbVendor
+    NullVal :: Value colType dbVendor
 
     -- Placeholders
 
     -- | Placeholder for a value of generic type.
-    Placeholder :: Value b dbVendor
+    Placeholder :: Value colType dbVendor
 
     -- | Placeholder for a boolean value.
     PlaceBool :: Value Bool dbVendor
@@ -1059,42 +1095,42 @@ data Value b dbVendor where
 
 -- | Value wrapper to hide the type "b".
 data ValueWrap a where
-    ValueWrap :: Value b dbVendor -> ValueWrap dbVendor
+    ValueWrap :: Value colType dbVendor -> ValueWrap dbVendor
 
 --------------------
 -- SELECT
 --------------------
 
 -- | SELECT statement.
-data Select b dbVendor =
+data Select colType dbVendor =
 
       -- | SELECT query.
-      Single (SelectQ b dbVendor)
+      Single (SelectQ colType dbVendor)
 
       -- | Combined query such as UNION.
-    | Combined (Combination dbVendor) [Select b dbVendor]
+    | Combined (Combination dbVendor) [Select colType dbVendor]
 
 -- | Set a specific clause of all select queries of a SELECT statement.
 setSelects ::
 
        -- | Lens.
-       ASetter (SelectQ b dbVendor) (SelectQ b dbVendor) d c
+       ASetter (SelectQ colType dbVendor) (SelectQ colType dbVendor) d c
 
        -- | Value to set.
     -> c
 
        -- | Original SELECT query.
-    -> Select b dbVendor
+    -> Select colType dbVendor
 
        -- | SELECT query with the newly set value.
-    -> Select b dbVendor
+    -> Select colType dbVendor
 setSelects l val query =
     case query of
         Single sq -> Single $ set l val sq
         Combined combi sqs -> Combined combi $ map (setSelects l val) sqs
 
 -- | Return the select queries of a SELECT statement.
-getSelects :: Select b dbVendor -> [SelectQ b dbVendor]
+getSelects :: Select colType dbVendor -> [SelectQ colType dbVendor]
 getSelects (Single s) = [s]
 getSelects (Combined _ selects) = concat $ map getSelects selects
 
@@ -1118,13 +1154,13 @@ More concretely, they are:
   - HAVING which is part of the GROUP BY clause;
   - OFFSET and LIMIT part of the ORDER BY clause.
 -}
-data SelectQ b dbVendor = SelectQ
+data SelectQ colType dbVendor = SelectQ
     {
       -- | Type of the SELECT (ALL or DISTINCT).
       _selectType :: SelectType dbVendor
 
       -- | Selected columns
-    , _selectCols :: Selection b dbVendor
+    , _selectCols :: Selection colType dbVendor
 
       -- | FROM clause.
     , _selectFrom :: Maybe (From dbVendor)
@@ -1150,7 +1186,7 @@ data SelectQ b dbVendor = SelectQ
 
 -- | SELECT statement wrapper.
 data SelectWrap dbVendor where
-    SelectWrap :: Select b dbVendor -> SelectWrap dbVendor
+    SelectWrap :: Select colType dbVendor -> SelectWrap dbVendor
 
 -- Selection clause
 --------------------
@@ -1162,20 +1198,20 @@ data SelectType dbVendor =
    | DistinctOn [ColRefWrap dbVendor]
 
 -- | Columns selected by a SELECT query.
-data Selection b dbVendor where
+data Selection colType dbVendor where
 
     -- | A single column.
     --   The returned type is a list representation of the type of that column.
     --   For example, if the column is a Numeric type
     --   then the returned type "b" is [Numeric].
-    TSelection :: ColRef b dbVendor -> Selection b dbVendor
+    TSelection :: ColRef colType dbVendor -> Selection colType dbVendor
 
     -- | Multiple columns of the same type.
     --   The returned type is a list of list representation of the type of
     --   the columns.
     --   For example, if the columns are of type Numeric the return type "b"
     --   will be [[Numeric]].
-    TsSelection :: [ColRef b dbVendor] -> Selection b dbVendor
+    TsSelection :: [ColRef colType dbVendor] -> Selection colType dbVendor
 
     -- | A single column of undefined type.
     --   The returned type is [Undefined].
@@ -1207,10 +1243,10 @@ data Selection b dbVendor where
 
 -- | Selection wrapper.
 data SelectionWrap dbVendor where
-    SelectionWrap :: Selection b dbVendor -> SelectionWrap dbVendor
+    SelectionWrap :: Selection colType dbVendor -> SelectionWrap dbVendor
 
 -- | Return the selected columns of a Selection.
-getSelectedCols :: Selection b dbVendor -> [ColRefWrap dbVendor]
+getSelectedCols :: Selection colType dbVendor -> [ColRefWrap dbVendor]
 getSelectedCols (TSelection   col)  = [ColRefWrap col]
 getSelectedCols (TsSelection  cols) = map ColRefWrap cols
 getSelectedCols (USelection   col)  = [col]
@@ -1355,10 +1391,10 @@ data Assignment dbVendor where
     Assignment ::
         {
           -- | Column to which the value is assigned.
-          _assignCol :: Column b dbVendor
+          _assignCol :: Column colType dbVendor
 
           -- | Assigned value.
-        , _assignExpr :: Expression b dbVendor
+        , _assignExpr :: Expression colType dbVendor
         } -> Assignment dbVendor
 
 getAssignCol :: Assignment dbVendor -> ColWrap dbVendor

@@ -375,11 +375,11 @@ class ToTable a b | a -> b where
 -- add a String instance?
 
 -- | Create a table from itself.
-instance ToTable (Table a) (Table a) where
+instance ToTable (Table dbVendor) (Table dbVendor) where
     table = id
 
 -- | Create a table reference alias using AS.
-alias :: ToTableRef a (TableRef b) => a -> String -> TableRef b
+alias :: ToTableRef a (TableRef dbVendor) => a -> String -> TableRef dbVendor
 alias t name =
     setAlias ref
     where
@@ -397,13 +397,13 @@ which can then be used in a query.
 class ToTableRef a b | a -> b where
     tableRef :: a -> b
 
-instance ToTableRef (Join a) (TableRef a) where
+instance ToTableRef (Join dbVendor) (TableRef dbVendor) where
     tableRef j = JoinRef j Nothing
 
-instance ToTableRef (Table a) (TableRef a) where
+instance ToTableRef (Table dbVendor) (TableRef dbVendor) where
     tableRef name = TableRef name Nothing
 
-instance ToTableRef (TableRef a) (TableRef a) where
+instance ToTableRef (TableRef dbVendor) (TableRef dbVendor) where
     tableRef = id
 
 --------------------------------------------------------------------------------
@@ -414,14 +414,14 @@ instance ToTableRef (TableRef a) (TableRef a) where
 class ToCol a b | a -> b where
     toCol :: a -> b
 
-instance ToCol (Column b a) (Column b a) where
+instance ToCol (Column colType dbVendor) (Column colType dbVendor) where
     toCol = id
 
 -- | Create one column which can then be used in a query or a statement.
 col ::
-       String       -- ^ Name of the column.
-    -> DataType b a -- ^ Data type of the column.
-    -> Column   b a
+       String                    -- ^ Name of the column.
+    -> DataType colType dbVendor -- ^ Data type of the column.
+    -> Column   colType dbVendor
 col name d = Column name d []
 
 {-|
@@ -431,39 +431,39 @@ in SELECT clause.
 class ToColRef a b | a -> b where
     colRef :: a -> b
 
-instance ToColRef (ColRef b a) (ColRef b a) where
+instance ToColRef (ColRef colType dbVendor) (ColRef colType dbVendor) where
     colRef = id
 
-instance ToColRef (ColRefWrap a) (ColRef Undefined a) where
+instance ToColRef (ColRefWrap dbVendor) (ColRef Undefined dbVendor) where
     -- The unsafeCoerce allows to have a ColRef of undefined type returned.
     colRef (ColRefWrap ref) = unsafeCoerce ref
 
-instance ToColRef (Column b a) (ColRef b a) where
+instance ToColRef (Column colType dbVendor) (ColRef colType dbVendor) where
     colRef a = ColRef (ColExpr $ ColDef a Nothing) Nothing
 
-instance ToColRef (Expression b a) (ColRef b a) where
+instance ToColRef (Expression colType dbVendor) (ColRef colType dbVendor) where
     colRef e = ColRef e Nothing
 
-instance ToColRef (Value b a) (ColRef b a) where
+instance ToColRef (Value colType dbVendor) (ColRef colType dbVendor) where
     colRef val = ColRef (Value val) Nothing
 
-instance ToColRef [Value b a] (ColRef [b] a) where
+instance ToColRef [Value colType dbVendor] (ColRef [colType] dbVendor) where
     colRef xs = ColRef (Values $ map value xs) Nothing
 
-instance ToColRef (Select b a) (ColRef b a) where
+instance ToColRef (Select colType dbVendor) (ColRef colType dbVendor) where
     colRef query = ColRef (SelectExpr query) Nothing
 
-instance ToColRef (Query b a) (ColRef b a) where
+instance ToColRef (Query colType dbVendor) (ColRef colType dbVendor) where
     colRef = colRef . execStmt
 
 -- | Create a column reference with a qualified name.
 (/.) ::
-    (  ToTableRef a (TableRef c)
-    ,  ToColRef   b (ColRef d c)
+    (  ToTableRef a (TableRef dbVendor)
+    ,  ToColRef   b (ColRef colType dbVendor)
     )
-    => a
-    -> b
-    -> ColRef d c
+    => a -- ^ Name/reference of the table.
+    -> b -- ^ Name/reference of the column.
+    -> ColRef colType dbVendor
 (/.) tName cName =
     case cRef^.colRefExpr of
         ColExpr colDef ->
@@ -476,7 +476,11 @@ instance ToColRef (Query b a) (ColRef b a) where
         cRef = colRef cName
 
 -- | Create a column reference label using AS.
-as_ :: ToColRef a (ColRef b c) => a -> String -> ColRef b c
+as_ ::
+       ToColRef a (ColRef colType dbVendor)
+    => a      -- ^ Name/reference of the column.
+    -> String -- ^ Output name.
+    -> ColRef colType dbVendor
 as_ cRef name = set colRefLabel (Just name) (colRef cRef)
 
 {-|
@@ -484,19 +488,22 @@ Coerce a type to a 'ColRefWrap'. This is used to wrap the columns
 of different types into one single type. Then such standardized type can
 be used in lists.
 -}
-colRefWrap :: ToColRef a (ColRef c b) => a -> ColRefWrap b
+colRefWrap :: ToColRef a (ColRef colType dbVendor) => a -> ColRefWrap dbVendor
 colRefWrap = wrap . colRef
 
 {-|
 Create a SQL expression which can then be used in condition or column reference.
 -}
-expr :: ToColRef a (ColRef b c) => a -> Expression b c
+expr :: ToColRef a (ColRef colType dbVendor) => a -> Expression colType dbVendor
 expr = view colRefExpr . colRef
 
 {-|
 Create SQL expressions which can then be used in condition or column references.
 -}
-exprs :: ToColRef a (ColRef b c) => [a] -> [Expression b c]
+exprs ::
+       ToColRef a (ColRef colType dbVendor)
+    => [a]
+    -> [Expression colType dbVendor]
 exprs = map expr
 
 --------------------------------------------------------------------------------
@@ -504,15 +511,15 @@ exprs = map expr
 --------------------------------------------------------------------------------
 
 -- | Create a BOOLEAN.
-boolean :: DataType Bool a
+boolean :: DataType Bool dbVendor
 boolean = Bool
 
 -- | Create a BIGINT.
-bigInt :: DataType Int a
+bigInt :: DataType Int dbVendor
 bigInt = BigInt
 
 -- | Create a CHAR.
-char :: Int -> DataType String a
+char :: Int -> DataType String dbVendor
 char = Char
 
 -- | Create a DATE.
@@ -520,25 +527,25 @@ date :: DataType a Time
 date = Date
 
 -- | Create an INTEGER.
-integer :: DataType Int a
+integer :: DataType Int dbVendor
 integer = Integer
 
 -- | Create a SMALLINT.
-smallInt :: DataType Int a
+smallInt :: DataType Int dbVendor
 smallInt = SmallInt
 
 -- | Create a VARCHAR.
-varchar :: Int -> DataType String a
+varchar :: Int -> DataType String dbVendor
 varchar = Varchar
 
 -- | Create a column/value pair to be used in an INSERT or UPDATE statement.
 assign ::
-    (  ToCol   a (Column c d)
-    ,  ToColRef b (ColRef c d)
+    (  ToCol   a (Column colType dbVendor)
+    ,  ToColRef b (ColRef colType dbVendor)
     )
     => a -- ^ Column or name of the column.
     -> b -- ^ Value for this column. It can also be an expression.
-    -> Assignment d
+    -> Assignment dbVendor
 assign a val = Assignment (toCol a) (expr val)
 
 --------------------------------------------------------------------------------
@@ -557,28 +564,28 @@ way with always the same function call.
 class Wrapper a b | a -> b where
     wrap :: a -> b
 
-instance Wrapper (Column b a) (ColWrap a) where
+instance Wrapper (Column colType dbVendor) (ColWrap dbVendor) where
     wrap = ColWrap
 
-instance Wrapper (ColRef b a) (ColRefWrap a) where
+instance Wrapper (ColRef colType dbVendor) (ColRefWrap dbVendor) where
     wrap = ColRefWrap
 
-instance Wrapper (Select b a) (SelectWrap a) where
+instance Wrapper (Select colType dbVendor) (SelectWrap dbVendor) where
     wrap = SelectWrap
 
-instance Wrapper (Query b a) (SelectWrap a) where
+instance Wrapper (Query colType dbVendor) (SelectWrap dbVendor) where
     wrap = wrap . execStmt
 
-instance Wrapper (Value b a) (ValueWrap a) where
+instance Wrapper (Value colType dbVendor) (ValueWrap dbVendor) where
     wrap = ValueWrap
 
 --------------------------------------------------------------------------------
 -- Composition
 --------------------------------------------------------------------------------
 
-type CreateStmt a = State (Create a) ()
+type CreateStmt dbVendor = State (Create dbVendor) ()
 
-type Query b a = State (Select b a) ()
+type Query colType dbVendor = State (Select colType dbVendor) ()
 
 type InsertStmt colType dbVendor = State (Insert colType dbVendor) ()
 
@@ -594,35 +601,35 @@ monad.
 class ToExec a b | a -> b where
     execStmt :: a -> b
 
-instance ToExec (CreateStmt a) (Create a) where
+instance ToExec (CreateStmt dbVendor) (Create dbVendor) where
     execStmt q = execState q $ CreateTable False (Table "" [] [])
 
-instance ToExec (TableConstraintType a) (Create a) where
+instance ToExec (TableConstraintType dbVendor) (Create dbVendor) where
     execStmt c =
         CreateTable False (Table "" [] [TableConstraint Nothing c Nothing])
 
-instance ToExec (Select b a) (Select b a) where
+instance ToExec (Select colType dbVendor) (Select colType dbVendor) where
     execStmt = id
 
-instance ToExec (Query b a) (Select b a) where
+instance ToExec (Query colType dbVendor) (Select colType dbVendor) where
     execStmt q = execState q $ simpleSelect' $ TsSelection []
 
-instance ToExec (Insert b a) (Insert b a) where
+instance ToExec (Insert colType dbVendor) (Insert colType dbVendor) where
     execStmt = id
 
-instance ToExec (InsertStmt b a) (Insert b a) where
+instance ToExec (InsertStmt colType dbVendor) (Insert colType dbVendor) where
     execStmt q = execState q $ Insert (Table "" [] []) [] Nothing
 
-instance ToExec (Delete b a) (Delete b a) where
+instance ToExec (Delete colType dbVendor) (Delete colType dbVendor) where
     execStmt = id
 
-instance ToExec (DeleteStmt b a) (Delete b a) where
+instance ToExec (DeleteStmt colType dbVendor) (Delete colType dbVendor) where
     execStmt q = execState q $ Delete (Table "" [] []) Nothing Nothing
 
-instance ToExec (Update b a) (Update b a) where
+instance ToExec (Update colType dbVendor) (Update colType dbVendor) where
     execStmt = id
 
-instance ToExec (UpdateStmt b a) (Update b a) where
+instance ToExec (UpdateStmt colType dbVendor) (Update colType dbVendor) where
     execStmt q = execState q $ Update (Table "" [] []) [] Nothing Nothing
 
 {-|
@@ -631,9 +638,9 @@ function.
 -}
 class Add a b where
     addElem ::
-           a c -- ^ Target.
-        -> b c -- ^ Element to add.
-        -> a c -- ^ Target returned with the added element.
+           a dbVendor -- ^ Target.
+        -> b dbVendor -- ^ Element to add.
+        -> a dbVendor -- ^ Target returned with the added element.
 
 -- | Add one constraint to a column.
 instance Add ColWrap ColConstraint where
@@ -665,21 +672,24 @@ are just aliases of the id function.
 class ToAddable a b | a -> b where
     toConvertible :: a -> b
 
-instance ToAddable (ColConstraint a) (ColConstraint a) where
+instance ToAddable (ColConstraint dbVendor) (ColConstraint dbVendor) where
     toConvertible = id
 
-newtype ColConstraints a = ColConstraints [ColConstraint a]
+newtype ColConstraints dbVendor = ColConstraints [ColConstraint dbVendor]
 
-instance ToAddable [ColConstraint a] (ColConstraints a) where
+instance ToAddable [ColConstraint dbVendor] (ColConstraints dbVendor) where
     toConvertible = ColConstraints
 
-instance ToAddable (ColConstraintType a) (ColConstraintType a) where
-    toConvertible = id
+instance ToAddable
+    (ColConstraintType dbVendor) (ColConstraintType dbVendor) where
+        toConvertible = id
 
-newtype ColConstraintTypes a = ColConstraintTypes [ColConstraintType a]
+newtype ColConstraintTypes dbVendor =
+    ColConstraintTypes [ColConstraintType dbVendor]
 
-instance ToAddable [ColConstraintType a] (ColConstraintTypes a) where
-    toConvertible = ColConstraintTypes
+instance ToAddable
+    [ColConstraintType dbVendor] (ColConstraintTypes dbVendor) where
+        toConvertible = ColConstraintTypes
 
 ----------------------------------------
 -- Public
@@ -693,7 +703,7 @@ For example, if you wish to add an ORDER BY clause to a SELECT query you can do
 it as follow:
 > selectQuery /++ orderByClause
 -}
-(/++) :: (Add a d, ToAddable b (d c)) => a c -> b -> a c
+(/++) :: (Add a d, ToAddable b (d dbVendor)) => a dbVendor -> b -> a dbVendor
 (/++) target = addElem target . toConvertible
 
 --------------------------------------------------------------------------------
@@ -712,101 +722,115 @@ maybeString name = Just name
 --------------------------------------------------------------------------------
 
 -- | Create a CHECK constraint.
-check :: Expression Bool b -> ColConstraintType b
+check :: Expression Bool dbVendor -> ColConstraintType dbVendor
 check = Check
 
 -- | Create a CHECK constraint to be used in a table constraint.
-checkT :: Expression Bool b -> TableConstraintType b
+checkT :: Expression Bool dbVendor -> TableConstraintType dbVendor
 checkT = TCCheck
 
 -- | Create a constraint which shall then be applied on a column.
-colConstraint :: String -> ColConstraintType a -> ColConstraint a
+colConstraint :: String -> ColConstraintType dbVendor -> ColConstraint dbVendor
 colConstraint name = ColConstraint (maybeString name)
 
 -- | Create a CREATE TABLE statement.
-createTable :: ToTable a (Table b) => a -> [ColWrap b] -> CreateStmt b
+createTable ::
+       ToTable a (Table dbVendor)
+    => a
+    -> [ColWrap dbVendor]
+    -> CreateStmt dbVendor
 createTable t c = modify (\_ -> CreateTable False $ table t & tableCols .~ c)
 
 -- | Create a CREATE TABLE IF NOT EXIST statement.
-createTableIfNotExist :: ToTable a (Table b) => a -> [ColWrap b] -> CreateStmt b
+createTableIfNotExist ::
+       ToTable a (Table dbVendor)
+    => a
+    -> [ColWrap dbVendor]
+    -> CreateStmt dbVendor
 createTableIfNotExist t c =
     modify (\_ -> CreateTable True (table t & tableCols .~ c))
 
 -- | Create a CREATE VIEW statement.
 createView ::
-       View a   -- ^ Select query from which the view is created.
-    -> Create a
+       View dbVendor   -- ^ Select query from which the view is created.
+    -> Create dbVendor
 createView = CreateView False
 
 -- | Create a CREATE VIEW IF NOT EXIST statement.
 createViewIfNotExist ::
-       View a   -- ^ Select query from which the view is created.
-    -> Create a
+       View dbVendor   -- ^ Select query from which the view is created.
+    -> Create dbVendor
 createViewIfNotExist = CreateView True
 
 -- | Create a DEFAULT value constraint.
-defaultValue :: ToColRef a (ColRef b c) => a -> ColConstraintType c
+defaultValue ::
+       ToColRef a (ColRef colType dbVendor)
+    => a
+    -> ColConstraintType dbVendor
 defaultValue e = Default $ expr e
 
 -- | Create a DROP TABLE statement.
 dropTable ::
-       (ToTable a (Table b))
+       (ToTable a (Table dbVendor))
     => a      -- ^ Table to drop.
-    -> Drop b
+    -> Drop dbVendor
 dropTable = DropTable False . table
 
 dropTableIfExists ::
-       ToTable a (Table b)
+       ToTable a (Table dbVendor)
     => a      -- ^ Table to drop.
-    -> Drop b
+    -> Drop dbVendor
 dropTableIfExists = DropTable True . table
 
 -- | Create a DROP VIEW statement.
 dropView ::
-       View a -- ^ View to drop.
-    -> Drop a
+       View dbVendor -- ^ View to drop.
+    -> Drop dbVendor
 dropView = DropView False
 
 -- | Create a DROP VIEW IF EXISTS statement.
 dropViewIfExists ::
-       View a -- ^ View to drop.
-    -> Drop a
+       View dbVendor -- ^ View to drop.
+    -> Drop dbVendor
 dropViewIfExists = DropView True
 
 -- | Create a FOREIGN KEY constraint.
 foreignKey ::
-    ( ToList b [e]
-    , ToTable a (Table d)
-    , ToCol e (Column c d)
+    ( ToList b [c]
+    , ToTable a (Table dbVendor)
+    , ToCol c (Column colType dbVendor)
     )
     => a -- ^ Table.
     -> b -- ^ Columns.
-    -> ColConstraintType d
+    -> ColConstraintType dbVendor
 foreignKey t c =
     Reference $ ForeignKey (table t) cols Nothing Nothing
     where
         cols = map (ColWrap . toCol) $ toList c
 
 -- | Create a NOT NULL constraint.
-notNull :: ColConstraintType a
+notNull :: ColConstraintType dbVendor
 notNull = NotNull
 
 -- | Create a NULL constraint.
-nullable :: ColConstraintType a
+nullable :: ColConstraintType dbVendor
 nullable = Null
 
 -- | Create a PRIMARY KEY constraint.
 primary ::
        Bool -- ^ If True, the primary key will be an AUTOINCREMENT.
-    -> ColConstraintType a
+    -> ColConstraintType dbVendor
 primary = Primary
 
 -- | Add a PRIMARY KEY constraint to a table constraint 'State'.
-primaryT :: (ToList a [d], ToCol d (Column b c)) => a -> CreateStmt c
+primaryT ::
+       (ToList a [b], ToCol b (Column colType dbVendor))
+    => a
+    -> CreateStmt dbVendor
 primaryT c = constraint "" $ TCPrimaryKey $ map (ColWrap . toCol) $ toList c
 
 -- | Add a table constraint to a table.
-constraint :: ToExec a (Create b) => String -> a -> CreateStmt b
+constraint :: ToExec a (Create dbVendor) => String -> a -> CreateStmt dbVendor
 constraint name con =
     modify modifyCreate
     where
@@ -823,11 +847,11 @@ constraint name con =
         getCreateConsts _                 = []
 
 -- | Create an UNIQUE column constraint.
-unique :: ColConstraintType a
+unique :: ColConstraintType dbVendor
 unique = Unique
 
 -- | Create an UNIQUE table constraint
-uniqueT :: [ColWrap a] -> CreateStmt a
+uniqueT :: [ColWrap dbVendor] -> CreateStmt dbVendor
 uniqueT cs = constraint "" $ TCUnique cs
 
 --------------------------------------------------------------------------------
@@ -843,11 +867,11 @@ class ToJoinClause a b | a -> b where
     joinClause :: a -> b
 
 -- | Create an ON join clause from a boolean function.
-instance ToJoinClause (Expression Bool a) (JoinClause a) where
+instance ToJoinClause (Expression Bool dbVendor) (JoinClause dbVendor) where
     joinClause = JoinClauseOn
 
 -- | Create an USING join clause from a column.
-instance ToJoinClause (Column b a) (JoinClause a) where
+instance ToJoinClause (Column colType dbVendor) (JoinClause dbVendor) where
     joinClause = JoinClauseUsing . list . ColWrap
 
 {-|
@@ -857,33 +881,33 @@ ORDER BY clause.
 class ToSortRef a b | a -> b where
     sortRef :: a -> b
 
-instance ToSortRef (Column b a) (SortRef a) where
+instance ToSortRef (Column colType dbVendor) (SortRef dbVendor) where
     sortRef c = SortRef (ColRefWrap $ colRef c) Nothing Nothing
 
-instance ToSortRef (ColWrap a) (SortRef a) where
+instance ToSortRef (ColWrap dbVendor) (SortRef dbVendor) where
     sortRef (ColWrap c) = SortRef (ColRefWrap $ colRef c) Nothing Nothing
 
-instance ToSortRef (ColRef b a) (SortRef a) where
+instance ToSortRef (ColRef colType dbVendor) (SortRef dbVendor) where
     sortRef ref = SortRef (ColRefWrap ref) Nothing Nothing
 
-instance ToSortRef (ColRefWrap a) (SortRef a) where
+instance ToSortRef (ColRefWrap dbVendor) (SortRef dbVendor) where
     sortRef ref = SortRef ref Nothing Nothing
 
-instance ToSortRef (SortRef a) (SortRef a) where
+instance ToSortRef (SortRef dbVendor) (SortRef dbVendor) where
     sortRef = id
 
 -- | Create a join on columns with a USING or ON clause.
 columnJoin ::
    (
-      ToTableRef   a (TableRef d)
-   ,  ToTableRef   b (TableRef d)
-   ,  ToJoinClause c (JoinClause d)
+      ToTableRef   a (TableRef dbVendor)
+   ,  ToTableRef   b (TableRef dbVendor)
+   ,  ToJoinClause c (JoinClause dbVendor)
    )
-   => JoinTypeCol d
-   -> a
-   -> b
-   -> c
-   -> Join d
+   => JoinTypeCol dbVendor -- ^ Type of join.
+   -> a                    -- ^ Name/reference of the first table.
+   -> b                    -- ^ Name/reference of the second table.
+   -> c                    -- ^ Join clause
+   -> Join dbVendor
 columnJoin joinType tableRef1 tableRef2 clause =
     JoinCol
          joinType
@@ -893,13 +917,13 @@ columnJoin joinType tableRef1 tableRef2 clause =
 
 -- | Create a join on tables (CROSS or NATURAL join).
 tableJoin ::
-    (  ToTableRef   a (TableRef c)
-    ,  ToTableRef   b (TableRef c)
+    (  ToTableRef   a (TableRef dbVendor)
+    ,  ToTableRef   b (TableRef dbVendor)
     )
-    => JoinTypeTable c
-    -> a
-    -> b
-    -> Join c
+    => JoinTypeTable dbVendor -- ^ Type of join.
+    -> a                      -- ^ Name/reference of the first table.
+    -> b                      -- ^ Name/reference of the second table.
+    -> Join dbVendor
 tableJoin joinType tableRef1 tableRef2 =
     JoinTable
         joinType
@@ -915,7 +939,7 @@ tableJoin joinType tableRef1 tableRef2 =
 ----------------------------------------
 
 -- | Create a Select query with only a column selection clause.
-simpleSelect' :: Selection b a -> Select b a
+simpleSelect' :: Selection colType dbVendor -> Select colType dbVendor
 simpleSelect' sel =
     Single $ SelectQ
         All
@@ -928,7 +952,7 @@ simpleSelect' sel =
         Nothing
         Nothing
 
-simpleSelect :: Selection b a -> Query b a
+simpleSelect :: Selection colType dbVendor -> Query colType dbVendor
 simpleSelect sel =
     modify (\(Single _) -> simpleSelect' sel)
 
@@ -945,35 +969,38 @@ class SelectConstr a b | a -> b where
     -- | Create a SELECT query.
     select :: a -> b
 
-instance SelectConstr (Select b a) (Query b a) where
+instance SelectConstr (Select colType dbVendor) (Query colType dbVendor) where
     select s = modify (\_ -> s)
 
-instance SelectConstr (ColRefWrap a) (Query [Undefined] a) where
+instance SelectConstr (ColRefWrap dbVendor) (Query [Undefined] dbVendor) where
     select = simpleSelect . selection
 
-instance SelectConstr [ColRefWrap a] (Query [[Undefined]] a) where
+instance SelectConstr [ColRefWrap dbVendor] (Query [[Undefined]] dbVendor) where
     select = simpleSelect . selection
 
-instance SelectConstr (Column b a) (Query [b] a) where
+instance SelectConstr (Column colType dbVendor) (Query [colType] dbVendor) where
     select = simpleSelect . selection
 
-instance SelectConstr [Column b a] (Query [[b]] a) where
+instance SelectConstr
+    [Column colType dbVendor] (Query [[colType]] dbVendor) where
+        select = simpleSelect . selection
+
+instance SelectConstr (ColWrap dbVendor) (Query [Undefined] dbVendor) where
     select = simpleSelect . selection
 
-instance SelectConstr (ColWrap a) (Query [Undefined] a) where
+instance SelectConstr [ColWrap dbVendor] (Query [[Undefined]] dbVendor) where
     select = simpleSelect . selection
 
-instance SelectConstr [ColWrap a] (Query [[Undefined]] a) where
+instance SelectConstr (ColRef colType dbVendor) (Query [colType] dbVendor) where
     select = simpleSelect . selection
 
-instance SelectConstr (ColRef b a) (Query [b] a) where
-    select = simpleSelect . selection
+instance SelectConstr
+    [ColRef colType dbVendor] (Query [[colType]] dbVendor) where
+        select = simpleSelect . selection
 
-instance SelectConstr [ColRef b a] (Query [[b]] a) where
-    select = simpleSelect . selection
-
-instance SelectConstr (Expression b a) (Query [b] a) where
-    select = simpleSelect . selection
+instance SelectConstr
+    (Expression colType dbVendor) (Query [colType] dbVendor) where
+        select = simpleSelect . selection
 
 {-|
 Create a SELECT DISTINCT query.
@@ -985,7 +1012,10 @@ If that query is a single query, it will become a select distinct one.
 If that query is a combination of select queries (UNION, EXCEPT, etc.) then
 all the queries will become select distinct ones.
 -}
-selectDistinct :: SelectConstr a (Query c b) => a -> Query c b
+selectDistinct ::
+       SelectConstr a (Query colType dbVendor)
+    => a
+    -> Query colType dbVendor
 selectDistinct sel =
     modify (\_ -> s)
     where
@@ -993,23 +1023,23 @@ selectDistinct sel =
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
-    ( ToColRef a (ColRef c d)
-    , ToColRef b (ColRef c d)
+    ( ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 isDistinctFrom colRef1 colRef2 =
     IsDistinctFrom (colRef colRef1) (colRef colRef2)
 
 -- | Create a IS NOT DISTINCT FROM operator.
 isNotDistinctFrom ::
-    ( ToColRef a (ColRef c d)
-    , ToColRef b (ColRef c d)
+    ( ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 isNotDistinctFrom colRef1 colRef2 =
     IsNotDistinctFrom (colRef colRef1) (colRef colRef2)
 
@@ -1033,19 +1063,21 @@ instance SelectionConstr
     [ColRefWrap dbVendor] (Selection [[Undefined]] dbVendor) where
         selection = UsSelection
 
-instance SelectionConstr (Column b dbVendor) (Selection [b] dbVendor) where
-    selection c = TSelection $ colRef column
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            column :: Column [b] dbVendor
-            column = unsafeCoerce c
+instance SelectionConstr
+    (Column colType dbVendor) (Selection [colType] dbVendor) where
+        selection c = TSelection $ colRef column
+            where
+                -- Unsafe coercion to the correct phantom types parameter.
+                column :: Column [colType] dbVendor
+                column = unsafeCoerce c
 
-instance SelectionConstr [Column b dbVendor] (Selection [[b]] dbVendor) where
-    selection cs = TsSelection $ map colRef columns
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            columns :: [Column [[b]] dbVendor]
-            columns = unsafeCoerce cs
+instance SelectionConstr
+    [Column colType dbVendor] (Selection [[colType]] dbVendor) where
+        selection cs = TsSelection $ map colRef columns
+            where
+                -- Unsafe coercion to the correct phantom types parameter.
+                columns :: [Column [[colType]] dbVendor]
+                columns = unsafeCoerce cs
 
 instance SelectionConstr
     (ColWrap dbVendor) (Selection [Undefined] dbVendor) where
@@ -1057,29 +1089,32 @@ instance SelectionConstr
             where
                 toColRef (ColWrap c) = ColRefWrap $ colRef c
 
-instance SelectionConstr (ColRef b dbVendor) (Selection [b] dbVendor) where
-    selection c = TSelection cRef
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            cRef :: ColRef [b] dbVendor
-            cRef = unsafeCoerce c
+instance SelectionConstr
+    (ColRef colType dbVendor) (Selection [colType] dbVendor) where
+        selection c = TSelection cRef
+            where
+                -- Unsafe coercion to the correct phantom types parameter.
+                cRef :: ColRef [colType] dbVendor
+                cRef = unsafeCoerce c
 
-instance SelectionConstr [ColRef b dbVendor] (Selection [[b]] dbVendor) where
-    selection cs = TsSelection cRefs
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            cRefs :: [ColRef [[b]] dbVendor]
-            cRefs = unsafeCoerce cs
+instance SelectionConstr
+    [ColRef colType dbVendor] (Selection [[colType]] dbVendor) where
+        selection cs = TsSelection cRefs
+            where
+                -- Unsafe coercion to the correct phantom types parameter.
+                cRefs :: [ColRef [[colType]] dbVendor]
+                cRefs = unsafeCoerce cs
 
-instance SelectionConstr (Expression b dbVendor) (Selection [b] dbVendor) where
-    selection c = TSelection $ colRef cRef
-        where
-            -- Unsafe coercion to the correct phantom types parameter.
-            cRef :: Expression [b] dbVendor
-            cRef = unsafeCoerce c
+instance SelectionConstr
+    (Expression colType dbVendor) (Selection [colType] dbVendor) where
+        selection c = TSelection $ colRef cRef
+            where
+                -- Unsafe coercion to the correct phantom types parameter.
+                cRef :: Expression [colType] dbVendor
+                cRef = unsafeCoerce c
 
 -- | Create a joker - "*" - character.
-(//*) :: Expression [Undefined] a
+(//*) :: Expression [Undefined] dbVendor
 (//*) = Joker
 
 ----------------------------------------
@@ -1087,7 +1122,10 @@ instance SelectionConstr (Expression b dbVendor) (Selection [b] dbVendor) where
 ----------------------------------------
 
 -- | Add a FROM clause to a SELECT query.
-from :: (ToList a [b], ToTableRef b (TableRef c)) => a -> Query d c
+from ::
+       (ToList a [b], ToTableRef b (TableRef dbVendor))
+    => a
+    -> Query colType dbVendor
 from tRef =
     modify (\s -> setSelects selectFrom (Just fromClause) s)
     where
@@ -1095,24 +1133,24 @@ from tRef =
 
 -- | Create a CROSS JOIN.
 crossJoin ::
-    (  ToTableRef a (TableRef c)
-    ,  ToTableRef b (TableRef c)
+    (  ToTableRef a (TableRef dbVendor)
+    ,  ToTableRef b (TableRef dbVendor)
     )
     => a
     -> b
-    -> Join c
+    -> Join dbVendor
 crossJoin = tableJoin CrossJoin
 
 -- | Create a FULL JOIN.
 fullJoin ::
-    ( ToTableRef   a (TableRef d)
-    , ToTableRef   b (TableRef d)
-    , ToJoinClause c (JoinClause d)
+    ( ToTableRef   a (TableRef dbVendor)
+    , ToTableRef   b (TableRef dbVendor)
+    , ToJoinClause c (JoinClause dbVendor)
     )
     => a      -- ^ First table reference.
     -> b      -- ^ Second table reference.
     -> c      -- ^ Join clause.
-    -> Join d
+    -> Join dbVendor
 fullJoin = columnJoin FullJoin
 
 {-|
@@ -1123,86 +1161,86 @@ If the join clause is a column, a string or a list of columns or strings, it
 will be an USING clause.
 -}
 innerJoin ::
-    ( ToTableRef   a (TableRef d)
-    , ToTableRef   b (TableRef d)
-    , ToJoinClause c (JoinClause d)
+    ( ToTableRef   a (TableRef dbVendor)
+    , ToTableRef   b (TableRef dbVendor)
+    , ToJoinClause c (JoinClause dbVendor)
     )
     => a      -- ^ First table reference.
     -> b      -- ^ Second table reference.
     -> c      -- ^ Join clause.
-    -> Join d
+    -> Join dbVendor
 innerJoin = columnJoin InnerJoin
 
 -- | Create a LEFT JOIN.
 leftJoin ::
-    ( ToTableRef   a (TableRef d)
-    , ToTableRef   b (TableRef d)
-    , ToJoinClause c (JoinClause d)
+    ( ToTableRef   a (TableRef dbVendor)
+    , ToTableRef   b (TableRef dbVendor)
+    , ToJoinClause c (JoinClause dbVendor)
     )
     => a -- ^ First table reference.
     -> b -- ^ Second table reference.
     -> c -- ^ Join clause.
-    -> Join d
+    -> Join dbVendor
 leftJoin = columnJoin LeftJoin
 
 -- | Create a NATURAL FULL JOIN.
 naturalFullJoin ::
-    (  ToTableRef a (TableRef c)
-    ,  ToTableRef b (TableRef c)
+    (  ToTableRef a (TableRef dbVendor)
+    ,  ToTableRef b (TableRef dbVendor)
     )
-    => a
-    -> b
-    -> Join c
+    => a -- ^ First table reference.
+    -> b -- ^ Second table reference.
+    -> Join dbVendor
 naturalFullJoin = tableJoin NaturalFullJoin
 
 -- | Create a NATURAL LEFT JOIN.
 naturalLeftJoin ::
-    (  ToTableRef a (TableRef c)
-    ,  ToTableRef b (TableRef c)
+    (  ToTableRef a (TableRef dbVendor)
+    ,  ToTableRef b (TableRef dbVendor)
     )
-    => a
-    -> b
-    -> Join c
+    => a -- ^ First table reference.
+    -> b -- ^ Second table reference.
+    -> Join dbVendor
 naturalLeftJoin = tableJoin NaturalLeftJoin
 
 -- | Create a NATURAL INNER JOIN.
 naturalInnerJoin ::
-    (  ToTableRef a (TableRef c)
-    ,  ToTableRef b (TableRef c)
+    (  ToTableRef a (TableRef dbVendor)
+    ,  ToTableRef b (TableRef dbVendor)
     )
-    => a
-    -> b
-    -> Join c
+    => a -- ^ First table reference.
+    -> b -- ^ Second table reference.
+    -> Join dbVendor
 naturalInnerJoin = tableJoin NaturalInnerJoin
 
 -- | Create a NATURAL RIGHT JOIN.
 naturalRightJoin ::
-    (  ToTableRef a (TableRef c)
-    ,  ToTableRef b (TableRef c)
+    (  ToTableRef a (TableRef dbVendor)
+    ,  ToTableRef b (TableRef dbVendor)
     )
-    => a
-    -> b
-    -> Join c
+    => a -- ^ First table reference.
+    -> b -- ^ Second table reference.
+    -> Join dbVendor
 naturalRightJoin = tableJoin NaturalRightJoin
 
 -- | Create a RIGHT JOIN.
 rightJoin ::
-    ( ToTableRef   a (TableRef d)
-    , ToTableRef   b (TableRef d)
-    , ToJoinClause c (JoinClause d)
+    ( ToTableRef   a (TableRef dbVendor)
+    , ToTableRef   b (TableRef dbVendor)
+    , ToJoinClause c (JoinClause dbVendor)
     )
     => a      -- ^ First table reference.
     -> b      -- ^ Second table reference.
     -> c      -- ^ Join clause.
-    -> Join d
+    -> Join dbVendor
 rightJoin = columnJoin RightJoin
 
 -- | Create a sub-query in a FROM clause.
 subQuery ::
-       (ToExec a (Select b c))
-    => a          -- ^ Sub-query.
-    -> String     -- ^ Alias of the sub-query.
-    -> TableRef c -- ^ Table reference.
+       (ToExec a (Select b dbVendor))
+    => a                 -- ^ Sub-query.
+    -> String            -- ^ Alias of the sub-query.
+    -> TableRef dbVendor -- ^ Table reference.
 subQuery sub name = SelectRef (SelectWrap $ execStmt sub) $ TableRefAs name []
 
 ----------------------------------------
@@ -1210,7 +1248,7 @@ subQuery sub name = SelectRef (SelectWrap $ execStmt sub) $ TableRefAs name []
 ----------------------------------------
 
 class WhereState a where
-    where_ :: Expression Bool b -> State (a b) ()
+    where_ :: Expression Bool dbVendor -> State (a dbVendor) ()
 
 -- | Create a WHERE clause for a SELECT query.
 instance WhereState (Select dbVendor) where
@@ -1229,10 +1267,10 @@ instance WhereState (Delete dbVendor) where
 -- | Add an ORDER BY clause to a query.
 orderBy ::
     (  ToList a [b]
-    ,  ToSortRef b (SortRef c)
+    ,  ToSortRef b (SortRef dbVendor)
     )
     => a          -- ^ Sorting references.
-    -> Query d c
+    -> Query colType dbVendor
 orderBy cs = modify (\s -> setSelects selectOrderBy (Just clause) s)
     where
         clause = OrderBy $ map sortRef $ toList cs
@@ -1241,28 +1279,28 @@ orderBy cs = modify (\s -> setSelects selectOrderBy (Just clause) s)
 Add an ascending sorting order (ASC) to a sort reference
 (which can be a column reference).
 -}
-asc :: ToSortRef a (SortRef b) => a -> SortRef b
+asc :: ToSortRef a (SortRef dbVendor) => a -> SortRef dbVendor
 asc ref =  set sortRefOrder (Just Asc) (sortRef ref)
 
 {-|
 Add a descending sorting order (DESC) to a sort reference
 (which can be a column reference).
 -}
-desc :: ToSortRef a (SortRef b) => a -> SortRef b
+desc :: ToSortRef a (SortRef dbVendor) => a -> SortRef dbVendor
 desc ref =  set sortRefOrder (Just Desc) (sortRef ref)
 
 {-|
 Add a nulls first option (NULLS FIRST) to a sort reference
 (which can be a column reference).
 -}
-nullsFirst :: ToSortRef a (SortRef b) => a -> SortRef b
+nullsFirst :: ToSortRef a (SortRef dbVendor) => a -> SortRef dbVendor
 nullsFirst sRef = set sortRefNulls (Just NullsFirst) (sortRef sRef)
 
 {-|
 Add a nulls last option (NULLS LAST) to a sort reference
 (which can be a column reference).
 -}
-nullsLast:: ToSortRef a (SortRef b) => a -> SortRef b
+nullsLast:: ToSortRef a (SortRef dbVendor) => a -> SortRef dbVendor
 nullsLast sRef = set sortRefNulls (Just NullsLast) (sortRef sRef)
 
 ----------------------------------------
@@ -1270,18 +1308,21 @@ nullsLast sRef = set sortRefNulls (Just NullsLast) (sortRef sRef)
 ----------------------------------------
 
 -- | Create a GROUP BY clause.
-groupBy :: (ToList a [b], ToColRef b (ColRef d c)) => a -> Query e c
+groupBy ::
+      (ToList a [b], ToColRef b (ColRef c dbVendor))
+    => a
+    -> Query colType dbVendor
 groupBy cs = modify (\s -> setSelects selectGroupBy (Just clause) s)
     where
         clause = GroupBy (map colRefWrap $ toList cs)
 
 -- | Add a HAVING clause to a select query.
-having :: HavingCond a => a b -> Query c b
+having :: HavingCond a => a dbVendor -> Query colType dbVendor
 having c = modify (\s -> setSelects selectHaving (Just $ havingCond c) s)
 
 -- | Create a HAVING condition.
 class HavingCond a where
-    havingCond :: a b -> Having b
+    havingCond :: a dbVendor -> Having dbVendor
 
 {-|
 Instance for regular predicates – which could also be used in a WHERE clause.
@@ -1301,11 +1342,11 @@ instance HavingCond (Expression AggrPred) where
 ----------------------------------------
 
 -- | Add a LIMIT clause to a SELECT query.
-limit :: Int -> Query b a
+limit :: Int -> Query colType dbVendor
 limit x = modify (\s -> setSelects selectLimit (Just $ Limit x) s)
 
 -- | Create an OFFSET clause to a SELECT query.
-offset :: Int -> Query b a
+offset :: Int -> Query colType dbVendor
 offset x = modify (\s -> setSelects selectOffset (Just $ Offset x) s)
 
 ----------------------------------------
@@ -1317,59 +1358,59 @@ Combine two SELECT queries using the provided combination clause
 (UNION, EXCEPT, etc.).
 -}
 combinedQuery ::
-       (ToExec a (Select e c), ToExec b (Select e c))
-    => Combination c
+       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
+    => Combination dbVendor
     -> a
     -> b
-    -> Select e c
+    -> Select colType dbVendor
 combinedQuery cType c1 c2 = Combined cType [execStmt c1, execStmt c2]
 
 -- | Apply an EXCEPT to two queries.
 except ::
-       (ToExec a (Select e c), ToExec b (Select e c))
+       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
     => a
     -> b
-    -> Select e c
+    -> Select colType dbVendor
 except = combinedQuery Except
 
 -- | Apply an EXCEPT ALL to two queries.
 exceptAll ::
-       (ToExec a (Select e c), ToExec b (Select e c))
+       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
     => a
     -> b
-    -> Select e c
+    -> Select colType dbVendor
 exceptAll = combinedQuery ExceptAll
 
 -- | Apply an INTERSECT to two queries.
 intersect ::
-       (ToExec a (Select e c), ToExec b (Select e c))
+       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
     => a
     -> b
-    -> Select e c
+    -> Select colType dbVendor
 intersect = combinedQuery Intersect
 
 -- | Apply an INTERSECT ALL to two queries.
 intersectAll ::
-       (ToExec a (Select e c), ToExec b (Select e c))
+       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
     => a
     -> b
-    -> Select e c
+    -> Select colType dbVendor
 intersectAll = combinedQuery IntersectAll
 
 -- | Create an UNION operation between two queries.
 union ::
-       (ToExec a (Select e c), ToExec b (Select e c))
+       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
     => a
     -> b
-    -> Select e c
+    -> Select colType dbVendor
 union = combinedQuery Union
 
 -- | Create an UNION ALL operation between two queries.
 unionAll ::
-       (ToExec a (Select e c), ToExec b (Select e c))
+       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
     => a
     -> b
-    -> Select e c
+    -> Select colType dbVendor
 unionAll = combinedQuery UnionAll
 
 --------------------------------------------------------------------------------
@@ -1383,11 +1424,11 @@ The values to insert are a list of list of assignments because you may insert
 more than one row in the database.
 -}
 insert ::
-    ( ToTable a (Table b)
+    ( ToTable a (Table dbVendor)
     )
     => a              -- ^ Table or name of the table to insert the data into.
-    -> [Assignment b] -- ^ Values to insert.
-    -> InsertStmt colType b
+    -> [Assignment dbVendor] -- ^ Values to insert.
+    -> InsertStmt colType dbVendor
 insert tRef assignments = modify (\_ -> Insert (table tRef) assignments Nothing)
 
 --------------------------------------------------------------------------------
@@ -1396,10 +1437,10 @@ insert tRef assignments = modify (\_ -> Insert (table tRef) assignments Nothing)
 
 -- | Create an UPDATE statement.
 update ::
-       ToTable a (Table b)
-    => a              -- ^ Table to update.
-    -> [Assignment b] -- ^ Column/value assignments.
-    -> UpdateStmt colType b
+       ToTable a (Table dbVendor)
+    => a                     -- ^ Table to update.
+    -> [Assignment dbVendor] -- ^ Column/value assignments.
+    -> UpdateStmt colType dbVendor
 update t assignments =
     modify (\_ -> Update (table t) assignments Nothing Nothing)
 
@@ -1409,9 +1450,9 @@ update t assignments =
 
 -- | Create a DELETE FROM statement.
 deleteFrom ::
-       ToTable a (Table b)
+       ToTable a (Table dbVendor)
     => a
-    -> DeleteStmt colType b
+    -> DeleteStmt colType dbVendor
 deleteFrom t = modify (\_ -> Delete (table t) Nothing Nothing)
 
 --------------------------------------------------------------------------------
@@ -1430,9 +1471,9 @@ More concretely we can define instances such as:
 >instance CoerceToX (SqlString a) (X a) where
 >    coerceToX = [...]
 -}
-type SqlBool   a = Bool
-type SqlString a = String
-type SqlInt    a = Int
+type SqlBool   dbVendor = Bool
+type SqlString dbVendor = String
+type SqlInt    dbVendor = Int
 
 {-|
 Convert a primitive value so it can be used in SQL queries as values.
@@ -1440,32 +1481,32 @@ Convert a primitive value so it can be used in SQL queries as values.
 class ToSqlValue a b | a -> b where
     value :: a -> b
 
-instance ToSqlValue (Value a b) (Value a b) where
+instance ToSqlValue (Value dbVendor colType) (Value dbVendor colType) where
     value = id
 
-instance ToSqlValue (SqlBool a) (Value Bool a) where
+instance ToSqlValue (SqlBool dbVendor) (Value Bool dbVendor) where
     value = BoolVal
 
-instance ToSqlValue (SqlString a) (Value String a) where
+instance ToSqlValue (SqlString dbVendor) (Value String dbVendor) where
     value = StringVal
 
-instance ToSqlValue (SqlInt a) (Value Int a) where
+instance ToSqlValue (SqlInt dbVendor) (Value Int dbVendor) where
     value = IntVal
 
 -- | Create a boolean value.
-boolVal :: Bool -> Value Bool a
+boolVal :: Bool -> Value Bool dbVendor
 boolVal = BoolVal
 
 -- | Create a string value.
-stringVal :: String -> Value String a
+stringVal :: String -> Value String dbVendor
 stringVal = StringVal
 
 -- | Create an integer value.
-intVal :: Int -> Value Int a
+intVal :: Int -> Value Int dbVendor
 intVal = IntVal
 
 -- | Create a numeric value.
-numVal :: (Show b, Num b) => b -> Value Numeric a
+numVal :: (Show b, Num b) => b -> Value Numeric dbVendor
 numVal = NumericVal
 
 ---------------------------------------
@@ -1473,27 +1514,27 @@ numVal = NumericVal
 ---------------------------------------
 
 -- | Create a placeholder "?" for a boolean value.
-pBool :: Value Bool a
+pBool :: Value Bool dbVendor
 pBool = PlaceBool
 
 -- | Create a placeholder "?" for a numeric value.
-pNum :: Value Numeric a
+pNum :: Value Numeric dbVendor
 pNum = PlaceNum
 
 -- | Create a placeholder "?" for a floating number value.
-pFloat :: Value Float a
+pFloat :: Value Float dbVendor
 pFloat = PlaceFloat
 
 -- | Create a placeholder "?" for a double precision number value.
-pDouble :: Value Double a
+pDouble :: Value Double dbVendor
 pDouble = PlaceDouble
 
 -- | Create a placeholder "?" for a integer value.
-pInt :: Value Int a
+pInt :: Value Int dbVendor
 pInt = PlaceInt
 
 -- | Create a placeholder ? for a string value.
-pString :: Value String a
+pString :: Value String dbVendor
 pString = PlaceString
 
 --------------------------------------------------------------------------------
@@ -1506,103 +1547,103 @@ pString = PlaceString
 
 -- | "+" operator.
 (/+) ::
-    ( Num d
-    , ToColRef a (ColRef d c)
-    , ToColRef b (ColRef d c)
+    ( Num colType
+    , ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression d c
+    -> Expression colType dbVendor
 (/+) left right = Add (colRef left) (colRef right)
 
 -- | "-" operator.
 (/-) ::
-    ( Num d
-    , ToColRef a (ColRef d c)
-    , ToColRef b (ColRef d c)
+    ( Num colType
+    , ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression d c
+    -> Expression colType dbVendor
 (/-) left right = Substract (colRef left) (colRef right)
 
 -- | "*" operator.
 (/*) ::
-    ( Num d
-    , ToColRef a (ColRef d c)
-    , ToColRef b (ColRef d c)
+    ( Num colType
+    , ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression d c
+    -> Expression colType dbVendor
 (/*) left right = Multiply (colRef left) (colRef right)
 
 -- | Equality operator ("=" in SQL).
 infix 7 /==
 (/==) ::
-    ( ToColRef a (ColRef c d)
-    , ToColRef b (ColRef c d)
+    ( ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 (/==) colRef1 colRef2 = Equal (colRef colRef1) (colRef colRef2)
 
 -- | Greater than operator (">").
 infix 7 />
 (/>) ::
-    ( ToColRef a (ColRef c d)
-    , ToColRef b (ColRef c d)
+    ( ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 (/>) colRef1 colRef2 = GreaterThan (colRef colRef1) (colRef colRef2)
 
 -- | Greater than or equal to operator (">=").
 infix 7 />=
 (/>=) ::
-    ( ToColRef a (ColRef c d)
-    , ToColRef b (ColRef c d)
+    ( ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 (/>=) colRef1 colRef2 = GreaterThanOrEqTo (colRef colRef1) (colRef colRef2)
 
 -- | Smaller than operator ("<").
 infix 7 /<
 (/<) ::
-    ( ToColRef a (ColRef c d)
-    , ToColRef b (ColRef c d)
+    ( ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 (/<) colRef1 colRef2 = SmallerThan (colRef colRef1) (colRef colRef2)
 
 -- | Smaller than or equal to operator ("<=").
 infix 7 /<=
 (/<=) ::
     (
-      SQLOrd c
-    , ToColRef a (ColRef c d)
-    , ToColRef b (ColRef c d)
+      SQLOrd colType
+    , ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 (/<=) colRef1 colRef2 = SmallerThanOrEqTo (colRef colRef1) (colRef colRef2)
 
 -- | Unequality operator ("<>").
 infix 7 /<>
 (/<>) ::
-    ( ToColRef a (ColRef c d)
-    , ToColRef b (ColRef c d)
+    ( ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 (/<>) colRef1 colRef2 = NotEqual (colRef colRef1) (colRef colRef2)
 
 ---------------------------------------
@@ -1616,11 +1657,17 @@ infix 7 /<>
 -- - use a 'parens' function to turn this parameter to 'True'.
 
 -- | Join two predicates with an AND.
-and_ :: Expression Bool b -> Expression Bool b -> Expression Bool b
+and_ ::
+       Expression Bool dbVendor
+    -> Expression Bool dbVendor
+    -> Expression Bool dbVendor
 and_ c1 c2 = And c1 c2 False
 
 -- | Join two predicates with an OR.
-or_ :: Expression Bool b -> Expression Bool b -> Expression Bool b
+or_ ::
+       Expression Bool dbVendor
+    -> Expression Bool dbVendor
+    -> Expression Bool dbVendor
 or_ c1 c2 = Or c1 c2 False
 
 ---------------------------------------
@@ -1630,96 +1677,105 @@ or_ c1 c2 = Or c1 c2 False
 -- | BETWEEN condition.
 between ::
     (
-      ToColRef a (ColRef d e)
-    , ToColRef b (ColRef d e)
-    , ToColRef c (ColRef d e)
+      ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
+    , ToColRef c (ColRef colType dbVendor)
     )
-    => a                 -- ^ Expression to evaluate.
-    -> b                 -- ^ Lower bound condition.
-    -> c                 -- ^ Higher bound condition.
-    -> Expression Bool e -- ^ Between condition.
+    => a                        -- ^ Expression to evaluate.
+    -> b                        -- ^ Lower bound condition.
+    -> c                        -- ^ Higher bound condition.
+    -> Expression Bool dbVendor -- ^ Between condition.
 between ex lower higher = Between (colRef ex) (colRef lower) (colRef higher)
 
 -- | NOT BETWEEN condition.
 notBetween ::
     (
-      ToColRef a (ColRef d e)
-    , ToColRef b (ColRef d e)
-    , ToColRef c (ColRef d e)
+      ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef colType dbVendor)
+    , ToColRef c (ColRef colType dbVendor)
     )
-    => a                 -- ^ Expression to evaluate.
-    -> b                 -- ^ Lower bound condition.
-    -> c                 -- ^ Higher bound condition.
-    -> Expression Bool e -- ^ Not between condition.
+    => a                        -- ^ Expression to evaluate.
+    -> b                        -- ^ Lower bound condition.
+    -> c                        -- ^ Higher bound condition.
+    -> Expression Bool dbVendor -- ^ Not between condition.
 notBetween ex lower higher =
     NotBetween (colRef ex) (colRef lower) (colRef higher)
 
 -- | Create an EXISTS function.
-exists :: ToColRef a (ColRef c b) => a -> Expression Bool b
+exists :: ToColRef a (ColRef colType dbVendor) => a -> Expression Bool dbVendor
 exists = Exists . colRef
 
 -- | Create an IN operator.
 in_ ::
     (
-      ToColRef a (ColRef c d)
-    , ToColRef b (ColRef [c] d)
+      ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef [colType] dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 in_ colRef1 colRef2 = In (colRef colRef1) (colRef colRef2)
 
 -- | Create a NOT IN operator.
 notIn ::
     (
-      ToColRef a (ColRef c d)
-    , ToColRef b (ColRef [c] d)
+      ToColRef a (ColRef colType dbVendor)
+    , ToColRef b (ColRef [colType] dbVendor)
     )
     => a
     -> b
-    -> Expression Bool d
+    -> Expression Bool dbVendor
 notIn colRef1 colRef2 = NotIn (colRef colRef1) (colRef colRef2)
 
 -- | Create a IS FALSE function.
-isFalse :: ToColRef a (ColRef Bool b) => a -> Expression Bool b
+isFalse :: ToColRef a (ColRef Bool dbVendor) => a -> Expression Bool dbVendor
 isFalse = IsFalse . colRef
 
 -- | Create a IS NOT FALSE function.
-isNotFalse :: ToColRef a (ColRef Bool b) => a -> Expression Bool b
+isNotFalse :: ToColRef a (ColRef Bool dbVendor) => a -> Expression Bool dbVendor
 isNotFalse = IsNotFalse . colRef
 
 -- | Create a IS NOT NULL function.
-isNotNull :: ToColRef a (ColRef c b) => a -> Expression Bool b
+isNotNull ::
+       ToColRef a (ColRef colType dbVendor)
+    => a
+    -> Expression Bool dbVendor
 isNotNull = IsNotNull . colRef
 
 -- | Create a IS NOT TRUE function.
-isNotTrue :: ToColRef a (ColRef Bool b) => a -> Expression Bool b
+isNotTrue :: ToColRef a (ColRef Bool dbVendor) => a -> Expression Bool dbVendor
 isNotTrue = IsNotTrue . colRef
 
 -- | Create a IS NOT UNKNOWN function.
-isNotUnknown :: ToColRef a (ColRef c b) => a -> Expression Bool b
+isNotUnknown ::
+       ToColRef a (ColRef colType dbVendor)
+    => a
+    -> Expression Bool dbVendor
 isNotUnknown = IsNotUnknown . colRef
 
 -- | Create a IS NULL function.
-isNull :: ToColRef a (ColRef c b) => a -> Expression Bool b
+isNull :: ToColRef a (ColRef colType dbVendor) => a -> Expression Bool dbVendor
 isNull = IsNull . colRef
 
 -- | Create a IS TRUE function.
-isTrue :: ToColRef a (ColRef Bool b) => a -> Expression Bool b
+isTrue :: ToColRef a (ColRef Bool dbVendor) => a -> Expression Bool dbVendor
 isTrue = IsTrue . colRef
 
 -- | Create a IS UNKNOWN function.
-isUnknown :: ToColRef a (ColRef c b) => a -> Expression Bool b
+isUnknown ::
+       ToColRef a (ColRef colType dbVendor)
+    => a
+    -> Expression Bool dbVendor
 isUnknown = IsUnknown . colRef
 
 -- | Create a LIKE operator.
 like ::
-    (  ToColRef a (ColRef String c)
-    ,  ToColRef b (ColRef String c)
+    (  ToColRef a (ColRef String dbVendor)
+    ,  ToColRef b (ColRef String dbVendor)
     )
     => a
     -> b
-    -> Expression Bool c
+    -> Expression Bool dbVendor
 like colRef1 colRef2 = Like (colRef colRef1) (colRef colRef2)
 
 ---------------------------------------
@@ -1727,23 +1783,32 @@ like colRef1 colRef2 = Like (colRef colRef1) (colRef colRef2)
 ---------------------------------------
 
 -- | Create a COUNT function.
-count :: ToColRef a (ColRef c b) => a -> Expression Int b
+count :: ToColRef a (ColRef colType dbVendor) => a -> Expression Int dbVendor
 count = Count . colRef
 
 -- | Create a MAX function.
-max_ :: Num c => ToColRef a (ColRef c b) => a -> Expression c b
+max_ ::
+      (Num colType, ToColRef a (ColRef colType dbVendor))
+    => a
+    -> Expression colType dbVendor
 max_ = Max . colRef
 
 -- | Create a MIN function.
-min_ :: Num c => ToColRef a (ColRef c b) => a -> Expression c b
+min_ ::
+      (Num colType, ToColRef a (ColRef colType dbVendor))
+    => a
+    -> Expression colType dbVendor
 min_ = Min . colRef
 
 -- | Create a random() function.
-random :: Num b => Expression b a
+random :: Num colType => Expression colType dbVendor
 random = Random
 
 -- | Create a SUM function.
-sum_ :: Num c => ToColRef a (ColRef c b) => a -> Expression c b
+sum_ ::
+      (Num colType, ToColRef a (ColRef colType dbVendor))
+    => a
+    -> Expression colType dbVendor
 sum_ = Sum . colRef
 
 ---------------------------------------
@@ -1753,7 +1818,7 @@ sum_ = Sum . colRef
 {-|
 Create a function which will return the current date.
 -}
-currentDate :: Expression Time a
+currentDate :: Expression Time dbVendor
 currentDate = CurrentDate
 
 ---------------------------------------
@@ -1767,7 +1832,7 @@ row.
 This function differs from one database vendor from another.
 Note that with PostgreSQL you may prefer to use the RETURNING clause instead.
 -}
-lastInsertId :: Expression b a
+lastInsertId :: Expression colType dbVendor
 lastInsertId = LastInsertId
 
 --------------------------------------------------------------------------------
@@ -1778,43 +1843,43 @@ lastInsertId = LastInsertId
 class ToStmt a b | a -> b where
     statement :: a -> b
 
-instance ToStmt [Statement a] (Statement a) where
+instance ToStmt [Statement dbVendor] (Statement dbVendor) where
     statement = Statements
 
-instance ToStmt (Create a) (Statement a) where
+instance ToStmt (Create dbVendor) (Statement dbVendor) where
     statement = CreateStmt
 
-instance ToStmt (CreateStmt a) (Statement a) where
+instance ToStmt (CreateStmt dbVendor) (Statement dbVendor) where
     statement = statement . execStmt
 
 instance ToStmt (Delete colType dbVendor) (Statement dbVendor) where
     statement = DeleteStmt . DeleteWrap
 
-instance ToStmt (Drop a) (Statement a) where
+instance ToStmt (Drop dbVendor) (Statement dbVendor) where
     statement = DropStmt
 
 instance ToStmt (Insert colType dbVendor) (Statement dbVendor) where
     statement = InsertStmt . InsertWrap
 
-instance ToStmt (Select b a) (Statement a) where
+instance ToStmt (Select colType dbVendor) (Statement dbVendor) where
     statement = SelectStmt . SelectWrap
 
-instance ToStmt (SelectWrap a) (Statement a) where
+instance ToStmt (SelectWrap dbVendor) (Statement dbVendor) where
     statement = SelectStmt
 
 instance ToStmt (Update colType dbVendor) (Statement dbVendor) where
     statement = UpdateStmt . UpdateWrap
 
-instance ToStmt (Query b a) (Statement a) where
+instance ToStmt (Query colType dbVendor) (Statement dbVendor) where
     statement = statement . execStmt
 
-instance ToStmt (InsertStmt colType a) (Statement a) where
+instance ToStmt (InsertStmt colType dbVendor) (Statement dbVendor) where
     statement = statement . execStmt
 
-instance ToStmt (UpdateStmt colType a) (Statement a) where
+instance ToStmt (UpdateStmt colType dbVendor) (Statement dbVendor) where
     statement = statement . execStmt
 
-instance ToStmt (DeleteStmt colType a) (Statement a) where
+instance ToStmt (DeleteStmt colType dbVendor) (Statement dbVendor) where
     statement = statement . execStmt
 
 --------------------------------------------------------------------------------
@@ -1832,50 +1897,50 @@ can take one or more argument.
 class ToList a b | a -> b where
     toList :: a -> b
 
-instance ToList (Table a) [Table a] where
+instance ToList (Table dbVendor) [Table dbVendor] where
     toList x = [x]
 
-instance ToList [Table a] [Table a] where
+instance ToList [Table dbVendor] [Table dbVendor] where
     toList = id
 
-instance ToList (TableRef a) [TableRef a] where
+instance ToList (TableRef dbVendor) [TableRef dbVendor] where
     toList x = [x]
 
-instance ToList [TableRef a] [TableRef a] where
+instance ToList [TableRef dbVendor] [TableRef dbVendor] where
     toList = id
 
-instance ToList (Join a) [Join a] where
+instance ToList (Join dbVendor) [Join dbVendor] where
     toList x = [x]
 
-instance ToList [Join a] [Join a] where
+instance ToList [Join dbVendor] [Join dbVendor] where
     toList = id
 
-instance ToList (Column b a) [Column b a] where
+instance ToList (Column colType dbVendor) [Column colType dbVendor] where
     toList x = [x]
 
-instance ToList [Column b a] [Column b a] where
+instance ToList [Column colType dbVendor] [Column colType dbVendor] where
     toList = id
 
-instance ToList (ColRef b a) [ColRef b a] where
+instance ToList (ColRef colType dbVendor) [ColRef colType dbVendor] where
     toList x = [x]
 
-instance ToList [ColRef b a] [ColRef b a] where
+instance ToList [ColRef colType dbVendor] [ColRef colType dbVendor] where
     toList = id
 
-instance ToList (ColWrap a) [ColWrap a] where
+instance ToList (ColWrap dbVendor) [ColWrap dbVendor] where
     toList x = [x]
 
-instance ToList [ColWrap a] [ColWrap a] where
+instance ToList [ColWrap dbVendor] [ColWrap dbVendor] where
     toList = id
 
-instance ToList (ColRefWrap a) [ColRefWrap a] where
+instance ToList (ColRefWrap dbVendor) [ColRefWrap dbVendor] where
     toList x = [x]
 
-instance ToList [ColRefWrap a] [ColRefWrap a] where
+instance ToList [ColRefWrap dbVendor] [ColRefWrap dbVendor] where
     toList = id
 
-instance ToList (SortRef a) [SortRef a] where
+instance ToList (SortRef dbVendor) [SortRef dbVendor] where
     toList x = [x]
 
-instance ToList [SortRef a] [SortRef a] where
+instance ToList [SortRef dbVendor] [SortRef dbVendor] where
     toList = id

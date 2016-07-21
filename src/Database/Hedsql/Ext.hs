@@ -100,16 +100,16 @@ import Database.Hedsql.Common.Constructor
 -- Table and table reference
 --------------------------------------------------------------------------------
 
-type SqlString a = String
+type SqlString dbVendor = String
 
-type SqlText a = T.Text
+type SqlText dbVendor = T.Text
 
 -- | Create a table from its name provided as 'String'
-instance ToTable (SqlString a) (Table a) where
+instance ToTable (SqlString dbVendor) (Table dbVendor) where
     table name = Table name [] []
 
 -- | Create a table from its name provided as 'Text'.
-instance ToTable (SqlText a) (Table a) where
+instance ToTable (SqlText dbVendor) (Table dbVendor) where
     table name = Table (T.unpack $ name) [] []
 
 {-|
@@ -117,34 +117,34 @@ Convert a table reference to a table.
 If the table reference is a table, then use that table.
 Else, create a table using the name of this table reference.
 -}
-instance ToTable (TableRef a) (Table a) where
+instance ToTable (TableRef dbVendor) (Table dbVendor) where
     table ref =
         case ref of
             TableRef t _ -> t
             _            -> Table (getTableRefName ref) [] []
 
 -- | Create a table reference using its name provided as 'String'.
-instance ToTableRef (SqlString a) (TableRef a) where
+instance ToTableRef (SqlString dbVendor) (TableRef dbVendor) where
     tableRef name = TableRef (table name) Nothing
 
 -- | Create a table reference using its name provided as 'Text'.
-instance ToTableRef (SqlText a) (TableRef a) where
+instance ToTableRef (SqlText dbVendor) (TableRef dbVendor) where
     tableRef name = TableRef (table $ T.unpack name) Nothing
 
 --------------------------------------------------------------------------------
 -- Column and column reference
 --------------------------------------------------------------------------------
 
-instance ToCol (SqlString a) (Column Undefined a) where
+instance ToCol (SqlString dbVendor) (Column Undefined dbVendor) where
     toCol name = Column name Undef []
 
-instance ToCol (SqlText a) (Column Undefined a) where
+instance ToCol (SqlText dbVendor) (Column Undefined dbVendor) where
     toCol name = Column (T.unpack name) Undef []
 
-instance ToColRef (SqlString a) (ColRef Undefined a) where
+instance ToColRef (SqlString dbVendor) (ColRef Undefined dbVendor) where
     colRef name = ColRef (ColExpr $ ColDef (toCol name) Nothing) Nothing
 
-instance ToColRef (SqlText a) (ColRef Undefined a) where
+instance ToColRef (SqlText dbVendor) (ColRef Undefined dbVendor) where
     colRef name = ColRef (ColExpr $ ColDef columnName Nothing) Nothing
         where
             columnName = toCol $ T.unpack name
@@ -154,11 +154,11 @@ instance ToColRef (SqlText a) (ColRef Undefined a) where
 --------------------------------------------------------------------------------
 
 -- | Create a placeholder "?" of undefined type for a prepared statement.
-(/?) :: Value b a
+(/?) :: Value colType dbVendor
 (/?) = Placeholder
 
 -- | Create a NULL value of generic type.
-null :: Value b a
+null :: Value colType dbVendor
 null = NullVal
 
 {-|
@@ -177,38 +177,42 @@ In our present case:
 
 Then the value will be parsed appropriately depending on the database vendor.
 -}
-genVal :: (Raw c, Show c) => c -> Value b a
+genVal :: (Raw a, Show a) => a -> Value colType dbVendor
 genVal = GenVal
 
 -- | Value of generic type which needs to be quoted when used in a statement.
-genQVal :: String -> Value b a
+genQVal :: String -> Value colType dbVendor
 genQVal = GenQVal
 
 -- | Same as 'genQVal' but for 'Text'.
-genQValT :: T.Text -> Value b a
+genQValT :: T.Text -> Value colType dbVendor
 genQValT = GenQVal . T.unpack
 
 --------------------------------------------------------------------------------
 -- SELECT
 --------------------------------------------------------------------------------
 
-type SqlString' b a = String
+type SqlString' colType dbVendor = String
 
-type SqlText' b a = T.Text
+type SqlText' colType dbVendor = T.Text
 
-instance SelectConstr (SqlString' b a) (Query [Undefined] a) where
-    select c = simpleSelect $ USelection $ ColRefWrap $ colRef c
+instance SelectConstr
+    (SqlString' colType dbVendor) (Query [Undefined] dbVendor) where
+        select = simpleSelect . USelection . ColRefWrap . colRef
 
-instance SelectConstr (SqlText' b a) (Query [Undefined] a) where
-    select c = simpleSelect $ USelection $ ColRefWrap $ colRef $ T.unpack c
+instance SelectConstr
+    (SqlText' colType dbVendor) (Query [Undefined] dbVendor) where
+        select = simpleSelect . USelection . ColRefWrap . colRef . T.unpack
 
-instance SelectConstr [SqlString' b a] (Query [[Undefined]] a) where
-    select cs = simpleSelect $ UsSelection $ map (ColRefWrap . colRef) cs
+instance SelectConstr
+    [SqlString' colType dbVendor] (Query [[Undefined]] dbVendor) where
+        select = simpleSelect . UsSelection . map (ColRefWrap . colRef)
 
-instance SelectConstr [SqlText' b a] (Query [[Undefined]] a) where
-    select cs = simpleSelect $ UsSelection $ map toColRef cs
-        where
-            toColRef = ColRefWrap . colRef . T.unpack
+instance SelectConstr
+    [SqlText' colType dbVendor] (Query [[Undefined]] dbVendor) where
+        select = simpleSelect . UsSelection . map toColRef
+            where
+                toColRef = ColRefWrap . colRef . T.unpack
 
 --------------------------------------------------------------------------------
 -- FROM
@@ -219,20 +223,20 @@ list :: a -> [a]
 list a = [a]
 
 -- | Create an USING join clause from a string which is a column name.
-instance ToJoinClause (SqlString a) (JoinClause a) where
+instance ToJoinClause (SqlString dbVendor) (JoinClause dbVendor) where
     joinClause = JoinClauseUsing . list . ColWrap . toCol
 
-instance ToJoinClause (SqlText a) (JoinClause a) where
+instance ToJoinClause (SqlText dbVendor) (JoinClause dbVendor) where
     joinClause = JoinClauseUsing . list . ColWrap . toCol . T.unpack
 
 ----------------------------------------
 -- ORDER BY
 ----------------------------------------
 
-instance ToSortRef (SqlString a) (SortRef a) where
+instance ToSortRef (SqlString dbVendor) (SortRef dbVendor) where
     sortRef name = SortRef (ColRefWrap $ colRef name) Nothing Nothing
 
-instance ToSortRef (SqlText a) (SortRef a) where
+instance ToSortRef (SqlText dbVendor) (SortRef dbVendor) where
     sortRef name = SortRef (ColRefWrap $ colRef $ T.unpack name) Nothing Nothing
 
 --------------------------------------------------------------------------------
