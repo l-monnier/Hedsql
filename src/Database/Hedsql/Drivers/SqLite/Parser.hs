@@ -29,7 +29,7 @@ import           Database.Hedsql.Common.Parser
 import           Database.Hedsql.Drivers.SqLite.Driver
 import qualified Database.Hedsql.Common.Parser.Type as T
 
-import           Data.Text.Lazy                        (pack, toUpper)
+import           Data.Text.Lazy                        (toUpper)
 
 import           Database.Hedsql.Common.PrettyPrint
 

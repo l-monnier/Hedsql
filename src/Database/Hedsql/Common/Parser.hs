@@ -78,6 +78,7 @@ module Database.Hedsql.Common.Parser
     -- * Utilities
     , csep
     , renderRaw
+    , renderP
     ) where
 
 --------------------------------------------------------------------------------
