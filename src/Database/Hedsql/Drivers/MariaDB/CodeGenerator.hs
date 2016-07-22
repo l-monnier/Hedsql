@@ -2,20 +2,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {-|
-Module      : Database/Hedsql/Drivers/MariaDB/Parser.hs
-Description : MariaDB parser.
+Module      : Database/Hedsql/Drivers/MariaDB/CodeGenerator.hs
+Description : MariaDB code generator.
 Copyright   : (c) Leonard Monnier, 2014
 License     : GPL-3
 Maintainer  : leonard.monnier@gmail.com
 Stability   : experimental
 Portability : portable
 
-MariaDB parser implementation.
+MariaDB code generator implementation.
 -}
-module Database.Hedsql.Drivers.MariaDB.Parser
-    ( T.Parser
-    , parse
-    , parseP
+module Database.Hedsql.Drivers.MariaDB.CodeGenerator
+    ( T.CodeGenerator
+    , codeGen
+    , codeGenP
     ) where
 
 --------------------------------------------------------------------------------
@@ -24,9 +24,9 @@ module Database.Hedsql.Drivers.MariaDB.Parser
 
 import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.AST
-import Database.Hedsql.Common.Parser
+import Database.Hedsql.Common.CodeGenerator
 import Database.Hedsql.Drivers.MariaDB.Driver
-import qualified Database.Hedsql.Common.Parser.Type as T
+import qualified Database.Hedsql.Common.CodeGenerator.Type as T
 
 import Data.Char
 import Data.Text.Lazy(pack)
@@ -36,19 +36,19 @@ import Database.Hedsql.Common.PrettyPrint
 -- PRIVATE
 --------------------------------------------------------------------------------
 
--- | Parse MariaDB data types.
+-- | Generate Code For MariaDB data types.
 mariaDBDataTypeFunc :: DataTypeWrap MariaDB -> Doc
-mariaDBDataTypeFunc = text . pack . map toUpper . show . parseDataTypeFunc
+mariaDBDataTypeFunc = text . pack . map toUpper . show . codeGenDataTypeFunc
 
 mariaDBExprFunc :: ExprWrap MariaDB -> Doc
 mariaDBExprFunc (ExprWrap LastInsertId) = "LAST_INSERT_ID()"
-mariaDBExprFunc e = parseExprFunc mariaDBParser e
+mariaDBExprFunc e = codeGenExprFunc mariaDBCodeGenerator e
 
--- | Create the MariaDB parser.
-mariaDBParser :: Parser MariaDB
-mariaDBParser = getParser mariaDBParser {
-      _parseDataType = mariaDBDataTypeFunc
-    , _parseExpr     = mariaDBExprFunc
+-- | Create the MariaDB code generator.
+mariaDBCodeGenerator :: CodeGenerator MariaDB
+mariaDBCodeGenerator = getCodeGenerator mariaDBCodeGenerator {
+      _codeGenDataType = mariaDBDataTypeFunc
+    , _codeGenExpr     = mariaDBExprFunc
     }
 
 --------------------------------------------------------------------------------
@@ -59,12 +59,12 @@ mariaDBParser = getParser mariaDBParser {
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string.
 -}
-parse :: T.Parser MariaDB
-parse = renderRaw . _parseStmt mariaDBParser . statement
+codeGen :: T.CodeGenerator MariaDB
+codeGen = renderRaw . _codeGenStmt mariaDBCodeGenerator . statement
 
 {-|
 Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string in pretty print mode.
 -}
-parseP :: T.Parser MariaDB
-parseP = renderP . _parseStmt mariaDBParser . statement
+codeGenP :: T.CodeGenerator MariaDB
+codeGenP = renderP . _codeGenStmt mariaDBCodeGenerator . statement

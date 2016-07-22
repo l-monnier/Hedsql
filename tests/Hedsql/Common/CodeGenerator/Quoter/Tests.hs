@@ -1,18 +1,18 @@
-module Hedsql.Common.Parser.Quoter.Tests where
+module Hedsql.Common.CodeGenerator.Quoter.Tests where
 
-import Database.Hedsql.Common.Parser
+import Database.Hedsql.Common.CodeGenerator
 
 import Test.Framework (Test, testGroup)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit hiding (Test)
 
 -- | Create the default parser.
-parser :: Parser a
-parser = getParser parser
+parser :: CodeGenerator a
+parser = getCodeGenerator parser
 
 -- | Gather all tests.
 tests :: Test
-tests = testGroup "Hedsql.Common.Parser.Quoter"
+tests = testGroup "Hedsql.Common.CodeGenerator.Quoter"
     [ testBasicQuoteElem
     , testBasicQuoteVal
     , testQuotedQuoteElem

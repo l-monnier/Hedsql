@@ -34,14 +34,14 @@ library
                     wl-pprint-text
   other-modules:
                     Database.Hedsql.Drivers.MariaDB.Driver,
-                    Database.Hedsql.Drivers.MariaDB.Parser,
+                    Database.Hedsql.Drivers.MariaDB.CodeGenerator,
                     Database.Hedsql.Drivers.PostgreSQL.Driver,
-                    Database.Hedsql.Drivers.PostgreSQL.Parser,
+                    Database.Hedsql.Drivers.PostgreSQL.CodeGenerator,
                     Database.Hedsql.Drivers.SqLite.Driver,
-                    Database.Hedsql.Drivers.SqLite.Parser,
+                    Database.Hedsql.Drivers.SqLite.CodeGenerator,
                     Database.Hedsql.Common.AST,
-                    Database.Hedsql.Common.Parser,
-                    Database.Hedsql.Common.Parser.Type
+                    Database.Hedsql.Common.CodeGenerator,
+                    Database.Hedsql.Common.CodeGenerator.Type
                     Database.Hedsql.Common.PrettyPrint,
                     Database.Hedsql.Common.Constructor,
                     Database.Hedsql.Specific.Constructor
