@@ -89,7 +89,7 @@ import           Database.Hedsql.Common.AST
 import           Control.Lens
 import           Data.List                          (intersperse)
 import           Data.Maybe
-import           Data.Text.Lazy                     (pack)
+import qualified Data.Text.Lazy as T
 import           Database.Hedsql.Common.PrettyPrint
 import           Prelude                            hiding ((<$>))
 
@@ -818,9 +818,9 @@ parseExprFunc parser (ExprWrap expr) =
             str <> ref
             where
                 ref = let cRef = renderRaw $ _parseColRefDef parser colRef in
-                      if head cRef == '(' && last cRef == ')'
-                      then text $ pack $ cRef
-                      else parens $ text $ pack $ cRef
+                      if T.head cRef == '(' && T.last cRef == ')'
+                      then text cRef
+                      else parens $ text cRef
 
 -- | Parse a FROM clause.
 parseFromFunc :: Parser dbVendor -> From dbVendor -> Doc
@@ -957,10 +957,10 @@ parseValueFunc parser (ValueWrap val) =
         DoubleVal      x -> double x
         FloatVal       x -> float x
         IntVal         x -> int x
-        NumericVal     x -> text $ pack $ show x
+        NumericVal     x -> text $ T.pack $ show x
         StringVal      x -> _quoteVal parser x
         GenQVal        x -> _quoteVal parser x
-        GenVal         x -> text $ pack $ show x
+        GenVal         x -> text $ T.pack $ show x
         NullVal          -> "NULL"
         _                -> "?"
 
@@ -1030,7 +1030,7 @@ genQuote ::
        Char   -- ^ Quoting character (typically ", ' or `)
     -> String -- ^ String to quote.
     -> Doc    -- ^ Returned quoted document.
-genQuote quote t = text $ pack $ quotedString
+genQuote quote t = text $ T.pack quotedString
   where
     quotedString  =
       concat
@@ -1054,8 +1054,11 @@ quoteValFunc = genQuote '\''
 {-|
 Render a 'Doc' on one single line.
 -}
-renderRaw :: Doc -> String
-renderRaw = show . renderOneLine
+renderRaw :: Doc -> T.Text
+renderRaw doc =  displayT $ renderOneLine doc
+
+renderP :: Doc -> T.Text
+renderP doc =  displayT $ renderPretty 1.0 72 doc
 
 {-|
 Separate a list of 'Doc' with a comma and a space.
