@@ -101,16 +101,7 @@ import Database.Hedsql.Common.Constructor
 --------------------------------------------------------------------------------
 
 type SqlString dbVendor = String
-
 type SqlText dbVendor = T.Text
-
--- | Create a table from its name provided as 'String'
-instance ToTable (SqlString dbVendor) (Table dbVendor) where
-    table name = Table name [] []
-
--- | Create a table from its name provided as 'Text'.
-instance ToTable (SqlText dbVendor) (Table dbVendor) where
-    table name = Table (T.unpack $ name) [] []
 
 {-|
 Convert a table reference to a table.
