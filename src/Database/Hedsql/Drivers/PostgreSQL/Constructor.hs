@@ -1,3 +1,6 @@
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 {-# LANGUAGE FlexibleContexts      #-}
@@ -78,8 +81,14 @@ instance ReturningState Update PostgreSQL where
 
 -- | Create a RETURNING clause for a DELETE statement.
 instance ReturningState Delete PostgreSQL where
-    returning =
-        modify . set deleteReturning . Just . Returning . coerce . selection
+    returning:: forall a x . SelectionConstr a (Selection [x] PostgreSQL)
+        => a -- ^ Reference to a column or list of columns.
+        -> State (Delete x PostgreSQL) ()
+    returning val =
+        modify stateFunc
+        where
+           stateFunc ::  Delete x PostgreSQL -> Delete x PostgreSQL
+           stateFunc x = set deleteReturning (Just $ Returning $ coerce $ selection val) x
 
 -- | Coerce the phantom type to a single value.
 coerce :: Selection [colType] dbVendor -> Selection colType dbVendor
