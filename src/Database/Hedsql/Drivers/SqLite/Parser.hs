@@ -29,8 +29,7 @@ import           Database.Hedsql.Common.Parser
 import           Database.Hedsql.Drivers.SqLite.Driver
 import qualified Database.Hedsql.Common.Parser.Type as T
 
-import           Data.Char
-import           Data.Text.Lazy                        (pack)
+import           Data.Text.Lazy                        (pack, toUpper)
 
 import           Database.Hedsql.Common.PrettyPrint
 
@@ -45,7 +44,7 @@ sqLiteDataTypeFunc dataType =
         DataTypeWrap (Char lenght) ->
             "CHARACTER" <> parens (int lenght)
         _ ->
-            text $ pack $ map toUpper $ renderRaw $ parseDataTypeFunc dataType
+            text $ toUpper $ renderRaw $ parseDataTypeFunc dataType
 
 {-|
 Parse a SqLite value.
@@ -130,4 +129,5 @@ Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string in pretty print mode.
 -}
 parseP :: T.Parser SqLite
-parseP = show ._parseStmt sqLiteParser . statement
+parseP = renderP ._parseStmt sqLiteParser . statement
+

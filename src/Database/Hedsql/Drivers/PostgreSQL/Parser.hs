@@ -108,4 +108,4 @@ Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string in pretty print mode.
 -}
 parseP :: T.Parser PostgreSQL
-parseP = show . _parseStmt postgreSQLParser . statement
+parseP = renderP . _parseStmt postgreSQLParser . statement
