@@ -67,4 +67,4 @@ Convert a SQL statement (or something which can be coerced to a statement)
 to a SQL string in pretty print mode.
 -}
 parseP :: T.Parser MariaDB
-parseP = show . _parseStmt mariaDBParser . statement
+parseP = renderP . _parseStmt mariaDBParser . statement

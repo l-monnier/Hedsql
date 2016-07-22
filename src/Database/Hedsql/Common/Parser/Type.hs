@@ -22,6 +22,7 @@ module Database.Hedsql.Common.Parser.Type
 
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor
+import Data.Text.Lazy (Text)
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -45,4 +46,4 @@ instance Stmt MariaDb where
     createStmt parser = ...
 @
 -}
-type Parser parser = forall a. ToStmt a (Statement parser) => a -> String
+type Parser parser = forall a. ToStmt a (Statement parser) => a -> Text
