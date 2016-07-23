@@ -52,13 +52,15 @@ test-suite tests
   ghc-options:     -Wall -rtsopts
   build-depends:
                    base,
+                   random,
                    text,
                    HUnit,
                    QuickCheck,
                    test-framework,
                    test-framework-quickcheck2,
                    test-framework-hunit,
-                   random
+                   sqlite-simple
+
   hs-source-dirs:
                    src,
                    tests

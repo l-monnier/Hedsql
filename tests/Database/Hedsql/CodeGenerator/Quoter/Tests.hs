@@ -1,4 +1,4 @@
-module Hedsql.Common.CodeGenerator.Quoter.Tests where
+module Database.Hedsql.CodeGenerator.Quoter.Tests where
 
 import Database.Hedsql.Common.CodeGenerator
 
