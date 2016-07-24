@@ -753,6 +753,7 @@ codeGenExprFunc codeGenerator (ExprWrap expr) =
         Min         e -> makeExpr "MIN" (ColRefWrap e)
         Random        -> "random()"
         Sum         e -> makeExpr "SUM" (ColRefWrap e)
+        Trim        e -> makeExpr "TRIM" (ColRefWrap e)
 
         -- Utils
         LastInsertId -> "lastval()"
