@@ -1,5 +1,8 @@
+{-# LANGUAGE InstanceSigs #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
@@ -19,13 +22,9 @@ module Database.Hedsql.Drivers.MariaDB.Constructor
     , returning
     ) where
 
-import Unsafe.Coerce
-
-import Control.Lens hiding (assign, from)
-import Control.Monad.State.Lazy
-
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor
+import Database.Hedsql.Common.Grammar
 import Database.Hedsql.Specific.Constructor
 import Database.Hedsql.Drivers.MariaDB.Driver
 
@@ -39,11 +38,22 @@ calcFoundRows = CalcFoundRows
 foundRows :: Expression MariaDB Int
 foundRows = FoundRows
 
--- | Create a RETURNING clause for a DELETE statement.
-instance ReturningState Delete MariaDB where
-    returning =
-        modify . set deleteReturning . Just . Returning . coerce . selection
-        where
-            -- | Coerce back the phantom type to a single value.
-            coerce :: Selection [colType] dbVendor -> Selection colType dbVendor
-            coerce = unsafeCoerce
+-- TODO: find a way to constraint the instances specifically to MariaDB.
+
+-- | Create a RETURNING clause for a DELETE statement with only a FROM clause.
+instance ReturningConstr DeleteFromStmt DeleteReturningStmt where
+    returning ::
+           SelectionConstr selection (Selection [colType] dbVendor)
+        => selection -- ^ Reference to a column or list of columns.
+        -> DeleteFromStmt dbVendor
+        -> DeleteReturningStmt colType dbVendor
+    returning = DeleteFromReturningStmt . returningClause
+
+-- | Create a RETURNING clause for a DELETE statement with a WHERE clause.
+instance ReturningConstr DeleteWhereStmt DeleteReturningStmt where
+    returning ::
+           SelectionConstr selection (Selection [colType] dbVendor)
+        => selection -- ^ Reference to a column or list of columns.
+        -> DeleteWhereStmt dbVendor
+        -> DeleteReturningStmt colType dbVendor
+    returning = DeleteWhereReturningStmt . returningClause

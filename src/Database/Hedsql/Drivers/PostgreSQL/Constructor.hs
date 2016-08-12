@@ -69,6 +69,11 @@ selectDistinctOn ::
 selectDistinctOn dExpr clause =
     modify (\_ -> setSelects selectType (DistinctOn dExpr) $ execStmt $ select clause)
 
+-- | Coerce the phantom type to a single value.
+coerce :: Selection [colType] dbVendor -> Selection colType dbVendor
+coerce = unsafeCoerce
+
+{- TODO: delete
 -- | Create a RETURNING clause for an INSERT statement.
 instance ReturningState Insert PostgreSQL where
     returning =
@@ -90,6 +95,4 @@ instance ReturningState Delete PostgreSQL where
            stateFunc ::  Delete x PostgreSQL -> Delete x PostgreSQL
            stateFunc x = set deleteReturning (Just $ Returning $ coerce $ selection val) x
 
--- | Coerce the phantom type to a single value.
-coerce :: Selection [colType] dbVendor -> Selection colType dbVendor
-coerce = unsafeCoerce
+-}

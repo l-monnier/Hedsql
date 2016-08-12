@@ -16,7 +16,7 @@ module Database.Hedsql.Statements.Delete
     , deleteSubQuery
 
       -- * PostgreSQL
-    , deleteReturningClause
+    -- , deleteReturningClause
 
       -- * MariaDB
     , deleteReturningClauseMariaDB
@@ -28,7 +28,7 @@ module Database.Hedsql.Statements.Delete
 
 import Database.Hedsql.SqLite
 import qualified Database.Hedsql.MariaDB as M
-import qualified Database.Hedsql.PostgreSQL as P
+--import qualified Database.Hedsql.PostgreSQL as P
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -46,10 +46,11 @@ DELETE FROM "People"
 WHERE "age" <> 20
 @
 -}
-deleteNotEqualTo :: DeleteStmt Void dbVendor
-deleteNotEqualTo = do
-    deleteFrom people
-    where_ (col "age" integer /<> value (20::Int))
+deleteNotEqualTo :: DeleteStmt' Void dbVendor
+deleteNotEqualTo =
+       deleteFrom people
+    |> where_' (col "age" integer /<> value (20::Int))
+    |> end
 
 {-|
 @
@@ -59,36 +60,40 @@ WHERE "personId" IN (SELECT "personId"
                      WHERE "name" = 'Switzerland')
 @
 -}
-deleteSubQuery :: DeleteStmt Void dbVendor
-deleteSubQuery = do
-    deleteFrom people
-    where_ (personId `in_`
-            (execStmt $ do
-                select personId
-                from countries
-                where_ (col "name" (varchar 128) /== value "Switzerland")
-            )
-        )
+deleteSubQuery :: DeleteStmt' Void dbVendor
+deleteSubQuery =
+       deleteFrom people
+    |> where_' (personId `in_`
+           (execStmt $ do
+               select personId
+               from countries
+               where_ (col "name" (varchar 128) /== value "Switzerland")
+           )
+       )
+    |> end
     where
         personId = col "personId" integer
 
+{-
+
+{-
 ----------------------------------------
 -- PostgreSQL
 ----------------------------------------
 
-{-|
 @
 DELETE FROM "People"
 WHERE "age" = 20
 RETURNING "personId"
 @
 -}
-deleteReturningClause :: DeleteStmt Int P.PostgreSQL
-deleteReturningClause = do
-    deleteFrom people
-    where_ (col "age" integer /== value (20::Int))
-    P.returning $ col "personId" integer
-
+deleteReturningClause :: DeleteStmt' Int P.PostgreSQL
+deleteReturningClause =
+       deleteFrom people
+    |> where_' (col "age" integer /== value (20::Int))
+    |> P.returning $ col "personId" integer
+    |> end
+-}
 ----------------------------------------
 -- MariaDB
 ----------------------------------------
@@ -100,8 +105,9 @@ WHERE "age" = 20
 RETURNING "personId"
 @
 -}
-deleteReturningClauseMariaDB :: DeleteStmt Int M.MariaDB
-deleteReturningClauseMariaDB = do
-    deleteFrom people
-    where_ (col "age" integer /== value (20::Int))
-    M.returning $ col "personId" integer
+deleteReturningClauseMariaDB :: DeleteStmt' Int M.MariaDB
+deleteReturningClauseMariaDB =
+       deleteFrom people
+    |> where_' (col "age" integer /== value (20::Int))
+    |> (M.returning $ col "personId" integer)
+    |> end

@@ -161,6 +161,8 @@ module Database.Hedsql.Common.Constructor
 
       -- * Composition
     , (/++)
+    , (|>)
+    , end
     , execStmt
 
       {-|
@@ -171,6 +173,7 @@ module Database.Hedsql.Common.Constructor
     , Query
     , InsertStmt
     , DeleteStmt
+    , DeleteStmt'
     , UpdateStmt
 
       -- * CREATE
@@ -227,6 +230,7 @@ module Database.Hedsql.Common.Constructor
 
     -- ** WHERE clause
     , where_
+    , where_'
 
     -- ** GROUP BY clause
     , ToSortRef
@@ -355,12 +359,14 @@ module Database.Hedsql.Common.Constructor
 -- IMPORTS
 --------------------------------------------------------------------------------
 
-import Database.Hedsql.Common.AST
-
-import Control.Lens hiding (assign, from)
-import Control.Monad.State.Lazy
 import Data.Maybe
 import Unsafe.Coerce
+
+import Control.Lens hiding (assign, from, (|>))
+import Control.Monad.State.Lazy
+
+import Database.Hedsql.Common.AST
+import Database.Hedsql.Common.Grammar
 
 --------------------------------------------------------------------------------
 -- Table
@@ -582,6 +588,15 @@ instance Wrapper (Value colType dbVendor) (ValueWrap dbVendor) where
 --------------------------------------------------------------------------------
 -- Composition
 --------------------------------------------------------------------------------
+
+{-|
+Compose the different part of the SQL statement.
+
+This function is actually just a reverse function composition:
+> flip ($)
+-}
+(|>) :: a -> (a -> b) -> b
+(|>) = flip ($)
 
 type CreateStmt dbVendor = State (Create dbVendor) ()
 
@@ -1260,6 +1275,12 @@ instance WhereState (Update dbVendor) where
 instance WhereState (Delete dbVendor) where
     where_ = modify . set deleteWhere . Just . Where
 
+class WhereConstr a b | a -> b where
+    where_' :: Expression Bool dbVendor -> a dbVendor -> b dbVendor
+
+instance WhereConstr DeleteFromStmt DeleteWhereStmt where
+    where_' = DeleteWhereStmt . Where
+
 ----------------------------------------
 -- ORDER BY
 ----------------------------------------
@@ -1448,12 +1469,33 @@ update t assignments =
 -- DELETE
 --------------------------------------------------------------------------------
 
--- | Create a DELETE FROM statement.
+{-|
+Create a DELETE FROM clause.
+-}
 deleteFrom ::
        ToTable a (Table dbVendor)
     => a
-    -> DeleteStmt colType dbVendor
-deleteFrom t = modify (\_ -> Delete (table t) Nothing Nothing)
+    -> DeleteFromStmt dbVendor
+deleteFrom = DeleteFromStmt . table
+
+type DeleteStmt' colType dbVendor = Delete colType dbVendor
+
+class End a b | a -> b where
+    end :: a -> b
+
+instance End (DeleteFromStmt dbVendor) (Delete Void dbVendor) where
+    end (DeleteFromStmt t) = Delete t Nothing Nothing
+
+instance End (DeleteWhereStmt dbVendor) (Delete Void dbVendor) where
+    end (DeleteWhereStmt w (DeleteFromStmt t)) = Delete t (Just w) Nothing
+
+instance End
+    (DeleteReturningStmt colType dbVendor) (Delete colType dbVendor) where
+        end (DeleteFromReturningStmt r (DeleteFromStmt t)) =
+            Delete t Nothing (Just r)
+
+        end (DeleteWhereReturningStmt r (DeleteWhereStmt w (DeleteFromStmt t))) =
+            Delete t (Just w) (Just r)
 
 --------------------------------------------------------------------------------
 -- Values
