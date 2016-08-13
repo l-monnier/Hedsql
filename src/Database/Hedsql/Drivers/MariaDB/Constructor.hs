@@ -23,7 +23,6 @@ module Database.Hedsql.Drivers.MariaDB.Constructor
     ) where
 
 import Database.Hedsql.Common.AST
-import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.Grammar
 import Database.Hedsql.Specific.Constructor
 import Database.Hedsql.Drivers.MariaDB.Driver
@@ -53,26 +52,3 @@ specifically for MariaDB.
 -}
 instance ReturningConstr MariaDB DeleteWhereStmt where
     returning = returningGen
-
---------------------------------------------------------------------------------
--- PRIVATE
---------------------------------------------------------------------------------
-
--- | Create a RETURNING clause for a DELETE statement with only a FROM clause.
-instance ReturningConstrGen DeleteFromStmt DeleteReturningStmt where
-    returningGen ::
-           SelectionConstr selection (Selection [colType] dbVendor)
-        => selection -- ^ Reference to a column or list of columns.
-        -> DeleteFromStmt dbVendor
-        -> DeleteReturningStmt colType dbVendor
-    returningGen = DeleteFromReturningStmt . returningClause
-
-
--- | Create a RETURNING clause for a DELETE statement with a WHERE clause.
-instance ReturningConstrGen DeleteWhereStmt DeleteReturningStmt where
-    returningGen ::
-           SelectionConstr selection (Selection [colType] dbVendor)
-        => selection -- ^ Reference to a column or list of columns.
-        -> DeleteWhereStmt dbVendor
-        -> DeleteReturningStmt colType dbVendor
-    returningGen = DeleteWhereReturningStmt . returningClause

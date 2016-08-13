@@ -1,6 +1,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE InstanceSigs           #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 
 {-|
@@ -26,6 +27,7 @@ import Unsafe.Coerce
 
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor
+import Database.Hedsql.Common.Grammar
 
 {-|
 Compose a RETURNING clause for a specific vendor.
@@ -52,6 +54,25 @@ class ReturningConstrGen a b | a -> b where
         => selection -- ^ Reference to a column or list of columns.
         -> a dbVendor
         -> b colType dbVendor
+
+-- | Create a RETURNING clause for a DELETE statement with only a FROM clause.
+instance ReturningConstrGen DeleteFromStmt DeleteReturningStmt where
+    returningGen ::
+           SelectionConstr selection (Selection [colType] dbVendor)
+        => selection -- ^ Reference to a column or list of columns.
+        -> DeleteFromStmt dbVendor
+        -> DeleteReturningStmt colType dbVendor
+    returningGen = DeleteFromReturningStmt . returningClause
+
+
+-- | Create a RETURNING clause for a DELETE statement with a WHERE clause.
+instance ReturningConstrGen DeleteWhereStmt DeleteReturningStmt where
+    returningGen ::
+           SelectionConstr selection (Selection [colType] dbVendor)
+        => selection -- ^ Reference to a column or list of columns.
+        -> DeleteWhereStmt dbVendor
+        -> DeleteReturningStmt colType dbVendor
+    returningGen = DeleteWhereReturningStmt . returningClause
 
 {-|
 Create a RETURNING clause.
