@@ -16,7 +16,7 @@ module Database.Hedsql.Statements.Delete
     , deleteSubQuery
 
       -- * PostgreSQL
-    -- , deleteReturningClause
+    , deleteReturningClause
 
       -- * MariaDB
     , deleteReturningClauseMariaDB
@@ -28,7 +28,7 @@ module Database.Hedsql.Statements.Delete
 
 import Database.Hedsql.SqLite
 import qualified Database.Hedsql.MariaDB as M
---import qualified Database.Hedsql.PostgreSQL as P
+import qualified Database.Hedsql.PostgreSQL as P
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -74,13 +74,11 @@ deleteSubQuery =
     where
         personId = col "personId" integer
 
-{-
-
-{-
 ----------------------------------------
 -- PostgreSQL
 ----------------------------------------
 
+{-
 @
 DELETE FROM "People"
 WHERE "age" = 20
@@ -91,9 +89,9 @@ deleteReturningClause :: DeleteStmt' Int P.PostgreSQL
 deleteReturningClause =
        deleteFrom people
     |> where_' (col "age" integer /== value (20::Int))
-    |> P.returning $ col "personId" integer
+    |> P.returning (col "personId" integer)
     |> end
--}
+
 ----------------------------------------
 -- MariaDB
 ----------------------------------------

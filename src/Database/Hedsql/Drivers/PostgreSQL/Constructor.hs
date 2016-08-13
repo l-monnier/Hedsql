@@ -25,12 +25,10 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     ) where
 
 import Control.Monad.State.Lazy
-import Unsafe.Coerce
 
-import Control.Lens hiding (assign, from)
-
-import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Common.AST
+import Database.Hedsql.Common.Grammar
+import Database.Hedsql.Common.Constructor
 import Database.Hedsql.Specific.Constructor
 import Database.Hedsql.Drivers.PostgreSQL.Driver
 
@@ -69,9 +67,19 @@ selectDistinctOn ::
 selectDistinctOn dExpr clause =
     modify (\_ -> setSelects selectType (DistinctOn dExpr) $ execStmt $ select clause)
 
--- | Coerce the phantom type to a single value.
-coerce :: Selection [colType] dbVendor -> Selection colType dbVendor
-coerce = unsafeCoerce
+{-|
+Create a RETURNING clause for a DELETE statement with only a FROM clause
+specifically for MariaDB.
+-}
+instance ReturningConstr PostgreSQL DeleteFromStmt where
+    returning = returningGen
+
+{-|
+Create a RETURNING clause for a DELETE statement with a WHERE clause
+specifically for MariaDB.
+-}
+instance ReturningConstr PostgreSQL DeleteWhereStmt where
+    returning = returningGen
 
 {- TODO: delete
 -- | Create a RETURNING clause for an INSERT statement.
@@ -83,16 +91,4 @@ instance ReturningState Insert PostgreSQL where
 instance ReturningState Update PostgreSQL where
     returning =
         modify . set updateReturning . Just . Returning . coerce . selection
-
--- | Create a RETURNING clause for a DELETE statement.
-instance ReturningState Delete PostgreSQL where
-    returning:: forall a x . SelectionConstr a (Selection [x] PostgreSQL)
-        => a -- ^ Reference to a column or list of columns.
-        -> State (Delete x PostgreSQL) ()
-    returning val =
-        modify stateFunc
-        where
-           stateFunc ::  Delete x PostgreSQL -> Delete x PostgreSQL
-           stateFunc x = set deleteReturning (Just $ Returning $ coerce $ selection val) x
-
 -}
