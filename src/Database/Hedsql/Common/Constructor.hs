@@ -172,8 +172,6 @@ module Database.Hedsql.Common.Constructor
     , CreateStmt
     , Query
     , InsertStmt
-    , DeleteStmt
-    , DeleteStmt'
     , UpdateStmt
 
       -- * CREATE
@@ -604,8 +602,6 @@ type Query colType dbVendor = State (Select colType dbVendor) ()
 
 type InsertStmt colType dbVendor = State (Insert colType dbVendor) ()
 
-type DeleteStmt colType dbVendor = State (Delete colType dbVendor) ()
-
 type UpdateStmt colType dbVendor = State (Update colType dbVendor) ()
 
 {-|
@@ -637,9 +633,6 @@ instance ToExec (InsertStmt colType dbVendor) (Insert colType dbVendor) where
 
 instance ToExec (Delete colType dbVendor) (Delete colType dbVendor) where
     execStmt = id
-
-instance ToExec (DeleteStmt colType dbVendor) (Delete colType dbVendor) where
-    execStmt q = execState q $ Delete (Table "" [] []) Nothing Nothing
 
 instance ToExec (Update colType dbVendor) (Update colType dbVendor) where
     execStmt = id
@@ -1478,8 +1471,6 @@ deleteFrom ::
     -> DeleteFromStmt dbVendor
 deleteFrom = DeleteFromStmt . table
 
-type DeleteStmt' colType dbVendor = Delete colType dbVendor
-
 class End a b | a -> b where
     end :: a -> b
 
@@ -1919,9 +1910,6 @@ instance ToStmt (InsertStmt colType dbVendor) (Statement dbVendor) where
     statement = statement . execStmt
 
 instance ToStmt (UpdateStmt colType dbVendor) (Statement dbVendor) where
-    statement = statement . execStmt
-
-instance ToStmt (DeleteStmt colType dbVendor) (Statement dbVendor) where
     statement = statement . execStmt
 
 --------------------------------------------------------------------------------
