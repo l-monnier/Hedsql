@@ -15,7 +15,9 @@ Portability : portable
 Constructors for functions/clauses specific to more than one vendor.
 -}
 module Database.Hedsql.Specific.Constructor
-    ( ReturningConstr
+    ( ReturningConstrGen
+    , ReturningConstr
+    , returningGen
     , returning
     , returningClause
     ) where
@@ -26,10 +28,26 @@ import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor
 
 {-|
-Compose a Returning clause.
+Compose a RETURNING clause for a specific vendor.
 -}
-class ReturningConstr a b | a -> b where
+class ReturningConstr dbVendor a where
     returning ::
+            ( SelectionConstr selection (Selection [colType] dbVendor)
+            , ReturningConstrGen a b
+            )
+           => selection
+           -> a dbVendor
+           -> b colType dbVendor
+
+{-|
+Compose a RETURNING clause in a database vendor agnostic way.
+
+This class is an internal machinery which later allow to build instances for
+RETURNING clauses for a specific database vendor.
+This way, only the instances supported by the vendor are implemented.
+-}
+class ReturningConstrGen a b | a -> b where
+    returningGen ::
            SelectionConstr selection (Selection [colType] dbVendor)
         => selection -- ^ Reference to a column or list of columns.
         -> a dbVendor

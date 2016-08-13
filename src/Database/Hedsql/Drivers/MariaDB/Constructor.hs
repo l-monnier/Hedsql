@@ -1,8 +1,8 @@
-{-# LANGUAGE InstanceSigs #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 {-|
@@ -28,7 +28,9 @@ import Database.Hedsql.Common.Grammar
 import Database.Hedsql.Specific.Constructor
 import Database.Hedsql.Drivers.MariaDB.Driver
 
--- Public.
+--------------------------------------------------------------------------------
+-- PUBLIC
+--------------------------------------------------------------------------------
 
 -- | SQL_CALC_FOUND_ROWS function.
 calcFoundRows :: Expression MariaDB Void
@@ -38,22 +40,39 @@ calcFoundRows = CalcFoundRows
 foundRows :: Expression MariaDB Int
 foundRows = FoundRows
 
--- TODO: find a way to constraint the instances specifically to MariaDB.
+{-|
+Create a RETURNING clause for a DELETE statement with only a FROM clause
+specifically for MariaDB.
+-}
+instance ReturningConstr MariaDB DeleteFromStmt where
+    returning = returningGen
+
+{-|
+Create a RETURNING clause for a DELETE statement with a WHERE clause
+specifically for MariaDB.
+-}
+instance ReturningConstr MariaDB DeleteWhereStmt where
+    returning = returningGen
+
+--------------------------------------------------------------------------------
+-- PRIVATE
+--------------------------------------------------------------------------------
 
 -- | Create a RETURNING clause for a DELETE statement with only a FROM clause.
-instance ReturningConstr DeleteFromStmt DeleteReturningStmt where
-    returning ::
+instance ReturningConstrGen DeleteFromStmt DeleteReturningStmt where
+    returningGen ::
            SelectionConstr selection (Selection [colType] dbVendor)
         => selection -- ^ Reference to a column or list of columns.
         -> DeleteFromStmt dbVendor
         -> DeleteReturningStmt colType dbVendor
-    returning = DeleteFromReturningStmt . returningClause
+    returningGen = DeleteFromReturningStmt . returningClause
+
 
 -- | Create a RETURNING clause for a DELETE statement with a WHERE clause.
-instance ReturningConstr DeleteWhereStmt DeleteReturningStmt where
-    returning ::
+instance ReturningConstrGen DeleteWhereStmt DeleteReturningStmt where
+    returningGen ::
            SelectionConstr selection (Selection [colType] dbVendor)
         => selection -- ^ Reference to a column or list of columns.
         -> DeleteWhereStmt dbVendor
         -> DeleteReturningStmt colType dbVendor
-    returning = DeleteWhereReturningStmt . returningClause
+    returningGen = DeleteWhereReturningStmt . returningClause

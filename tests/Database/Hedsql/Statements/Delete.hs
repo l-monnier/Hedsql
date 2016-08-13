@@ -109,5 +109,5 @@ deleteReturningClauseMariaDB :: DeleteStmt' Int M.MariaDB
 deleteReturningClauseMariaDB =
        deleteFrom people
     |> where_' (col "age" integer /== value (20::Int))
-    |> (M.returning $ col "personId" integer)
+    |> M.returning (col "personId" integer)
     |> end
