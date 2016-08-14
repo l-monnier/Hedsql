@@ -17,7 +17,7 @@ module Database.Hedsql.Statements.Update
 
       -- * PostgreSQL
     , defaultVal
-    , updateReturningClause
+    --, updateReturningClause
     )
     where
 
@@ -84,6 +84,8 @@ WHERE "personId" = 1
 RETURNING "id"
 @
 -}
+{-
+TODO: reactivate.
 updateReturningClause :: UpdateStmt Int P.PostgreSQL
 updateReturningClause = do
     update "People" [assign (col "age" integer) $ intVal 2050]
@@ -91,3 +93,4 @@ updateReturningClause = do
     P.returning idC
     where
        idC = col "personId" integer
+-}

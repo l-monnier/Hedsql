@@ -20,7 +20,7 @@ module Database.Hedsql.Statements.Insert
 
       -- * PostgreSQL
     , defaultValPostgreSQL
-    , returningPostgreSQL
+    -- , returningPostgreSQL
     )
     where
 
@@ -241,6 +241,8 @@ VALUES (
   2)
 @
 -}
+{-
+TODO: re-activate.
 returningPostgreSQL :: InsertStmt Int P.PostgreSQL
 returningPostgreSQL = do
     insert "People"
@@ -254,6 +256,7 @@ returningPostgreSQL = do
         , assign countryId  $ intVal 2
         ]
     P.returning idC
+-}
 
 {-|
 @

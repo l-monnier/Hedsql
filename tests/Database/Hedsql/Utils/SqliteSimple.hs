@@ -55,7 +55,7 @@ createTable :: S.Connection -> H.CreateStmt H.SqLite -> IO ()
 createTable = execute
 
 -- | Delete values in a table.
-delete :: S.Connection -> H.DeleteStmt colType H.SqLite -> IO ()
+delete :: S.Connection -> H.Delete colType H.SqLite -> IO ()
 delete = execute
 
 -- | Drop a table.
