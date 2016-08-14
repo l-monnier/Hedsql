@@ -11,12 +11,31 @@ Portability : portable
 Description of the grammar to build SQL statements.
 -}
 module Database.Hedsql.Common.Grammar
-    ( DeleteFromStmt(..)
+    ( -- * Insert
+      InsertFromStmt(..)
+    , InsertReturningStmt(..)
+
+      -- * Delete
+    , DeleteFromStmt(..)
     , DeleteWhereStmt(..)
     , DeleteReturningStmt(..)
     ) where
 
 import Database.Hedsql.Common.AST
+
+--------------------------------------------------------------------------------
+-- INSERT
+--------------------------------------------------------------------------------
+
+data InsertFromStmt dbVendor =
+    InsertFromStmt (Table dbVendor) [Assignment dbVendor]
+
+data InsertReturningStmt colType dbVendor =
+    InsertReturningStmt (Returning colType dbVendor) (InsertFromStmt dbVendor)
+
+--------------------------------------------------------------------------------
+-- DELETE
+--------------------------------------------------------------------------------
 
 data DeleteFromStmt dbVendor =
     DeleteFromStmt (Table dbVendor)

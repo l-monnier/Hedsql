@@ -63,7 +63,7 @@ dropTable :: S.Connection -> H.Drop H.SqLite -> IO ()
 dropTable = execute
 
 -- | Insert values in a table.
-insert :: S.Connection -> H.InsertStmt colType H.SqLite -> IO ()
+insert :: S.Connection -> H.Insert colType H.SqLite -> IO ()
 insert = execute
 
 -- | Return the first row of a SELECT query's result.

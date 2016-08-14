@@ -55,6 +55,15 @@ class ReturningConstrGen a b | a -> b where
         -> a dbVendor
         -> b colType dbVendor
 
+-- | Create a RETURNING clause for an INSERT statement.
+instance ReturningConstrGen InsertFromStmt InsertReturningStmt where
+    returningGen ::
+           SelectionConstr selection (Selection [colType] dbVendor)
+        => selection -- ^ Reference to a column or list of columns.
+        -> InsertFromStmt dbVendor
+        -> InsertReturningStmt colType dbVendor
+    returningGen = InsertReturningStmt . returningClause
+
 -- | Create a RETURNING clause for a DELETE statement with only a FROM clause.
 instance ReturningConstrGen DeleteFromStmt DeleteReturningStmt where
     returningGen ::

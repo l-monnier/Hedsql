@@ -171,7 +171,6 @@ module Database.Hedsql.Common.Constructor
       -}
     , CreateStmt
     , Query
-    , InsertStmt
     , UpdateStmt
 
       -- * CREATE
@@ -600,8 +599,6 @@ type CreateStmt dbVendor = State (Create dbVendor) ()
 
 type Query colType dbVendor = State (Select colType dbVendor) ()
 
-type InsertStmt colType dbVendor = State (Insert colType dbVendor) ()
-
 type UpdateStmt colType dbVendor = State (Update colType dbVendor) ()
 
 {-|
@@ -627,9 +624,6 @@ instance ToExec (Query colType dbVendor) (Select colType dbVendor) where
 
 instance ToExec (Insert colType dbVendor) (Insert colType dbVendor) where
     execStmt = id
-
-instance ToExec (InsertStmt colType dbVendor) (Insert colType dbVendor) where
-    execStmt q = execState q $ Insert (Table "" [] []) [] Nothing
 
 instance ToExec (Delete colType dbVendor) (Delete colType dbVendor) where
     execStmt = id
@@ -1440,10 +1434,10 @@ more than one row in the database.
 insert ::
     ( ToTable a (Table dbVendor)
     )
-    => a              -- ^ Table or name of the table to insert the data into.
+    => a -- ^ Table or name of the table to insert the data into.
     -> [Assignment dbVendor] -- ^ Values to insert.
-    -> InsertStmt colType dbVendor
-insert tRef assignments = modify (\_ -> Insert (table tRef) assignments Nothing)
+    -> InsertFromStmt dbVendor
+insert = InsertFromStmt . table
 
 --------------------------------------------------------------------------------
 -- UPDATE
@@ -1471,8 +1465,29 @@ deleteFrom ::
     -> DeleteFromStmt dbVendor
 deleteFrom = DeleteFromStmt . table
 
+{-|
+Clauses a SQL statement by giving its final type.
+
+Without this class SQL statements with different structures would
+have different types. For example:
+> SELECT * FROM table1;
+would have a different type than:
+> SELECT * FROM table1 WHERE id = 1;
+
+The 'end' function can be seen as the semi-column used to terminate
+a SQL statement.
+-}
 class End a b | a -> b where
     end :: a -> b
+
+instance End (InsertFromStmt dbVendor) (Insert Void dbVendor) where
+    end (InsertFromStmt t a) = Insert t a Nothing
+
+instance End
+    (InsertReturningStmt colType dbVendor)
+    (Insert colType dbVendor)
+    where
+        end (InsertReturningStmt r (InsertFromStmt t a)) = Insert t a (Just r)
 
 instance End (DeleteFromStmt dbVendor) (Delete Void dbVendor) where
     end (DeleteFromStmt t) = Delete t Nothing Nothing
@@ -1904,9 +1919,6 @@ instance ToStmt (Update colType dbVendor) (Statement dbVendor) where
     statement = UpdateStmt . UpdateWrap
 
 instance ToStmt (Query colType dbVendor) (Statement dbVendor) where
-    statement = statement . execStmt
-
-instance ToStmt (InsertStmt colType dbVendor) (Statement dbVendor) where
     statement = statement . execStmt
 
 instance ToStmt (UpdateStmt colType dbVendor) (Statement dbVendor) where

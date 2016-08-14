@@ -68,24 +68,26 @@ selectDistinctOn dExpr clause =
     modify (\_ -> setSelects selectType (DistinctOn dExpr) $ execStmt $ select clause)
 
 {-|
+Create a RETURNING clause for an INSERT statement specifically for PostgreSQL.
+-}
+instance ReturningConstr PostgreSQL InsertFromStmt where
+    returning = returningGen
+
+{-|
 Create a RETURNING clause for a DELETE statement with only a FROM clause
-specifically for MariaDB.
+specifically for PostgreSQL.
 -}
 instance ReturningConstr PostgreSQL DeleteFromStmt where
     returning = returningGen
 
 {-|
 Create a RETURNING clause for a DELETE statement with a WHERE clause
-specifically for MariaDB.
+specifically for PostgreSQL.
 -}
 instance ReturningConstr PostgreSQL DeleteWhereStmt where
     returning = returningGen
 
 {- TODO: delete
--- | Create a RETURNING clause for an INSERT statement.
-instance ReturningState Insert PostgreSQL where
-    returning =
-        modify . set insertReturning . Just . Returning . coerce . selection
 
 -- | Create a RETURNING clause for an UPDATE statement.
 instance ReturningState Update PostgreSQL where

@@ -74,9 +74,6 @@ testDefaultValPostgreSQL = testCase "Insert with a DEFAULT value" assertInsert
             )
             (P.codeGen defaultValPostgreSQL)
 
-
-{-
-TODO: reactivate.
 testReturningPostgreSQL :: Test
 testReturningPostgreSQL = testCase "Insert with RETURNING clause" assertInsert
     where
@@ -91,7 +88,6 @@ testReturningPostgreSQL = testCase "Insert with RETURNING clause" assertInsert
             <> "RETURNING \"id\""
             )
             (P.codeGen returningPostgreSQL)
--}
 
 --testMultiValsPostgreSQL :: Test
 --testMultiValsPostgreSQL = testCase "Multiple inserts" assertInsert
@@ -122,7 +118,7 @@ tests = testGroup "Insert"
         ]
     , testGroup "PostgreSQL"
         [ testDefaultValPostgreSQL
-        --, testReturningPostgreSQL
+        , testReturningPostgreSQL
         --, testMultiValsPostgreSQL
         ]
     ]
