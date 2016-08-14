@@ -74,6 +74,12 @@ instance ReturningConstr PostgreSQL InsertFromStmt where
     returning = returningGen
 
 {-|
+Create a RETURNING clause for an UPDATE statement specifically for PostgreSQL.
+-}
+instance ReturningConstr PostgreSQL UpdateWhereStmt where
+    returning = returningGen
+
+{-|
 Create a RETURNING clause for a DELETE statement with only a FROM clause
 specifically for PostgreSQL.
 -}

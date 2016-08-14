@@ -61,8 +61,6 @@ testDefaultVal = testCase "Update with defaultValue" assertUpdate
             "UPDATE \"People\" SET \"title\" = DEFAULT WHERE \"personId\" = 1"
             (P.codeGen defaultVal)
 
-{-
-TODO: reactivate
 testReturning :: Test
 testReturning = testCase "Update with RETURNING clause" assertUpdate
     where
@@ -74,7 +72,6 @@ testReturning = testCase "Update with RETURNING clause" assertUpdate
             <>  "RETURNING \"personId\""
             )
             (P.codeGen updateReturningClause)
--}
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -89,6 +86,6 @@ tests = testGroup "Update"
         ]
     , testGroup "PostgreSQL"
         [ testDefaultVal
-        --, testReturning
+        , testReturning
         ]
     ]

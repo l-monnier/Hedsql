@@ -171,7 +171,6 @@ module Database.Hedsql.Common.Constructor
       -}
     , CreateStmt
     , Query
-    , UpdateStmt
 
       -- * CREATE
     , createTable
@@ -599,8 +598,6 @@ type CreateStmt dbVendor = State (Create dbVendor) ()
 
 type Query colType dbVendor = State (Select colType dbVendor) ()
 
-type UpdateStmt colType dbVendor = State (Update colType dbVendor) ()
-
 {-|
 Execute the state of the 'State' monad.
 Concretely, it allows to retrieve a statement "encapsulated" inside the 'State'
@@ -630,9 +627,6 @@ instance ToExec (Delete colType dbVendor) (Delete colType dbVendor) where
 
 instance ToExec (Update colType dbVendor) (Update colType dbVendor) where
     execStmt = id
-
-instance ToExec (UpdateStmt colType dbVendor) (Update colType dbVendor) where
-    execStmt q = execState q $ Update (Table "" [] []) [] Nothing Nothing
 
 {-|
 Allow to easily add optional elements to data types using the '/++' infix
@@ -1265,6 +1259,9 @@ instance WhereState (Delete dbVendor) where
 class WhereConstr a b | a -> b where
     where_' :: Expression Bool dbVendor -> a dbVendor -> b dbVendor
 
+instance WhereConstr UpdateSetStmt UpdateWhereStmt where
+    where_' = UpdateWhereStmt . Where
+
 instance WhereConstr DeleteFromStmt DeleteWhereStmt where
     where_' = DeleteWhereStmt . Where
 
@@ -1448,9 +1445,8 @@ update ::
        ToTable a (Table dbVendor)
     => a                     -- ^ Table to update.
     -> [Assignment dbVendor] -- ^ Column/value assignments.
-    -> UpdateStmt colType dbVendor
-update t assignments =
-    modify (\_ -> Update (table t) assignments Nothing Nothing)
+    -> UpdateSetStmt dbVendor
+update = UpdateSetStmt . table
 
 --------------------------------------------------------------------------------
 -- DELETE
@@ -1488,6 +1484,16 @@ instance End
     (Insert colType dbVendor)
     where
         end (InsertReturningStmt r (InsertFromStmt t a)) = Insert t a (Just r)
+
+instance End (UpdateWhereStmt dbVendor) (Update Void dbVendor) where
+    end (UpdateWhereStmt w (UpdateSetStmt t a)) = Update t a (Just w) Nothing
+
+instance End
+    (UpdateReturningStmt colType dbVendor)
+    (Update colType dbVendor)
+    where
+        end (UpdateReturningStmt r (UpdateWhereStmt w (UpdateSetStmt t a))) =
+            Update t a (Just w) (Just r)
 
 instance End (DeleteFromStmt dbVendor) (Delete Void dbVendor) where
     end (DeleteFromStmt t) = Delete t Nothing Nothing
@@ -1919,9 +1925,6 @@ instance ToStmt (Update colType dbVendor) (Statement dbVendor) where
     statement = UpdateStmt . UpdateWrap
 
 instance ToStmt (Query colType dbVendor) (Statement dbVendor) where
-    statement = statement . execStmt
-
-instance ToStmt (UpdateStmt colType dbVendor) (Statement dbVendor) where
     statement = statement . execStmt
 
 --------------------------------------------------------------------------------

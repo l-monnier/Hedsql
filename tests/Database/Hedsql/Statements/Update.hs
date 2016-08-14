@@ -17,7 +17,7 @@ module Database.Hedsql.Statements.Update
 
       -- * PostgreSQL
     , defaultVal
-    --, updateReturningClause
+    , updateReturningClause
     )
     where
 
@@ -45,19 +45,21 @@ SET "age" = 2050
 WHERE "lastName" = 'Ceasar'
 @
 -}
-equalTo :: UpdateStmt colType dbVendor
-equalTo = do
-    update "People" [assign (col "age" integer) $ intVal 2050]
-    where_ (col "lastName" (varchar 256) /== value "Ceasar")
+equalTo :: Update Void dbVendor
+equalTo =
+       update "People" [assign (col "age" integer) $ intVal 2050]
+    |> where_' (col "lastName" (varchar 256) /== value "Ceasar")
+    |> end
 
 {-|
 UPDATE "People" SET "age" = "age" + 1 WHERE "countryId" IN
   (SELECT "countryId" FROM "Countries" WHERE "name" = 'Italy')
 -}
-updateSelect :: UpdateStmt colType dbVendor
-updateSelect = do
-    update "People" [assign age $ age /+ intVal 1]
-    where_ (countryId `in_` execStmt subSelect)
+updateSelect :: Update Void dbVendor
+updateSelect =
+       update "People" [assign age $ age /+ intVal 1]
+    |> where_' (countryId `in_` execStmt subSelect)
+    |> end
     where
         subSelect = do
             select countryId
@@ -71,10 +73,11 @@ updateSelect = do
 ----------------------------------------
 
 -- | > UPDATE "People" SET "title" = DEFAULT WHERE "personId" = 1
-defaultVal :: UpdateStmt Int P.PostgreSQL
-defaultVal = do
-    update "People" [assign "title" default_]
-    where_ (col "personId" integer /== intVal 1)
+defaultVal :: Update Void P.PostgreSQL
+defaultVal =
+       update "People" [assign "title" default_]
+    |> where_' (col "personId" integer /== intVal 1)
+    |> end
 
 {-|
 @
@@ -84,13 +87,11 @@ WHERE "personId" = 1
 RETURNING "id"
 @
 -}
-{-
-TODO: reactivate.
-updateReturningClause :: UpdateStmt Int P.PostgreSQL
-updateReturningClause = do
-    update "People" [assign (col "age" integer) $ intVal 2050]
-    where_ (idC /== intVal 1)
-    P.returning idC
+updateReturningClause :: Update Int P.PostgreSQL
+updateReturningClause =
+       update "People" [assign (col "age" integer) $ intVal 2050]
+    |> where_' (idC /== intVal 1)
+    |> P.returning idC
+    |> end
     where
        idC = col "personId" integer
--}

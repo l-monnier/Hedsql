@@ -15,6 +15,11 @@ module Database.Hedsql.Common.Grammar
       InsertFromStmt(..)
     , InsertReturningStmt(..)
 
+      -- * Update
+    , UpdateSetStmt(..)
+    , UpdateWhereStmt(..)
+    , UpdateReturningStmt(..)
+
       -- * Delete
     , DeleteFromStmt(..)
     , DeleteWhereStmt(..)
@@ -32,6 +37,19 @@ data InsertFromStmt dbVendor =
 
 data InsertReturningStmt colType dbVendor =
     InsertReturningStmt (Returning colType dbVendor) (InsertFromStmt dbVendor)
+
+--------------------------------------------------------------------------------
+-- UPDATE
+--------------------------------------------------------------------------------
+
+data UpdateSetStmt dbVendor =
+    UpdateSetStmt (Table dbVendor) [Assignment dbVendor]
+
+data UpdateWhereStmt dbVendor =
+    UpdateWhereStmt (Where dbVendor) (UpdateSetStmt dbVendor)
+
+data UpdateReturningStmt colType dbVendor =
+    UpdateReturningStmt (Returning colType dbVendor) (UpdateWhereStmt dbVendor)
 
 --------------------------------------------------------------------------------
 -- DELETE

@@ -80,5 +80,5 @@ selectAll :: FromRow r => S.Connection -> H.Query colType H.SqLite -> IO [r]
 selectAll conn query = S.query_ conn $ toQuery $ H.codeGen query
 
 -- | Update the values of a table.
-update :: S.Connection -> H.UpdateStmt colType H.SqLite -> IO ()
+update :: S.Connection -> H.Update colType H.SqLite -> IO ()
 update = execute
