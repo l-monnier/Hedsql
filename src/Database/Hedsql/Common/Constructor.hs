@@ -1485,6 +1485,11 @@ instance End
     where
         end (InsertReturningStmt r (InsertFromStmt t a)) = Insert t a (Just r)
 
+{-|
+For UPDATE statement the possibility to create a statement without a WHERE
+clause is missing on purpose for avoiding the risk to UPDATE all records
+of a table by accident.
+-}
 instance End (UpdateWhereStmt dbVendor) (Update Void dbVendor) where
     end (UpdateWhereStmt w (UpdateSetStmt t a)) = Update t a (Just w) Nothing
 
