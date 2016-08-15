@@ -11,8 +11,18 @@ Portability : portable
 Description of the grammar to build SQL statements.
 -}
 module Database.Hedsql.Common.Grammar
-    ( -- * Insert
-      InsertFromStmt(..)
+    ( -- * Select
+      SelectStmt(..)
+    , SelectFromStmt(..)
+    , SelectWhereStmt(..)
+    , SelectGroupByStmt(..)
+    , SelectHavingStmt(..)
+    , SelectOrderByStmt(..)
+    , SelectLimitStmt(..)
+    , SelectOffsetStmt(..)
+
+      -- * Insert
+    , InsertFromStmt(..)
     , InsertReturningStmt(..)
 
       -- * Update
@@ -27,6 +37,62 @@ module Database.Hedsql.Common.Grammar
     ) where
 
 import Database.Hedsql.Common.AST
+
+--------------------------------------------------------------------------------
+-- SELECT
+--------------------------------------------------------------------------------
+
+data SelectStmt colType dbVendor =
+      SelectSingleStmt (SelectQ colType dbVendor)
+    | SelectCombinedStmt (Combination dbVendor) [Select colType dbVendor]
+
+data SelectFromStmt colType dbVendor =
+    SelectFromStmt (From dbVendor) (SelectStmt colType dbVendor)
+
+data SelectWhereStmt colType dbVendor =
+    SelectWhereStmt (Where dbVendor) (SelectFromStmt colType dbVendor)
+
+data SelectGroupByStmt colType dbVendor =
+      SelectFromGroupByStmt
+          (GroupBy dbVendor)
+          (SelectFromStmt colType dbVendor)
+    | SelectWhereGroupByStmt
+          (GroupBy dbVendor)
+          (SelectWhereStmt colType dbVendor)
+
+{-|
+The choice has been made to forbid use of HAVING without a previously defined
+GROUP BY clause eventhough some database vendors accept such syntax.
+-}
+data SelectHavingStmt colType dbVendor =
+    SelectHavingStmt (Having dbVendor) (SelectGroupByStmt colType dbVendor)
+
+data SelectOrderByStmt colType dbVendor =
+      SelectFromOrderByStmt
+          (OrderBy dbVendor)
+          (SelectFromStmt colType dbVendor)
+    | SelectWhereOrderByStmt
+          (OrderBy dbVendor)
+          (SelectWhereStmt colType dbVendor)
+    | SelectGroupByOrderByStmt
+          (OrderBy dbVendor)
+          (SelectGroupByStmt colType dbVendor)
+    | SelectHavingOrderByStmt
+          (OrderBy dbVendor)
+          (SelectHavingStmt colType dbVendor)
+
+{-|
+An ORDER BY clause is requested before a LIMIT since the order of the rows
+in the returned result is otherwise not guaranteed.
+-}
+data SelectLimitStmt colType dbVendor =
+    SelectLimitStmt (Limit dbVendor) (SelectOrderByStmt colType dbVendor)
+
+{-|
+A LIMIT clause is requested before an OFFSET.
+-}
+data SelectOffsetStmt colType dbVendor =
+    SelectOffsetStmt (Offset dbVendor) (SelectLimitStmt colType dbVendor)
 
 --------------------------------------------------------------------------------
 -- INSERT
