@@ -43,7 +43,7 @@ import Database.Hedsql.Common.AST
 --------------------------------------------------------------------------------
 
 data SelectStmt colType dbVendor =
-      SelectSingleStmt (SelectQ colType dbVendor)
+      SelectSingleStmt (SelectType dbVendor) (Selection colType dbVendor)
     | SelectCombinedStmt (Combination dbVendor) [Select colType dbVendor]
 
 data SelectFromStmt colType dbVendor =
