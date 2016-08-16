@@ -1251,6 +1251,15 @@ instance WhereConstr DeleteFromStmt DeleteWhereStmt where
 -- ORDER BY
 ----------------------------------------
 
+-- | Create an ORDER BY clause.
+orderByClause ::
+    (  ToList a [b]
+    ,  ToSortRef b (SortRef dbVendor)
+    )
+    => a
+    -> OrderBy dbVendor
+orderByClause = OrderBy . map sortRef . toList
+
 -- | Add an ORDER BY clause to a query.
 class OrderByConstr a where
     orderBy ::
@@ -1262,11 +1271,16 @@ class OrderByConstr a where
         -> SelectOrderByStmt colType dbVendor
 
 instance OrderByConstr SelectFromStmt where
-    orderBy cs = SelectFromOrderByStmt clause
-        where
-            clause = OrderBy $ map sortRef $ toList cs
+    orderBy = SelectFromOrderByStmt . orderByClause
 
--- TODO: implement the other instances.
+instance OrderByConstr SelectWhereStmt where
+    orderBy = SelectWhereOrderByStmt . orderByClause
+
+instance OrderByConstr SelectGroupByStmt where
+    orderBy = SelectGroupByOrderByStmt . orderByClause
+
+instance OrderByConstr SelectHavingStmt where
+    orderBy = SelectHavingOrderByStmt . orderByClause
 
 {-|
 Add an ascending sorting order (ASC) to a sort reference
@@ -1301,6 +1315,15 @@ nullsLast sRef = set sortRefNulls (Just NullsLast) (sortRef sRef)
 ----------------------------------------
 
 -- | Create a GROUP BY clause.
+groupByClause ::
+    ( ToList a [b]
+    , ToColRef b (ColRef colType dbVendor)
+    )
+    => a -- ^ Grouping references.
+    -> GroupBy dbVendor
+groupByClause = GroupBy . map colRefWrap . toList
+
+-- | Add a GROUP BY clause to a SELECT statement.
 class GroupByConstr a where
     groupBy ::
         ( ToList g [t]
@@ -1311,11 +1334,10 @@ class GroupByConstr a where
         -> SelectGroupByStmt colType dbVendor
 
 instance GroupByConstr SelectFromStmt where
-    groupBy cs = SelectFromGroupByStmt clause
-        where
-            clause = GroupBy (map colRefWrap $ toList cs)
+    groupBy = SelectFromGroupByStmt . groupByClause
 
--- TODO: implement the other instances.
+instance GroupByConstr SelectWhereStmt where
+    groupBy = SelectWhereGroupByStmt . groupByClause
 
 -- | Add a HAVING clause to a SELECT statement having a GROUP BY clause.
 having ::
