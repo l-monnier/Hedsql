@@ -170,7 +170,6 @@ module Database.Hedsql.Common.Constructor
       when creating 'Select' queries.
       -}
     , CreateStmt
-    , Query
 
       -- * CREATE
     , createTable
@@ -455,9 +454,6 @@ instance ToColRef [Value colType dbVendor] (ColRef [colType] dbVendor) where
 instance ToColRef (Select colType dbVendor) (ColRef colType dbVendor) where
     colRef query = ColRef (SelectExpr query) Nothing
 
-instance ToColRef (Query colType dbVendor) (ColRef colType dbVendor) where
-    colRef = colRef . execStmt
-
 -- | Create a column reference with a qualified name.
 (/.) ::
     (  ToTableRef a (TableRef dbVendor)
@@ -575,9 +571,6 @@ instance Wrapper (ColRef colType dbVendor) (ColRefWrap dbVendor) where
 instance Wrapper (Select colType dbVendor) (SelectWrap dbVendor) where
     wrap = SelectWrap
 
-instance Wrapper (Query colType dbVendor) (SelectWrap dbVendor) where
-    wrap = wrap . execStmt
-
 instance Wrapper (Value colType dbVendor) (ValueWrap dbVendor) where
     wrap = ValueWrap
 
@@ -596,8 +589,6 @@ This function is actually just a reverse function composition:
 
 type CreateStmt dbVendor = State (Create dbVendor) ()
 
-type Query colType dbVendor = State (Select colType dbVendor) ()
-
 {-|
 Execute the state of the 'State' monad.
 Concretely, it allows to retrieve a statement "encapsulated" inside the 'State'
@@ -615,9 +606,6 @@ instance ToExec (TableConstraintType dbVendor) (Create dbVendor) where
 
 instance ToExec (Select colType dbVendor) (Select colType dbVendor) where
     execStmt = id
-
-instance ToExec (Query colType dbVendor) (Select colType dbVendor) where
-    execStmt q = execState q $ simpleSelect' $ TsSelection []
 
 instance ToExec (Insert colType dbVendor) (Insert colType dbVendor) where
     execStmt = id
@@ -694,10 +682,6 @@ instance ToAddable
 {-|
 Allow to easily add optional elements to data types using the @ /++ @ infix
 function.
-
-For example, if you wish to add an ORDER BY clause to a SELECT query you can do
-it as follow:
-> selectQuery /++ orderByClause
 -}
 (/++) :: (Add a d, ToAddable b (d dbVendor)) => a dbVendor -> b -> a dbVendor
 (/++) target = addElem target . toConvertible
@@ -935,22 +919,8 @@ tableJoin joinType tableRef1 tableRef2 =
 ----------------------------------------
 
 -- | Create a Select query with only a column selection clause.
-simpleSelect' :: Selection colType dbVendor -> Select colType dbVendor
-simpleSelect' sel =
-    Single $ SelectQ
-        All
-        sel
-        Nothing
-        Nothing
-        Nothing
-        Nothing
-        Nothing
-        Nothing
-        Nothing
-
-simpleSelect :: Selection colType dbVendor -> Query colType dbVendor
-simpleSelect sel =
-    modify (\(Single _) -> simpleSelect' sel)
+simpleSelect :: Selection colType dbVendor -> SelectStmt colType dbVendor
+simpleSelect = SelectSingleStmt All
 
 {-|
 Allow the creation of SELECT queries with correct types.
@@ -965,57 +935,68 @@ class SelectConstr a b | a -> b where
     -- | Create a SELECT query.
     select :: a -> b
 
-instance SelectConstr (Select colType dbVendor) (Query colType dbVendor) where
-    select s = modify (\_ -> s)
-
-instance SelectConstr (ColRefWrap dbVendor) (Query [Undefined] dbVendor) where
-    select = simpleSelect . selection
-
-instance SelectConstr [ColRefWrap dbVendor] (Query [[Undefined]] dbVendor) where
-    select = simpleSelect . selection
-
-instance SelectConstr (Column colType dbVendor) (Query [colType] dbVendor) where
-    select = simpleSelect . selection
-
 instance SelectConstr
-    [Column colType dbVendor] (Query [[colType]] dbVendor) where
-        select = simpleSelect . selection
-
-instance SelectConstr (ColWrap dbVendor) (Query [Undefined] dbVendor) where
-    select = simpleSelect . selection
-
-instance SelectConstr [ColWrap dbVendor] (Query [[Undefined]] dbVendor) where
-    select = simpleSelect . selection
-
-instance SelectConstr (ColRef colType dbVendor) (Query [colType] dbVendor) where
-    select = simpleSelect . selection
-
-instance SelectConstr
-    [ColRef colType dbVendor] (Query [[colType]] dbVendor) where
+    (ColRefWrap dbVendor)
+    (SelectStmt [Undefined] dbVendor)
+    where
         select = simpleSelect . selection
 
 instance SelectConstr
-    (Expression colType dbVendor) (Query [colType] dbVendor) where
+    [ColRefWrap dbVendor]
+    (SelectStmt [[Undefined]] dbVendor)
+    where
+        select = simpleSelect . selection
+
+instance SelectConstr
+    (Column colType dbVendor)
+    (SelectStmt [colType] dbVendor)
+    where
+        select = simpleSelect . selection
+
+instance SelectConstr
+    [Column colType dbVendor]
+    (SelectStmt [[colType]] dbVendor)
+    where
+        select = simpleSelect . selection
+
+instance SelectConstr
+    (ColWrap dbVendor)
+    (SelectStmt [Undefined] dbVendor)
+    where
+        select = simpleSelect . selection
+
+instance SelectConstr
+    [ColWrap dbVendor]
+    (SelectStmt [[Undefined]] dbVendor)
+    where
+        select = simpleSelect . selection
+
+instance SelectConstr
+    (ColRef colType dbVendor)
+    (SelectStmt [colType] dbVendor)
+    where
+        select = simpleSelect . selection
+
+instance SelectConstr
+    [ColRef colType dbVendor]
+    (SelectStmt [[colType]] dbVendor)
+    where
+        select = simpleSelect . selection
+
+instance SelectConstr
+    (Expression colType dbVendor)
+    (SelectStmt [colType] dbVendor)
+    where
         select = simpleSelect . selection
 
 {-|
 Create a SELECT DISTINCT query.
-
-This function is normally meant to be used for building a select query from
-scratch, providing the selected columns as argument.
-However, it is possible to apply it on an existing select query.
-If that query is a single query, it will become a select distinct one.
-If that query is a combination of select queries (UNION, EXCEPT, etc.) then
-all the queries will become select distinct ones.
 -}
 selectDistinct ::
-       SelectConstr a (Query colType dbVendor)
+       SelectionConstr a (Selection colType dbVendor)
     => a
-    -> Query colType dbVendor
-selectDistinct sel =
-    modify (\_ -> s)
-    where
-        s = setSelects selectType Distinct $ execStmt $ select sel
+    -> SelectStmt colType dbVendor
+selectDistinct s = SelectSingleStmt Distinct (selection s)
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
@@ -1121,9 +1102,10 @@ instance SelectionConstr
 from ::
        (ToList a [b], ToTableRef b (TableRef dbVendor))
     => a
-    -> Query colType dbVendor
+    -> SelectStmt colType dbVendor
+    -> SelectFromStmt colType dbVendor
 from tRef =
-    modify (\s -> setSelects selectFrom (Just fromClause) s)
+    SelectFromStmt fromClause
     where
         fromClause = From $ map tableRef $ toList tRef
 
@@ -1270,15 +1252,21 @@ instance WhereConstr DeleteFromStmt DeleteWhereStmt where
 ----------------------------------------
 
 -- | Add an ORDER BY clause to a query.
-orderBy ::
-    (  ToList a [b]
-    ,  ToSortRef b (SortRef dbVendor)
-    )
-    => a          -- ^ Sorting references.
-    -> Query colType dbVendor
-orderBy cs = modify (\s -> setSelects selectOrderBy (Just clause) s)
-    where
-        clause = OrderBy $ map sortRef $ toList cs
+class OrderByConstr a where
+    orderBy ::
+        (  ToList s [t]
+        ,  ToSortRef t (SortRef dbVendor)
+        )
+        => s -- ^ Sorting references.
+        -> a colType dbVendor
+        -> SelectOrderByStmt colType dbVendor
+
+instance OrderByConstr SelectFromStmt where
+    orderBy cs = SelectFromOrderByStmt clause
+        where
+            clause = OrderBy $ map sortRef $ toList cs
+
+-- TODO: implement the other instances.
 
 {-|
 Add an ascending sorting order (ASC) to a sort reference
@@ -1313,17 +1301,29 @@ nullsLast sRef = set sortRefNulls (Just NullsLast) (sortRef sRef)
 ----------------------------------------
 
 -- | Create a GROUP BY clause.
-groupBy ::
-      (ToList a [b], ToColRef b (ColRef c dbVendor))
-    => a
-    -> Query colType dbVendor
-groupBy cs = modify (\s -> setSelects selectGroupBy (Just clause) s)
-    where
-        clause = GroupBy (map colRefWrap $ toList cs)
+class GroupByConstr a where
+    groupBy ::
+        ( ToList g [t]
+        , ToColRef t (ColRef colType dbVendor)
+        )
+        => g -- ^ Grouping references.
+        -> a colType dbVendor
+        -> SelectGroupByStmt colType dbVendor
 
--- | Add a HAVING clause to a select query.
-having :: HavingCond a => a dbVendor -> Query colType dbVendor
-having c = modify (\s -> setSelects selectHaving (Just $ havingCond c) s)
+instance GroupByConstr SelectFromStmt where
+    groupBy cs = SelectFromGroupByStmt clause
+        where
+            clause = GroupBy (map colRefWrap $ toList cs)
+
+-- TODO: implement the other instances.
+
+-- | Add a HAVING clause to a SELECT statement having a GROUP BY clause.
+having ::
+       HavingCond a
+    => a dbVendor
+    -> SelectGroupByStmt colType dbVendor
+    -> SelectHavingStmt colType dbVendor
+having = SelectHavingStmt . havingCond
 
 -- | Create a HAVING condition.
 class HavingCond a where
@@ -1346,13 +1346,19 @@ instance HavingCond (Expression AggrPred) where
 -- LIMIT
 ----------------------------------------
 
--- | Add a LIMIT clause to a SELECT query.
-limit :: Int -> Query colType dbVendor
-limit x = modify (\s -> setSelects selectLimit (Just $ Limit x) s)
+-- | Add a LIMIT clause to a SELECT statement having an ORDER BY clause.
+limit ::
+       Int
+    -> SelectOrderByStmt colType dbVendor
+    -> SelectLimitStmt colType dbVendor
+limit = SelectLimitStmt . Limit
 
--- | Create an OFFSET clause to a SELECT query.
-offset :: Int -> Query colType dbVendor
-offset x = modify (\s -> setSelects selectOffset (Just $ Offset x) s)
+-- | Add an OFFSET clause to a SELECT statement having a LIMIT clause.
+offset ::
+       Int
+    -> SelectLimitStmt colType dbVendor
+    -> SelectOffsetStmt colType dbVendor
+offset = SelectOffsetStmt . Offset
 
 ----------------------------------------
 -- Combined queries
@@ -1928,9 +1934,6 @@ instance ToStmt (SelectWrap dbVendor) (Statement dbVendor) where
 
 instance ToStmt (Update colType dbVendor) (Statement dbVendor) where
     statement = UpdateStmt . UpdateWrap
-
-instance ToStmt (Query colType dbVendor) (Statement dbVendor) where
-    statement = statement . execStmt
 
 --------------------------------------------------------------------------------
 -- Utility functions.
