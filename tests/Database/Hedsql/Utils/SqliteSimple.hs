@@ -67,7 +67,7 @@ insert :: S.Connection -> H.Insert colType H.SqLite -> IO ()
 insert = execute
 
 -- | Return the first row of a SELECT query's result.
-selectOne :: FromRow r => S.Connection -> H.Query colType H.SqLite -> IO r
+selectOne :: FromRow r => S.Connection -> H.Select colType H.SqLite -> IO r
 selectOne conn query = fmap head $ S.query_ conn $ toQuery $ H.codeGen query
 
 {-|
@@ -76,7 +76,7 @@ Return all rows of a SELECT query's result.
 Note: since this function uses query_ and not fold_, it should not be used
 for big results.
 -}
-selectAll :: FromRow r => S.Connection -> H.Query colType H.SqLite -> IO [r]
+selectAll :: FromRow r => S.Connection -> H.Select colType H.SqLite -> IO [r]
 selectAll conn query = S.query_ conn $ toQuery $ H.codeGen query
 
 -- | Update the values of a table.

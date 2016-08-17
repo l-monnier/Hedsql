@@ -49,7 +49,7 @@ WHERE "age" <> 20
 deleteNotEqualTo :: Delete Void dbVendor
 deleteNotEqualTo =
        deleteFrom people
-    |> where_' (col "age" integer /<> value (20::Int))
+    |> where_ (col "age" integer /<> value (20::Int))
     |> end
 
 {-|
@@ -63,11 +63,11 @@ WHERE "personId" IN (SELECT "personId"
 deleteSubQuery :: Delete Void dbVendor
 deleteSubQuery =
        deleteFrom people
-    |> where_' (personId `in_`
-           (execStmt $ do
-               select personId
-               from countries
-               where_ (col "name" (varchar 128) /== value "Switzerland")
+    |> where_ (personId `in_`
+           (  select personId
+           |> from countries
+           |> where_ (col "name" (varchar 128) /== value "Switzerland")
+           |> end
            )
        )
     |> end
@@ -88,7 +88,7 @@ RETURNING "personId"
 deleteReturningClause :: Delete Int P.PostgreSQL
 deleteReturningClause =
        deleteFrom people
-    |> where_' (col "age" integer /== value (20::Int))
+    |> where_ (col "age" integer /== value (20::Int))
     |> P.returning (col "personId" integer)
     |> end
 
@@ -106,6 +106,6 @@ RETURNING "personId"
 deleteReturningClauseMariaDB :: Delete Int M.MariaDB
 deleteReturningClauseMariaDB =
        deleteFrom people
-    |> where_' (col "age" integer /== value (20::Int))
+    |> where_ (col "age" integer /== value (20::Int))
     |> M.returning (col "personId" integer)
     |> end

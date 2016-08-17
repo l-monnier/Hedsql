@@ -95,6 +95,7 @@ import qualified Data.Text as T
 
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor
+import Database.Hedsql.Common.Grammar
 
 --------------------------------------------------------------------------------
 -- Table and table reference
@@ -187,23 +188,48 @@ type SqlString' colType dbVendor = String
 
 type SqlText' colType dbVendor = T.Text
 
+instance SelectionConstr
+    (SqlString' colType dbVendor)
+    (Selection [Undefined] dbVendor)
+    where
+        selection = USelection . ColRefWrap . colRef
+
+instance SelectionConstr
+    (SqlText' colType dbVendor)
+    (Selection [Undefined] dbVendor)
+    where
+        selection = USelection . ColRefWrap . colRef . T.unpack
+
+instance SelectionConstr
+    [SqlString' colType dbVendor]
+    (Selection [[Undefined]] dbVendor)
+    where
+        selection = UsSelection . map (ColRefWrap . colRef)
+
+instance SelectionConstr
+    [SqlText' colType dbVendor]
+    (Selection [[Undefined]] dbVendor)
+    where
+        selection = UsSelection . map (ColRefWrap . colRef . T.unpack)
+
 instance SelectConstr
-    (SqlString' colType dbVendor) (Query [Undefined] dbVendor) where
+    (SqlString' colType dbVendor) (SelectSingleStmt [Undefined] dbVendor) where
         select = simpleSelect . USelection . ColRefWrap . colRef
 
 instance SelectConstr
-    (SqlText' colType dbVendor) (Query [Undefined] dbVendor) where
+    (SqlText' colType dbVendor) (SelectSingleStmt [Undefined] dbVendor) where
         select = simpleSelect . USelection . ColRefWrap . colRef . T.unpack
 
 instance SelectConstr
-    [SqlString' colType dbVendor] (Query [[Undefined]] dbVendor) where
+    [SqlString' colType dbVendor]
+    (SelectSingleStmt [[Undefined]] dbVendor)
+    where
         select = simpleSelect . UsSelection . map (ColRefWrap . colRef)
 
 instance SelectConstr
-    [SqlText' colType dbVendor] (Query [[Undefined]] dbVendor) where
-        select = simpleSelect . UsSelection . map toColRef
-            where
-                toColRef = ColRefWrap . colRef . T.unpack
+    [SqlText' colType dbVendor] (SelectSingleStmt [[Undefined]] dbVendor) where
+        select =
+            simpleSelect . UsSelection . map (ColRefWrap . colRef . T.unpack)
 
 --------------------------------------------------------------------------------
 -- FROM

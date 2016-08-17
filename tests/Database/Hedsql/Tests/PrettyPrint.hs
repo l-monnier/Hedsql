@@ -265,19 +265,6 @@ testLimit =
             \LIMIT 2"
             (S.codeGenP orderByLimit)
 
-testOffset :: Test
-testOffset =
-    testCase "OFFSET clause." assertSelect
-    where
-        assertSelect :: Assertion
-        assertSelect = assertEqual
-            "OFFSET clause is incorrect."
-            "SELECT *\n\
-            \FROM \"People\"\n\
-            \ORDER BY \"firstName\"\n\
-            \OFFSET 2"
-            (S.codeGenP orderByOffset)
-
 testLimitOffset :: Test
 testLimitOffset =
     testCase "LIMIT and OFFSET clauses." assertSelect
@@ -382,7 +369,6 @@ tests = testGroup "Pretty Print"
     , testOrderByOne
     , testOrderByTwo
     , testLimit
-    , testOffset
     , testLimitOffset
     , testCreate
     , testUpdate

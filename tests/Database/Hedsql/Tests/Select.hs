@@ -403,17 +403,6 @@ testOrderByLimit = testCase "ORDER BY with LIMIT clause" assertOrderBy
             )
             (S.codeGen orderByLimit)
 
-testOrderByOffset :: Test
-testOrderByOffset = testCase "ORDER BY with OFFSET clause" assertOrderBy
-    where
-        assertOrderBy :: Assertion
-        assertOrderBy = assertEqual
-            "ORDER BY with OFFSET clause is incorrect"
-            (  "SELECT * FROM \"People\" "
-            <> "ORDER BY \"firstName\" OFFSET 2"
-            )
-            (S.codeGen orderByOffset)
-
 ----------------------------------------
 -- GROUP BY
 ----------------------------------------
@@ -625,7 +614,6 @@ tests = testGroup "Select"
         , testOrderByAscDesc
         , testOrderByNull
         , testOrderByLimit
-        , testOrderByOffset
         , testGroupBy
         , testGroupBySum
         , testGroupByAlias

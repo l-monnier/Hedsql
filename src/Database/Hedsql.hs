@@ -17,5 +17,6 @@ Otherwise, you will be better off using a specific module such as
 'Database.Hedsql.SqLite'
 -}
 module Database.Hedsql (module H) where
-import Database.Hedsql.Common.Constructor as H
 import Database.Hedsql.Common.AST         as H
+import Database.Hedsql.Common.Constructor as H
+import Database.Hedsql.Common.Grammar     as H

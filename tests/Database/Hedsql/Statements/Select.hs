@@ -10,8 +10,7 @@ Portability : portable
 A collection of SELECT queries to be used in tests or as examples.
 -}
 module Database.Hedsql.Statements.Select
-    (
-      -- * All DB vendors
+    ( -- * All DB vendors
 
       -- ** SELECT
       selectAll
@@ -54,7 +53,6 @@ module Database.Hedsql.Statements.Select
     , orderByAscDesc
     , Database.Hedsql.Statements.Select.orderByLimit
     , orderByNull
-    , Database.Hedsql.Statements.Select.orderByOffset
     , orderByLimitOffset
 
       -- ** GROUP BY
@@ -94,6 +92,7 @@ module Database.Hedsql.Statements.Select
 -- IMPORTS
 --------------------------------------------------------------------------------
 
+import Database.Hedsql
 import Database.Hedsql.Ext
 import Database.Hedsql.SqLite
 
@@ -113,10 +112,11 @@ import qualified Database.Hedsql.PostgreSQL                     as Pg
 --------------------
 
 -- | > SELECT * FROM "People"
-selectAll :: Query [[Undefined]] dbVendor
-selectAll = do
-    select (//*)
-    from "People"
+selectAll :: Select [[Undefined]] dbVendor
+selectAll =
+       select (//*)
+    |> from "People"
+    |> end
 
 {-|
 @
@@ -126,16 +126,18 @@ SELECT
 FROM "People"
 @
 -}
-selectTwoCols :: Query [[Undefined]] dbVendor
-selectTwoCols = do
-    select ["firstName", "lastName"]
-    from "People"
+selectTwoCols :: Select [[Undefined]] dbVendor
+selectTwoCols =
+       select ["firstName", "lastName"]
+    |> from "People"
+    |> end
 
 -- | > SELECT DISTINCT "firstName" FROM "People"
-distinctSelect :: Query [Undefined] dbVendor
-distinctSelect = do
-    selectDistinct "firstName"
-    from "People"
+distinctSelect :: Select [Undefined] dbVendor
+distinctSelect =
+       selectDistinct "firstName"
+    |> from "People"
+    |> end
 
 --------------------
 -- FROM
@@ -145,10 +147,11 @@ distinctSelect = do
 --------------------
 
 -- | > SELECT * FROM "People" CROSS JOIN "Countries"
-fromCrossJoin :: Query [[Undefined]] dbVendor
-fromCrossJoin = do
-    select (//*)
-    from $ "People" `crossJoin` "Countries"
+fromCrossJoin :: Select [[Undefined]] dbVendor
+fromCrossJoin =
+       select (//*)
+    |> from ("People" `crossJoin` "Countries")
+    |> end
 
 {-|
 @
@@ -158,55 +161,62 @@ INNER JOIN "Countries"
 ON "People"."countryId" = "Countries"."countryId"
 @
 -}
-fromInnerJoinOn :: Query [[Undefined]] dbVendor
-fromInnerJoinOn = do
-    select (//*)
-    from $ innerJoin "People" "Countries" $ "People" /. "countryId" /== "Countries" /. "countryId"
+fromInnerJoinOn :: Select [[Undefined]] dbVendor
+fromInnerJoinOn =
+       select (//*)
+    |> from (innerJoin "People" "Countries" $ "People" /. "countryId" /== "Countries" /. "countryId")
+    |> end
 
 -- | > SELECT * FROM "People" INNER JOIN "Countries" USING ("country")
-fromInnerJoinUsing :: Query [[Undefined]] dbVendor
-fromInnerJoinUsing = do
-    select (//*)
-    from $ innerJoin "People" "Countries" "countryId"
+fromInnerJoinUsing :: Select [[Undefined]] dbVendor
+fromInnerJoinUsing =
+       select (//*)
+    |> from (innerJoin "People" "Countries" "countryId")
+    |> end
 
 -- | > SELECT * FROM "People" NATURAL INNER JOIN "Countries"
-fromNaturalInnerJoin :: Query [[Undefined]] dbVendor
-fromNaturalInnerJoin = do
-    select (//*)
-    from $ "People" `naturalInnerJoin` "Countries"
+fromNaturalInnerJoin :: Select [[Undefined]] dbVendor
+fromNaturalInnerJoin =
+       select (//*)
+    |> from ("People" `naturalInnerJoin` "Countries")
+    |> end
 
 {-|
 > SELECT * FROM "People" LEFT JOIN "Countries"
 > ON "People"."countryId" = "Countries"."countryId"
 -}
-fromLeftJoinOn :: Query [[Undefined]] dbVendor
-fromLeftJoinOn = do
-    select (//*)
-    from $ leftJoin "People" "Countries" $ "People"/."countryId" /== "Countries"/."countryId"
+fromLeftJoinOn :: Select [[Undefined]] dbVendor
+fromLeftJoinOn =
+       select (//*)
+    |> from (leftJoin "People" "Countries" $ "People"/."countryId" /== "Countries"/."countryId")
+    |> end
 
 -- | > SELECT * FROM "People" LEFT JOIN "Countries" USING ("countryId")
-fromLeftJoinUsing :: Query [[Undefined]] dbVendor
-fromLeftJoinUsing = do
-    select (//*)
-    from $ leftJoin "People" "Countries" "countryId"
+fromLeftJoinUsing :: Select [[Undefined]] dbVendor
+fromLeftJoinUsing =
+       select (//*)
+    |> from (leftJoin "People" "Countries" "countryId")
+    |> end
 
 {-|
 > SELECT * FROM "People" RIGHT JOIN "Countries"
 > ON "People"."countryId" = "Countries"."countryId"
 -}
-fromRightJoinOn :: Query [[Undefined]] dbVendor
-fromRightJoinOn = do
-    select (//*)
-    from $ rightJoin "People" "Countries" $ "People"/."countryId" /== "Countries"/."countryId"
+fromRightJoinOn :: Select [[Undefined]] dbVendor
+fromRightJoinOn =
+       select (//*)
+    |> from (rightJoin "People" "Countries" $ "People"/."countryId" /== "Countries"/."countryId")
+    |> end
 
 {-|
 > SELECT * FROM "People" FULL JOIN "Countries"
 > ON "People"."countryId" = "Countries"."countryId"
 -}
-fromFullJoinOn :: Query [[Undefined]] dbVendor
-fromFullJoinOn = do
-    select (//*)
-    from $ fullJoin t1 t2 $ c1 /== c2
+fromFullJoinOn :: Select [[Undefined]] dbVendor
+fromFullJoinOn =
+       select (//*)
+    |> from (fullJoin t1 t2 $ c1 /== c2)
+    |> end
     where
         t1 = table "People"
         t2 = table "Countries"
@@ -218,10 +228,11 @@ fromFullJoinOn = do
 > ON ("People"."countryId" = "Countries"."countryId"
 >      AND "Countries"."name" = 'Italy')
 -}
-fromLeftJoinOnAnd :: Query [[Undefined]] dbVendor
-fromLeftJoinOnAnd = do
-    select (//*)
-    from $ leftJoin t1 t2 cond
+fromLeftJoinOnAnd :: Select [[Undefined]] dbVendor
+fromLeftJoinOnAnd =
+       select (//*)
+    |> from (leftJoin t1 t2 cond)
+    |> end
     where
         t1 = table "People"
         t2 = table "Countries"
@@ -234,10 +245,11 @@ fromLeftJoinOnAnd = do
 > FROM "People" AS "Father"
 >   INNER JOIN "People" AS "Child" ON "Father"."personId" = "Child"."father"
 -}
-selfJoin :: Query [[Undefined]] dbVendor
-selfJoin = do
-    select (//*)
-    from $ innerJoin father child cond
+selfJoin :: Select [[Undefined]] dbVendor
+selfJoin =
+       select (//*)
+    |> from (innerJoin father child cond)
+    |> end
     where
         cond = (father/."personId") /== (child/."father")
         father = people `alias` "Father"
@@ -245,16 +257,18 @@ selfJoin = do
         people = table "People"
 
 -- | > SELECT * FROM "People" AS "P" CROSS JOIN "Countries" AS "C"
-crossJoinAlias :: Query [[Undefined]] dbVendor
-crossJoinAlias = do
-        select (//*)
-        from $ crossJoin ("People" `alias` "P") ("Countries" `alias` "C")
+crossJoinAlias :: Select [[Undefined]] dbVendor
+crossJoinAlias =
+       select (//*)
+    |> from (crossJoin ("People" `alias` "P") ("Countries" `alias` "C"))
+    |> end
 
 -- | > SELECT * FROM ("People" AS "P" CROSS JOIN "Countries") AS "PC";
-crossRefAlias :: Query [[Undefined]] dbVendor
-crossRefAlias = do
-        select (//*)
-        from $ (("People" `alias` "P") `crossJoin` "Countries") `alias` "PC"
+crossRefAlias :: Select [[Undefined]] dbVendor
+crossRefAlias =
+       select (//*)
+    |> from ((("People" `alias` "P") `crossJoin` "Countries") `alias` "PC")
+    |> end
 
 {-|
 @
@@ -266,10 +280,11 @@ INNER JOIN "Addresses"
 ON "People"."personId" = "Addresses"."personId"
 @
 -}
-nestedJoins :: Query [[Undefined]] dbVendor
-nestedJoins = do
-    select (//*)
-    from join2
+nestedJoins :: Select [[Undefined]] dbVendor
+nestedJoins =
+       select (//*)
+    |> from join2
+    |> end
     where
         join1 = innerJoin "People" "Countries" $ "People" /. "countryId" /== "Countries" /. "countryId"
         join2 = innerJoin join1 "Addresses" $ "People" /. "personId" /== "Addresses" /. "personId"
@@ -284,12 +299,14 @@ FROM (SELECT *
       FROM "People") AS "P"
 @
 -}
-selectSubQuery :: Query [[Undefined]] dbVendor
-selectSubQuery = do
-    select (//*)
-    from (subQuery (do
-        select (//*)
-        from "People") "P")
+selectSubQuery :: Select [[Undefined]] dbVendor
+selectSubQuery =
+       select (//*)
+    |> from (subQuery (
+           select (//*)
+        |> from "People"
+        |> end) "P")
+    |> end
 
 --------------------
 -- WHERE
@@ -300,18 +317,20 @@ SELECT using a generic columns and values.
 
 > SELECT "firstName" FROM "People" WHERE "age" > 18
 -}
-selectGen :: Query [Undefined] dbVendor
-selectGen = do
-    select "firstName"
-    from "People"
-    where_ $ "age" /> genVal (18::Int)
+selectGen :: Select [Undefined] dbVendor
+selectGen =
+       select "firstName"
+    |> from "People"
+    |> where_ ("age" /> genVal (18::Int))
+    |> end
 
 -- | > SELECT * FROM "People" AS "P" WHERE "P"."age" > 18;
-whereAlias :: Query [[Undefined]] dbVendor
-whereAlias = do
-    select (//*)
-    from p
-    where_ $ p/. col "age" integer /> intVal 5
+whereAlias :: Select [[Undefined]] dbVendor
+whereAlias =
+       select (//*)
+    |> from p
+    |> where_ (p/. col "age" integer /> intVal 5)
+    |> end
     where
         p = table "People" `alias` "P"
 
@@ -326,12 +345,13 @@ WHERE
   AND "People"."age" > 18
 @
 -}
-whereAnd :: Query [[Undefined]] dbVendor
-whereAnd = do
-    select (//*)
-    from [people, countries]
-    where_ $ (people/.id' /== countries/.id')
-        `and_` (people/. col "age" integer /> intVal 18)
+whereAnd :: Select [[Undefined]] dbVendor
+whereAnd =
+       select (//*)
+    |> from [people, countries]
+    |> where_ ((people/.id' /== countries/.id')
+        `and_` (people/. col "age" integer /> intVal 18))
+    |> end
     where
         people = tableRef "People"
         countries = tableRef "Countries"
@@ -349,13 +369,14 @@ WHERE
   AND "People"."age" < 70
 @
 -}
-whereAnds :: Query [[Undefined]] dbVendor
-whereAnds = do
-    select (//*)
-    from [people, countries]
-    where_ $ (people/.id' /== countries/.id')
+whereAnds :: Select [[Undefined]] dbVendor
+whereAnds =
+       select (//*)
+    |> from [people, countries]
+    |> where_ ((people/.id' /== countries/.id')
         `and_` (people/. age /> intVal 18)
-        `and_` (people/. age /< intVal 70)
+        `and_` (people/. age /< intVal 70))
+    |> end
     where
         people = tableRef "People"
         countries = tableRef "Countries"
@@ -363,11 +384,12 @@ whereAnds = do
         age = col "age" integer
 
 -- | > SELECT * FROM "Countries" WHERE "name" IN ('Italy', 'Switzerland')
-whereInValues :: Query [[Undefined]] dbVendor
-whereInValues = do
-    select (//*)
-    from "Countries"
-    where_ $ col "name" (varchar 256) `in_` cs
+whereInValues :: Select [[Undefined]] dbVendor
+whereInValues =
+       select (//*)
+    |> from "Countries"
+    |> where_ (col "name" (varchar 256) `in_` cs)
+    |> end
     where
         cs = colRef $ map genQVal ["Italy", "Switzerland"]
 
@@ -380,17 +402,19 @@ WHERE "countryId" IN (SELECT "countryId"
                       WHERE "inhabitants" >= "size" * 100)
 @
 -}
-whereInSelect :: Query [[Undefined]] dbVendor
-whereInSelect = do
-    select (//*)
-    from "People"
-    where_ $ countryId `in_` query
+whereInSelect :: Select [[Undefined]] dbVendor
+whereInSelect =
+       select (//*)
+    |> from "People"
+    |> where_ (countryId `in_` query)
+    |> end
     where
         countryId = col "countryId" integer
-        query = do
-            select countryId
-            from "Countries"
-            where_ $ col "inhabitants" integer />= (col "size" integer /* intVal 100)
+        query =
+               select countryId
+            |> from "Countries"
+            |> where_ (col "inhabitants" integer />= (col "size" integer /* intVal 100))
+            |> end
 
 {-|
 @
@@ -399,11 +423,12 @@ FROM "Countries"
 WHERE ("inhabitants" BETWEEN 10000 AND 10000000)
 @
 -}
-whereBetween :: Query [[Undefined]] dbVendor
-whereBetween = do
-    select (//*)
-    from "Countries"
-    where_ $ between (col "inhabitants" integer) (intVal 10000) (intVal 1000000)
+whereBetween :: Select [[Undefined]] dbVendor
+whereBetween =
+       select (//*)
+    |> from "Countries"
+    |> where_ (between (col "inhabitants" integer) (intVal 10000) (intVal 1000000))
+    |> end
 
 {-|
 @
@@ -415,16 +440,18 @@ WHERE EXISTS (
     WHERE "People"."countryId" = "Countries"."countryId")
 @
 -}
-whereExists :: Query [[Undefined]] dbVendor
-whereExists = do
-    select (//*)
-    from "People"
-    where_ $ exists query
+whereExists :: Select [[Undefined]] dbVendor
+whereExists =
+       select (//*)
+    |> from "People"
+    |> where_ (exists query)
+    |> end
     where
-        query = do
-            select (//*)
-            from "Countries"
-            where_ ("People"/."countryId" /== "Countries"/."countryId")
+        query =
+               select (//*)
+            |> from "Countries"
+            |> where_ ("People"/."countryId" /== "Countries"/."countryId")
+            |> end
 
 --------------------
 -- ORDER BY
@@ -433,11 +460,12 @@ whereExists = do
 {-|
 > SELECT "firstName" FROM "People" ORDER BY "firstName
 -}
-orderByQuery :: Query [String] dbVendor
-orderByQuery = do
-    select c
-    from "People"
-    orderBy c
+orderByQuery :: Select [String] dbVendor
+orderByQuery =
+       select c
+    |> from "People"
+    |> orderBy c
+    |> end
     where
         c = col "firstName" (varchar 256)
 
@@ -446,11 +474,12 @@ orderByQuery = do
 > FROM "Countries"
 > ORDER BY "sum"
 -}
-orderBySum :: Query [[Undefined]] dbVendor
-orderBySum = do
-    select [sum', colRefWrap "name"]
-    from "Countries"
-    orderBy sum'
+orderBySum :: Select [[Undefined]] dbVendor
+orderBySum =
+       select [sum', colRefWrap "name"]
+    |> from "Countries"
+    |> orderBy sum'
+    |> end
     where
         sum' =
             wrap $ (col "size" integer /+ col "inhabitants" integer) `as_` "sum"
@@ -466,11 +495,12 @@ ORDER BY
   "lastName" DESC
 @
 -}
-orderByAscDesc :: Query [[String]] dbVendor
-orderByAscDesc = do
-    select [firstName, lastName]
-    from "People"
-    orderBy [asc firstName, desc lastName]
+orderByAscDesc :: Select [[String]] dbVendor
+orderByAscDesc =
+       select [firstName, lastName]
+    |> from "People"
+    |> orderBy [asc firstName, desc lastName]
+    |> end
     where
         firstName = col "firstName" (varchar 256)
         lastName = col "lastName" (varchar 256)
@@ -480,11 +510,12 @@ orderByAscDesc = do
 > FROM "People"
 > ORDER BY "age" NULLS FIRST, "passeportNumber" NULLS LAST"
 -}
-orderByNull :: Query [[Int]] dbVendor
-orderByNull = do
-    select [age, passeport]
-    from "People"
-    orderBy [nullsFirst age, nullsLast passeport]
+orderByNull :: Select [[Int]] dbVendor
+orderByNull =
+       select [age, passeport]
+    |> from "People"
+    |> orderBy [nullsFirst age, nullsLast passeport]
+    |> end
     where
         age = col "age" integer
         passeport = col "passeportNumber" integer
@@ -497,27 +528,13 @@ ORDER BY "firstName"
 LIMIT 2
 @
 -}
-orderByLimit :: Query [[Undefined]] dbVendor
-orderByLimit = do
-    select (//*)
-    from "People"
-    orderBy "firstName"
-    limit 2
-
-{-|
-@
-SELECT *
-FROM "People"
-ORDER BY "firstName"
-OFFSET 2
-@
--}
-orderByOffset :: Query [[Undefined]] dbVendor
-orderByOffset = do
-    select (//*)
-    from "People"
-    orderBy "firstName"
-    offset 2
+orderByLimit :: Select [[Undefined]] dbVendor
+orderByLimit =
+       select (//*)
+    |> from "People"
+    |> orderBy "firstName"
+    |> limit 2
+    |> end
 
 {-|
 @
@@ -527,14 +544,14 @@ ORDER BY "firstName"
 LIMIT 5 OFFSET 2
 @
 -}
-orderByLimitOffset :: Query [[Undefined]] dbVendor
-orderByLimitOffset = do
-    select (//*)
-    from "People"
-    orderBy "firstName"
-    limit 5
-    offset 2
-
+orderByLimitOffset :: Select [[Undefined]] dbVendor
+orderByLimitOffset =
+       select (//*)
+    |> from "People"
+    |> orderBy "firstName"
+    |> limit 5
+    |> offset 2
+    |> end
 
 --------------------
 -- GROUP BY
@@ -547,11 +564,12 @@ FROM "People"
 GROUP BY "age"
 @
 -}
-selectGroupBy :: Query [Int] dbVendor
-selectGroupBy = do
-    select age
-    from "People"
-    groupBy age
+selectGroupBy :: Select [Int] dbVendor
+selectGroupBy =
+       select age
+    |> from "People"
+    |> groupBy age
+    |> end
     where
         age = col "age" integer
 
@@ -566,29 +584,32 @@ GROUP BY
   "age"
 @
 -}
-groupByTwo :: Query [[Undefined]] dbVendor
-groupByTwo = do
-    select cs
-    from "People"
-    groupBy cs
+groupByTwo :: Select [[Undefined]] dbVendor
+groupByTwo =
+       select cs
+    |> from "People"
+    |> groupBy cs
+    |> end
     where
         cs = ["firstName", "age"]
 
 -- | > SELECT "lastName", sum("age") FROM "People" GROUP BY "lastName";
-groupBySum :: Query [[Undefined]] dbVendor
-groupBySum = do
-    select [lastName, colRefWrap $ sum_ $ col "age" integer]
-    from "People"
-    groupBy lastName
+groupBySum :: Select [[Undefined]] dbVendor
+groupBySum =
+       select [lastName, colRefWrap $ sum_ $ col "age" integer]
+    |> from "People"
+    |> groupBy lastName
+    |> end
     where
         lastName = colRefWrap $ col "lastName" (varchar 256)
 
 -- | > SELECT "lastName" AS "name" FROM "People" GROUP BY "name"
-groupByAlias :: Query [String] dbVendor
-groupByAlias = do
-    select name
-    from "People"
-    groupBy name
+groupByAlias :: Select [String] dbVendor
+groupByAlias =
+       select name
+    |> from "People"
+    |> groupBy name
+    |> end
     where
         name = col "lastName" (varchar 256) `as_` "name"
 
@@ -602,11 +623,12 @@ FROM "People" AS "P" LEFT JOIN "Countries" AS "C" USING ("personId")
 GROUP BY "personId", "name"
 @
 -}
-groupByComplex :: Query [[Undefined]] dbVendor
-groupByComplex = do
-     select [colRefWrap personId, name, weird]
-     from (leftJoin people countries personId)
-     groupBy [colRefWrap personId, name]
+groupByComplex :: Select [[Undefined]] dbVendor
+groupByComplex =
+        select [colRefWrap personId, name, weird]
+     |> from (leftJoin people countries personId)
+     |> groupBy [colRefWrap personId, name]
+     |> end
      where
          name = colRefWrap $ (people/."lastName") `as_` "name"
          personId = toCol "personId"
@@ -626,12 +648,13 @@ GROUP BY "lastName"
 HAVING SUM("age") > 18
 @
 -}
-groupBySumHaving :: Query [[Undefined]] dbVendor
-groupBySumHaving = do
-    select [lastName, colRefWrap sumAge]
-    from "People"
-    groupBy lastName
-    having $ sumAge /> intVal 18
+groupBySumHaving :: Select [[Undefined]] dbVendor
+groupBySumHaving =
+       select [lastName, colRefWrap sumAge]
+    |> from "People"
+    |> groupBy lastName
+    |> having (sumAge /> intVal 18)
+    |> end
     where
          lastName = colRefWrap "lastName"
          sumAge = sum_ $ col "age" integer
@@ -646,12 +669,13 @@ HAVING
   OR sum("size") < 1800
 @
 -}
-groupBySumHavingTwo :: Query [Undefined] dbVendor
-groupBySumHavingTwo = do
-    select "firstName"
-    from "People"
-    groupBy "firstName"
-    having ((sumAge /> intVal 18) `or_` (sumSize /< intVal 1800))
+groupBySumHavingTwo :: Select [Undefined] dbVendor
+groupBySumHavingTwo =
+       select "firstName"
+    |> from "People"
+    |> groupBy "firstName"
+    |> having ((sumAge /> intVal 18) `or_` (sumSize /< intVal 1800))
+    |> end
     where
         sumAge = sum_ $ col "age" integer
         sumSize = sum_ $ col "size" integer
@@ -665,13 +689,14 @@ GROUP BY "personId", "P"."name", "P"."age"
 HAVING SUM("P"."age" * "C"."size") > 5000000
 @
 -}
-havingComplex :: Query [[Undefined]] dbVendor
-havingComplex = do
-     select [colRefWrap personId, colRefWrap name, wrap weird]
-     from $ leftJoin people countries personId
-     where_ $ personId /> intVal 2
-     groupBy [colRefWrap personId, wrap name, wrap age]
-     having $ sum_ (age /* size) /> intVal 5000000
+havingComplex :: Select [[Undefined]] dbVendor
+havingComplex =
+        select [colRefWrap personId, colRefWrap name, wrap weird]
+     |> from (leftJoin people countries personId)
+     |> where_ (personId /> intVal 2)
+     |> groupBy [colRefWrap personId, wrap name, wrap age]
+     |> having (sum_ (age /* size) /> intVal 5000000)
+     |> end
      where
          name      = people/."name"
          personId  = col "personId" integer
@@ -696,16 +721,17 @@ ORDER BY "id"
 LIMIT 30 OFFSET 2
 @
 -}
-selectFull :: Query [[Undefined]] dbVendor
-selectFull = do
-    select (//*)
-    from $ table "People"
-    where_ (age /> intVal 18)
-    groupBy $ col "lastName" $ varchar 256
-    having (sum_ age /> intVal 100)
-    orderBy $ col "id" integer
-    limit 30
-    offset 2
+selectFull :: Select [[Undefined]] dbVendor
+selectFull =
+       select (//*)
+    |> from (table "People")
+    |> where_ (age /> intVal 18)
+    |> groupBy (col "lastName" $ varchar 256)
+    |> having (sum_ age /> intVal 100)
+    |> orderBy (col "id" integer)
+    |> limit 30
+    |> offset 2
+    |> end
     where
         age = col "age" integer
 
@@ -714,143 +740,162 @@ selectFull = do
 --------------------
 
 -- | Query all rows from the People table.
-selectPeople :: Query [[Undefined]] dbVendor
-selectPeople = do
-    select (//*)
-    from "People"
+selectPeople :: SelectFromStmt [[Undefined]] dbVendor
+selectPeople =
+       select (//*)
+    |> from "People"
 
 -- | > SELECT * FROM "People" WHERE "age" > 18
-selectGreaterThan :: Query [[Undefined]] dbVendor
-selectGreaterThan = do
-    selectPeople
-    where_ $ col "age" integer /> intVal 18
+selectGreaterThan :: Select [[Undefined]] dbVendor
+selectGreaterThan =
+       selectPeople
+    |> where_ (col "age" integer /> intVal 18)
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "age" >= 18
-selectGreaterThanOrEqualTo :: Query [[Undefined]] dbVendor
-selectGreaterThanOrEqualTo = do
-    selectPeople
-    where_ $ col "age" integer />= intVal 18
+selectGreaterThanOrEqualTo :: Select [[Undefined]] dbVendor
+selectGreaterThanOrEqualTo =
+       selectPeople
+    |> where_ (col "age" integer />= intVal 18)
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "age" < 18
-selectSmallerThan :: Query [[Undefined]] dbVendor
-selectSmallerThan = do
-    selectPeople
-    where_ $ col "age" integer /< intVal 18
+selectSmallerThan :: Select [[Undefined]] dbVendor
+selectSmallerThan =
+       selectPeople
+    |> where_ (col "age" integer /< intVal 18)
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "age" <= 18
-selectSmallerThanOrEqualTo :: Query [[Undefined]] dbVendor
-selectSmallerThanOrEqualTo = do
-    selectPeople
-    where_ $ col "age" integer /<= intVal 18
+selectSmallerThanOrEqualTo :: Select [[Undefined]] dbVendor
+selectSmallerThanOrEqualTo =
+       selectPeople
+    |> where_ (col "age" integer /<= intVal 18)
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "age" = 18
-selectEqual :: Query [[Undefined]] dbVendor
-selectEqual = do
-    selectPeople
-    where_ $ col "age" integer /== intVal 18
+selectEqual :: Select [[Undefined]] dbVendor
+selectEqual =
+       selectPeople
+    |> where_ (col "age" integer /== intVal 18)
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "age" <> 18
-selectNotEqual :: Query [[Undefined]] dbVendor
-selectNotEqual = do
-    selectPeople
-    where_ $ col "age" integer /<> intVal 18
+selectNotEqual :: Select [[Undefined]] dbVendor
+selectNotEqual =
+       selectPeople
+    |> where_ (col "age" integer /<> intVal 18)
+    |> end
 
 -- | > SELECT * FROM "People" WHERE ("age" NOT BETWEEN 5 AND 18)
-selectNotBetween :: Query [[Undefined]] dbVendor
-selectNotBetween = do
-    selectPeople
-    where_ $ notBetween (col "age" integer) (intVal 5) $ intVal 18
+selectNotBetween :: Select [[Undefined]] dbVendor
+selectNotBetween =
+       selectPeople
+    |> where_ (notBetween (col "age" integer) (intVal 5) $ intVal 18)
+    |> end
 
 --------------------
 -- Boolean operators
 --------------------
 
 -- | > SELECT * FROM "People" WHERE "passeportNumber" IS NULL
-isNullQuery :: Query [[Undefined]] dbVendor
-isNullQuery = do
-    selectPeople
-    where_ $ isNull "passeportNumber"
+isNullQuery :: Select [[Undefined]] dbVendor
+isNullQuery =
+       selectPeople
+    |> where_ (isNull "passeportNumber")
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "passeportNumber" IS NOT NULL
-isNotNullQuery :: Query [[Undefined]] dbVendor
-isNotNullQuery = do
-    selectPeople
-    where_ $ isNotNull "passeportNumber"
+isNotNullQuery :: Select [[Undefined]] dbVendor
+isNotNullQuery =
+       selectPeople
+    |> where_ (isNotNull "passeportNumber")
+    |> end
 
 {-|
 > SELECT *
 > FROM "People" WHERE "nickNameAsKind" IS DISTINCT FROM "nickNameAsAdult"
 -}
-isDistinctFromQuery :: Query [[Undefined]] dbVendor
-isDistinctFromQuery = do
-    selectPeople
-    where_ $ "nickNameAsKind" `isDistinctFrom` "nickNameAsAdult"
+isDistinctFromQuery :: Select [[Undefined]] dbVendor
+isDistinctFromQuery =
+       selectPeople
+    |> where_ ("nickNameAsKind" `isDistinctFrom` "nickNameAsAdult")
+    |> end
 
 {-|
 > SELECT *
 > FROM "People" WHERE "nickNameAsKind" IS NOT DISTINCT FROM "nickNameAsAdult"
 -}
-isNotDistinctFromQuery :: Query [[Undefined]] dbVendor
-isNotDistinctFromQuery = do
-    selectPeople
-    where_ $ "nickNameAsKind" `isNotDistinctFrom` "nickNameAsAdult"
+isNotDistinctFromQuery :: Select [[Undefined]] dbVendor
+isNotDistinctFromQuery =
+       selectPeople
+    |> where_ ("nickNameAsKind" `isNotDistinctFrom` "nickNameAsAdult")
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "married" IS TRUE
-isTrueQuery :: Query [[Undefined]] dbVendor
-isTrueQuery = do
-    selectPeople
-    where_ $ isTrue $ col "married" boolean
+isTrueQuery :: Select [[Undefined]] dbVendor
+isTrueQuery =
+       selectPeople
+    |> where_ (isTrue $ col "married" boolean)
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "married" IS NOT TRUE
-isNotTrueQuery :: Query [[Undefined]] dbVendor
-isNotTrueQuery = do
-    selectPeople
-    where_ $ isNotTrue $ col "married" boolean
+isNotTrueQuery :: Select [[Undefined]] dbVendor
+isNotTrueQuery =
+       selectPeople
+    |> where_ (isNotTrue $ col "married" boolean)
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "married" IS FALSE
-isFalseQuery :: Query [[Undefined]] dbVendor
-isFalseQuery = do
-    selectPeople
-    where_ $ isFalse $ col "married" boolean
+isFalseQuery :: Select [[Undefined]] dbVendor
+isFalseQuery =
+       selectPeople
+    |> where_ (isFalse $ col "married" boolean)
+    |> end
 
 -- | > SELECT * FROM "People" WHERE "married" IS NOT FALSE
-isNotFalseQuery :: Query [[Undefined]] dbVendor
-isNotFalseQuery = do
-    selectPeople
-    where_ $ isNotFalse $ col "married" boolean
+isNotFalseQuery :: Select [[Undefined]] dbVendor
+isNotFalseQuery =
+       selectPeople
+    |> where_ (isNotFalse $ col "married" boolean)
+    |> end
 
 {-|
 > SELECT * FROM "People"
 > WHERE ("nickNameAsKind" = "nickNameAsAdult") IS UNKWNOWN
 -}
-isUnknownQuery :: Query [[Undefined]] dbVendor
-isUnknownQuery = do
-    selectPeople
-    where_ $ isUnknown $ "nickNameAsKind" /== "nickNameAsAdult"
+isUnknownQuery :: Select [[Undefined]] dbVendor
+isUnknownQuery =
+       selectPeople
+    |> where_ (isUnknown $ "nickNameAsKind" /== "nickNameAsAdult")
+    |> end
 
 {-|
 > SELECT *
 > FROM "People" WHERE ("nickNameAsKind" = "nickNameAsAdult") IS NOT UNKWNOWN
 -}
-isNotUnknownQuery :: Query [[Undefined]] dbVendor
-isNotUnknownQuery = do
-    selectPeople
-    where_ $ isNotUnknown $ "nickNameAsKind" /== "nickNameAsAdult"
+isNotUnknownQuery :: Select [[Undefined]] dbVendor
+isNotUnknownQuery =
+       selectPeople
+    |> where_ (isNotUnknown $ "nickNameAsKind" /== "nickNameAsAdult")
+    |> end
 
 --------------------
 -- Functions
 --------------------
 
 -- | > SELECT "age" + 1 FROM "People"
-addition :: Query [Int] dbVendor
-addition = do
-    select $ col "age" integer /+ intVal 1
-    from "People"
+addition :: Select [Int] dbVendor
+addition =
+       select (col "age" integer /+ intVal 1)
+    |> from "People"
+    |> end
 
 -- | > SELECT 3 * 4
-multiplication :: Query [Int] dbVendor
-multiplication = do
-    select $ intVal 3 /* intVal 4
+multiplication :: Select [Int] dbVendor
+multiplication =
+       select (intVal 3 /* intVal 4)
+    |> end
 
 {-|
 MariaDB & PostgreSQL
@@ -859,9 +904,10 @@ MariaDB & PostgreSQL
 SqLite
 > SELECT Date('now')
 -}
-selectCurrentDate :: Query [Time] dbVendor
-selectCurrentDate = do
-    select currentDate
+selectCurrentDate :: Select [Time] dbVendor
+selectCurrentDate =
+       select currentDate
+    |> end
 
 {-|
 MariaDB
@@ -870,9 +916,10 @@ MariaDB
 PostgreSQL & SqLite
 > SELECT random()
 -}
-selectRandom :: Query [Int] dbVendor
-selectRandom = do
-    select random
+selectRandom :: Select [Int] dbVendor
+selectRandom =
+       select random
+    |> end
 
 {-|
 PostgreSQL:
@@ -884,20 +931,22 @@ MariaDB:
 SQLite:
 > SELECT last_insert_row_id()
 -}
-selectLastInsertId :: Query [Int] dbVendor
-selectLastInsertId = do
-    select lastInsertId
+selectLastInsertId :: Select [Int] dbVendor
+selectLastInsertId =
+       select lastInsertId
+    |> end
 
 --------------------
 -- Combined queries
 --------------------
 
 -- | Query a person by its primary key.
-selectId :: Int -> Query [[Undefined]] dbVendor
-selectId id' = do
-    select (//*)
-    from "People"
-    where_ $ col "personId" integer /== value id'
+selectId :: Int -> Select [[Undefined]] dbVendor
+selectId id' =
+       select (//*)
+    |> from "People"
+    |> where_ (col "personId" integer /== value id')
+    |> end
 
 {-|
 @
@@ -923,10 +972,11 @@ unionQuery = union (selectId 1) $ selectId 2
 unionCombined :: Select [[Undefined]] dbVendor
 unionCombined =
     intersect
-        unionQuery (do
-            select (//*)
-            from "People"
-            where_ (col "personId" integer /== intVal 1))
+        unionQuery (
+               select (//*)
+            |> from "People"
+            |> where_ (col "personId" integer /== intVal 1)
+            |> end)
 
 {-|
 > SELECT * FROM "People" WHERE "personId" = 1
@@ -950,9 +1000,10 @@ intersectAllQuery = intersectAll (selectId 1) $ selectId 2
 > SELECT * FROM "People" WHERE "personId" = 1
 -}
 exceptQuery :: Select [[Undefined]] dbVendor
-exceptQuery = except (do
-    select (//*)
-    from "People") (selectId 1)
+exceptQuery = except (
+       select (//*)
+    |> from "People"
+    |> end) (selectId 1)
 
 {-|
 > SELECT * FROM "People"
@@ -961,20 +1012,22 @@ exceptQuery = except (do
 -}
 exceptAllQuery :: Select [[Undefined]] dbVendor
 exceptAllQuery =
-    exceptAll (do
-        select (//*)
-        from "People") (selectId 1)
+    exceptAll (
+           select (//*)
+        |> from "People"
+        |> end) (selectId 1)
 
 ----------------------------------------
 -- PostgreSQL
 ----------------------------------------
 
 -- | > SELECT DISTINCT ON ("firstName") * FROM "People" ORDER BY "age"
-distinctOnSelect :: Query [[Undefined]] Pg.PostgreSQL
-distinctOnSelect = do
-    P.selectDistinctOn [colRefWrap "firstName"] (//*)
-    from "People"
-    orderBy "age"
+distinctOnSelect :: Select [[Undefined]] Pg.PostgreSQL
+distinctOnSelect =
+       P.selectDistinctOn [colRefWrap "firstName"] (//*)
+    |> from "People"
+    |> orderBy "age"
+    |> end
 
 {-|
 SELECT * FROM "Countries", LATERAL (
@@ -982,58 +1035,67 @@ SELECT * FROM "Countries", LATERAL (
     FROM "People"
     WHERE "People"."countryId" = "Countries"."countryId") AS "C"
 -}
-fromLateral :: Query [[Undefined]] Pg.PostgreSQL
-fromLateral = do
-    select (//*)
-    from [tableRef "Countries", P.lateral (wrap subQuery) "C"]
+fromLateral :: Select [[Undefined]] Pg.PostgreSQL
+fromLateral =
+       select (//*)
+    |> from [tableRef "Countries", P.lateral (wrap subQuery) "C"]
+    |> end
     where
-        subQuery = do
-            select (//*)
-            from "People"
-            where_ $ "People"/."countryId" /== "Countries"/."countryId"
+        subQuery =
+               select (//*)
+            |> from "People"
+            |> where_ ("People"/."countryId" /== "Countries"/."countryId")
+            |> end
 
 ----------------------------------------
 -- Quick start tutorial
 ----------------------------------------
 
-myQueryOne :: Query [[Undefined]] dbVendor
-myQueryOne = do
-    select (//*)
-    from $ table "films"
+myQueryOne :: Select [[Undefined]] dbVendor
+myQueryOne =
+       select (//*)
+    |> from (table "films")
+    |> end
 
-myQueryTwo :: Query [[Int]] SqLite
-myQueryTwo = do
-    select [id', age]
-    from films
-    where_ $ age /+ intVal 20 `in_` subSelect
+myQueryTwo :: Select [[Int]] SqLite
+myQueryTwo =
+       select [id', age]
+    |> from films
+    |> where_ (age /+ intVal 20 `in_` subSelect)
+    |> end
     where
         id' = col "id" integer
         age = col "age" integer
         films = table "films"
         actor = table "actors"
-        subSelect = do
-            select age
-            from actor
+        subSelect =
+               select age
+            |> from actor
+            |> end
 
-myQueryThree :: Query [[Undefined]] Pg.PostgreSQL
-myQueryThree = do
-        select (//*)
-        from [tableRef $ table "foo", Pg.lateral (wrap sub) "s"]
+myQueryThree :: Select [[Undefined]] Pg.PostgreSQL
+myQueryThree =
+           select (//*)
+        |> from [tableRef $ table "foo", Pg.lateral (wrap sub) "s"]
+        |> end
         where
-            sub = do
-                select (//*)
-                from "bar"
+            sub =
+                   select (//*)
+                |> from "bar"
+                |> end
 
-myQueryFour :: Query [[Undefined]] dbVendor
-myQueryFour = do
-    select ["firstName", "lastName"]
-    from "People"
-    where_ $ "age" /> genVal (18::Int)
+myQueryFour :: Select [[Undefined]] dbVendor
+myQueryFour =
+       select ["firstName", "lastName"]
+    |> from "People"
+    |> where_ ("age" /> genVal (18::Int))
+    |> end
 
-myQueryFive :: Query [[Undefined]] dbVendor
-myQueryFive = do
-    select [wrap name, wrap age]
-    from $ table "People"
+myQueryFive :: Select [[Undefined]] dbVendor
+myQueryFive =
+       select [wrap name, wrap age]
+    |> from (table "People")
+    |> end
     where
         name = col "name" $ varchar 256
         age = col "age" integer

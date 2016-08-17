@@ -48,7 +48,7 @@ WHERE "lastName" = 'Ceasar'
 equalTo :: Update Void dbVendor
 equalTo =
        update "People" [assign (col "age" integer) $ intVal 2050]
-    |> where_' (col "lastName" (varchar 256) /== value "Ceasar")
+    |> where_ (col "lastName" (varchar 256) /== value "Ceasar")
     |> end
 
 {-|
@@ -58,13 +58,14 @@ UPDATE "People" SET "age" = "age" + 1 WHERE "countryId" IN
 updateSelect :: Update Void dbVendor
 updateSelect =
        update "People" [assign age $ age /+ intVal 1]
-    |> where_' (countryId `in_` execStmt subSelect)
+    |> where_ (countryId `in_` execStmt subSelect)
     |> end
     where
-        subSelect = do
-            select countryId
-            from "Countries"
-            where_ (col "name" (varchar 256) /== value "Italy")
+        subSelect =
+               select countryId
+            |> from "Countries"
+            |> where_ (col "name" (varchar 256) /== value "Italy")
+            |> end
         countryId = col "countryId" (varchar 256)
         age = col "age" integer
 
@@ -76,7 +77,7 @@ updateSelect =
 defaultVal :: Update Void P.PostgreSQL
 defaultVal =
        update "People" [assign "title" default_]
-    |> where_' (col "personId" integer /== intVal 1)
+    |> where_ (col "personId" integer /== intVal 1)
     |> end
 
 {-|
@@ -90,7 +91,7 @@ RETURNING "id"
 updateReturningClause :: Update Int P.PostgreSQL
 updateReturningClause =
        update "People" [assign (col "age" integer) $ intVal 2050]
-    |> where_' (idC /== intVal 1)
+    |> where_ (idC /== intVal 1)
     |> P.returning idC
     |> end
     where

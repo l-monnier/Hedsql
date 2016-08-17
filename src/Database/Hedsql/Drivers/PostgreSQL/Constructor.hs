@@ -24,8 +24,6 @@ module Database.Hedsql.Drivers.PostgreSQL.Constructor
     , returning
     ) where
 
-import Control.Monad.State.Lazy
-
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Grammar
 import Database.Hedsql.Common.Constructor
@@ -50,22 +48,14 @@ lateral ::
 lateral s a = LateralRef s $ TableRefAs a []
 
 {-|
-Create a SELECT DISTINCT ON query.
-
-This function is normally meant to be used for building a select query from
-scratch, providing the ON clause and selected columns as arguments.
-However, it is possible to apply it on an existing select query.
-If that query is a single query, it will become a SELECT DISTINCT ON one.
-If that query is a combination of select queries (UNION, EXCEPT, etc.) then
-all the queries will become SELECT DISTINCT ON ones.
+Create a SELECT DISTINCT ON statement.
 -}
 selectDistinctOn ::
-       SelectConstr a (Query c PostgreSQL)
+       SelectionConstr a (Selection colType PostgreSQL)
     => [ColRefWrap PostgreSQL]             -- ^ Distinct expression.
     -> a                                   -- ^ Select clause.
-    -> Query c PostgreSQL                  -- ^ Select query.
-selectDistinctOn dExpr clause =
-    modify (\_ -> setSelects selectType (DistinctOn dExpr) $ execStmt $ select clause)
+    -> SelectSingleStmt colType PostgreSQL -- ^ Select statement.
+selectDistinctOn dExpr = SelectSingleStmt (DistinctOn dExpr) . selection
 
 {-|
 Create a RETURNING clause for an INSERT statement specifically for PostgreSQL.

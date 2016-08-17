@@ -12,7 +12,8 @@ Description of the grammar to build SQL statements.
 -}
 module Database.Hedsql.Common.Grammar
     ( -- * Select
-      SelectStmt(..)
+      SelectCombinedStmt(..)
+    , SelectSingleStmt(..)
     , SelectFromStmt(..)
     , SelectWhereStmt(..)
     , SelectGroupByStmt(..)
@@ -42,12 +43,14 @@ import Database.Hedsql.Common.AST
 -- SELECT
 --------------------------------------------------------------------------------
 
-data SelectStmt colType dbVendor =
-      SelectSingleStmt (SelectType dbVendor) (Selection colType dbVendor)
-    | SelectCombinedStmt (Combination dbVendor) [Select colType dbVendor]
+data SelectCombinedStmt colType dbVendor =
+    SelectCombinedStmt (Combination dbVendor) [Select colType dbVendor]
+
+data SelectSingleStmt colType dbVendor =
+    SelectSingleStmt (SelectType dbVendor) (Selection colType dbVendor)
 
 data SelectFromStmt colType dbVendor =
-    SelectFromStmt (From dbVendor) (SelectStmt colType dbVendor)
+    SelectFromStmt (From dbVendor) (SelectSingleStmt colType dbVendor)
 
 data SelectWhereStmt colType dbVendor =
     SelectWhereStmt (Where dbVendor) (SelectFromStmt colType dbVendor)

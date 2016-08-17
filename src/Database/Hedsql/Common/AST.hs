@@ -177,6 +177,8 @@ module Database.Hedsql.Common.AST
 
       -- ** SELECT
     , Select(..)
+    , _Single
+    , _Combined
     , getSelects
     , setSelects
     , Combination(..)
@@ -1168,11 +1170,11 @@ data SelectQ colType dbVendor = SelectQ
       -- | WHERE clause.
     , _selectWhere :: Maybe (Where dbVendor)
 
-      -- | Having clause.
-    , _selectHaving :: Maybe (Having dbVendor)
-
       -- | GROUP BY clause.
     , _selectGroupBy :: Maybe (GroupBy dbVendor)
+
+      -- | Having clause.
+    , _selectHaving :: Maybe (Having dbVendor)
 
       -- | ORDER BY clause.
     , _selectOrderBy :: Maybe (OrderBy dbVendor)
@@ -1501,6 +1503,7 @@ makeLenses ''TableRefAs
 makeLenses ''ColDef
 makeLenses ''ColRef
 makeLenses ''Select
+makePrisms ''Select
 makeLenses ''SelectQ
 makeLenses ''From
 makeLenses ''Join

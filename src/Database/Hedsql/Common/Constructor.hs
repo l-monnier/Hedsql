@@ -225,7 +225,6 @@ module Database.Hedsql.Common.Constructor
 
     -- ** WHERE clause
     , where_
-    , where_'
 
     -- ** GROUP BY clause
     , ToSortRef
@@ -919,7 +918,7 @@ tableJoin joinType tableRef1 tableRef2 =
 ----------------------------------------
 
 -- | Create a Select query with only a column selection clause.
-simpleSelect :: Selection colType dbVendor -> SelectStmt colType dbVendor
+simpleSelect :: Selection colType dbVendor -> SelectSingleStmt colType dbVendor
 simpleSelect = SelectSingleStmt All
 
 {-|
@@ -937,55 +936,55 @@ class SelectConstr a b | a -> b where
 
 instance SelectConstr
     (ColRefWrap dbVendor)
-    (SelectStmt [Undefined] dbVendor)
+    (SelectSingleStmt [Undefined] dbVendor)
     where
         select = simpleSelect . selection
 
 instance SelectConstr
     [ColRefWrap dbVendor]
-    (SelectStmt [[Undefined]] dbVendor)
+    (SelectSingleStmt [[Undefined]] dbVendor)
     where
         select = simpleSelect . selection
 
 instance SelectConstr
     (Column colType dbVendor)
-    (SelectStmt [colType] dbVendor)
+    (SelectSingleStmt [colType] dbVendor)
     where
         select = simpleSelect . selection
 
 instance SelectConstr
     [Column colType dbVendor]
-    (SelectStmt [[colType]] dbVendor)
+    (SelectSingleStmt [[colType]] dbVendor)
     where
         select = simpleSelect . selection
 
 instance SelectConstr
     (ColWrap dbVendor)
-    (SelectStmt [Undefined] dbVendor)
+    (SelectSingleStmt [Undefined] dbVendor)
     where
         select = simpleSelect . selection
 
 instance SelectConstr
     [ColWrap dbVendor]
-    (SelectStmt [[Undefined]] dbVendor)
+    (SelectSingleStmt [[Undefined]] dbVendor)
     where
         select = simpleSelect . selection
 
 instance SelectConstr
     (ColRef colType dbVendor)
-    (SelectStmt [colType] dbVendor)
+    (SelectSingleStmt [colType] dbVendor)
     where
         select = simpleSelect . selection
 
 instance SelectConstr
     [ColRef colType dbVendor]
-    (SelectStmt [[colType]] dbVendor)
+    (SelectSingleStmt [[colType]] dbVendor)
     where
         select = simpleSelect . selection
 
 instance SelectConstr
     (Expression colType dbVendor)
-    (SelectStmt [colType] dbVendor)
+    (SelectSingleStmt [colType] dbVendor)
     where
         select = simpleSelect . selection
 
@@ -995,8 +994,8 @@ Create a SELECT DISTINCT query.
 selectDistinct ::
        SelectionConstr a (Selection colType dbVendor)
     => a
-    -> SelectStmt colType dbVendor
-selectDistinct s = SelectSingleStmt Distinct (selection s)
+    -> SelectSingleStmt colType dbVendor
+selectDistinct = SelectSingleStmt Distinct . selection
 
 -- | Create a IS DISTINCT FROM operator.
 isDistinctFrom ::
@@ -1102,7 +1101,7 @@ instance SelectionConstr
 from ::
        (ToList a [b], ToTableRef b (TableRef dbVendor))
     => a
-    -> SelectStmt colType dbVendor
+    -> SelectSingleStmt colType dbVendor
     -> SelectFromStmt colType dbVendor
 from tRef =
     SelectFromStmt fromClause
@@ -1225,27 +1224,20 @@ subQuery sub name = SelectRef (SelectWrap $ execStmt sub) $ TableRefAs name []
 -- WHERE
 ----------------------------------------
 
-class WhereState a where
-    where_ :: Expression Bool dbVendor -> State (a dbVendor) ()
-
--- | Create a WHERE clause for a SELECT query.
-instance WhereState (Select dbVendor) where
-    where_ = modify . setSelects selectWhere . Just . Where
-
-instance WhereState (Update dbVendor) where
-    where_ = modify . set updateWhere . Just . Where
-
-instance WhereState (Delete dbVendor) where
-    where_ = modify . set deleteWhere . Just . Where
-
 class WhereConstr a b | a -> b where
-    where_' :: Expression Bool dbVendor -> a dbVendor -> b dbVendor
+    where_ :: Expression Bool dbVendor -> a dbVendor -> b dbVendor
 
+-- | Create a WHERE clause for a SELECT statement.
+instance WhereConstr (SelectFromStmt colType) (SelectWhereStmt colType) where
+    where_ = SelectWhereStmt . Where
+
+-- | Create a WHERE clause for an UPDATE statement.
 instance WhereConstr UpdateSetStmt UpdateWhereStmt where
-    where_' = UpdateWhereStmt . Where
+    where_ = UpdateWhereStmt . Where
 
+-- | Create a WHERE clause for a DELETE statement.
 instance WhereConstr DeleteFromStmt DeleteWhereStmt where
-    where_' = DeleteWhereStmt . Where
+    where_ = DeleteWhereStmt . Where
 
 ----------------------------------------
 -- ORDER BY
@@ -1317,7 +1309,7 @@ nullsLast sRef = set sortRefNulls (Just NullsLast) (sortRef sRef)
 -- | Create a GROUP BY clause.
 groupByClause ::
     ( ToList a [b]
-    , ToColRef b (ColRef colType dbVendor)
+    , ToColRef b (ColRef c dbVendor)
     )
     => a -- ^ Grouping references.
     -> GroupBy dbVendor
@@ -1327,7 +1319,7 @@ groupByClause = GroupBy . map colRefWrap . toList
 class GroupByConstr a where
     groupBy ::
         ( ToList g [t]
-        , ToColRef t (ColRef colType dbVendor)
+        , ToColRef t (ColRef c dbVendor)
         )
         => g -- ^ Grouping references.
         -> a colType dbVendor
@@ -1504,6 +1496,63 @@ a SQL statement.
 class End a b | a -> b where
     end :: a -> b
 
+instance End (SelectSingleStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectSingleStmt t s) = Single $
+        SelectQ
+            t
+            s
+            Nothing
+            Nothing
+            Nothing
+            Nothing
+            Nothing
+            Nothing
+            Nothing
+
+instance End (SelectFromStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectFromStmt f selectFromStmt) =
+        end selectFromStmt & _Single . selectFrom .~ Just f
+
+instance End (SelectWhereStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectWhereStmt w selectFromStmt) =
+        end selectFromStmt & _Single . selectWhere .~ Just w
+
+instance End
+    (SelectGroupByStmt colType dbVendor)
+    (Select colType dbVendor)
+    where
+        end (SelectFromGroupByStmt g stmt) =
+            end stmt & _Single . selectGroupBy .~ Just g
+        end (SelectWhereGroupByStmt g stmt) =
+            end stmt & _Single . selectGroupBy .~ Just g
+
+instance End
+    (SelectHavingStmt colType dbVendor)
+    (Select colType dbVendor)
+    where
+        end (SelectHavingStmt h stmt) =
+            end stmt & _Single . selectHaving .~ Just h
+
+instance End
+    (SelectOrderByStmt colType dbVendor)
+    (Select colType dbVendor)
+    where
+        end (SelectFromOrderByStmt o stmt) =
+            end stmt & _Single . selectOrderBy .~ Just o
+        end (SelectWhereOrderByStmt o stmt) =
+            end stmt & _Single . selectOrderBy .~ Just o
+        end (SelectGroupByOrderByStmt o stmt) =
+            end stmt & _Single . selectOrderBy .~ Just o
+        end (SelectHavingOrderByStmt o stmt) =
+            end stmt & _Single . selectOrderBy .~ Just o
+
+instance End (SelectLimitStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectLimitStmt l stmt) = end stmt & _Single . selectLimit .~ Just l
+
+
+instance End (SelectOffsetStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectOffsetStmt o stmt) = end stmt & _Single . selectOffset .~ Just o
+
 instance End (InsertFromStmt dbVendor) (Insert Void dbVendor) where
     end (InsertFromStmt t a) = Insert t a Nothing
 
@@ -1511,7 +1560,7 @@ instance End
     (InsertReturningStmt colType dbVendor)
     (Insert colType dbVendor)
     where
-        end (InsertReturningStmt r (InsertFromStmt t a)) = Insert t a (Just r)
+        end (InsertReturningStmt r stmt) = end stmt & insertReturning .~ Just r
 
 {-|
 For UPDATE statement the possibility to create a statement without a WHERE
@@ -1525,22 +1574,20 @@ instance End
     (UpdateReturningStmt colType dbVendor)
     (Update colType dbVendor)
     where
-        end (UpdateReturningStmt r (UpdateWhereStmt w (UpdateSetStmt t a))) =
-            Update t a (Just w) (Just r)
+        end (UpdateReturningStmt r stmt) = end stmt & updateReturning .~ Just r
 
 instance End (DeleteFromStmt dbVendor) (Delete Void dbVendor) where
     end (DeleteFromStmt t) = Delete t Nothing Nothing
 
 instance End (DeleteWhereStmt dbVendor) (Delete Void dbVendor) where
-    end (DeleteWhereStmt w (DeleteFromStmt t)) = Delete t (Just w) Nothing
+    end (DeleteWhereStmt w stmt) = end stmt & deleteWhere .~ Just w
 
 instance End
     (DeleteReturningStmt colType dbVendor) (Delete colType dbVendor) where
-        end (DeleteFromReturningStmt r (DeleteFromStmt t)) =
-            Delete t Nothing (Just r)
-
-        end (DeleteWhereReturningStmt r (DeleteWhereStmt w (DeleteFromStmt t))) =
-            Delete t (Just w) (Just r)
+        end (DeleteFromReturningStmt r stmt) =
+            end stmt & deleteReturning .~ Just r
+        end (DeleteWhereReturningStmt r stmt) =
+            end stmt & deleteReturning .~ Just r
 
 --------------------------------------------------------------------------------
 -- Values
