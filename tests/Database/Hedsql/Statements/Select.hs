@@ -304,8 +304,7 @@ selectSubQuery =
        select (//*)
     |> from (subQuery (
            select (//*)
-        |> from "People"
-        |> end) "P")
+        |> from "People") "P")
     |> end
 
 --------------------
