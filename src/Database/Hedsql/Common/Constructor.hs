@@ -29,7 +29,7 @@ clause but only the arguments specific to the 'select' clause which are the
 columns.
 
 @
-mySelect :: Select [[Undefined]] a
+mySelect :: SelectSingleStmt [[Undefined]] a
 
 mySelect =
     select [firstName, age]
@@ -38,20 +38,32 @@ mySelect =
         age = col "age" integer
 @
 
-The additional FROM clause can be added using do notation.
-The monad in which the query is stored is a 'State' monad.
-As we are now using a monad, the returned type of the SELECT query will change.
-In our case, it will be 'Query' instead of 'Select'.
-Note that in our previous example we could also have used a monad and thus the
-same 'Query' type.
+The additional FROM clause can be added using reversed function composition
+('(|>)').
+As we are now adding a clause, the returned type will change.
 
 Adding a FROM clause to our previous example leads to:
 
 @
-mySelect :: Query [[Undefined]] a
+mySelect :: SelectFromStmt [[Undefined]] a
 mySelect = do
-    select [firstName, age]
-    from people
+       select [firstName, age]
+    |> from people
+    where
+        firstName = col "firstName" $ varchar 256
+        age = col "age" $ integer
+        people = table "People"
+@
+
+To avoid having to deal with different types, you can use the 'end' function.
+This will lead to the final 'Select' type:
+
+@
+mySelect :: Select [[Undefined]] a
+mySelect = do
+       select [firstName, age]
+    |> from people
+    |> end
     where
         firstName = col "firstName" $ varchar 256
         age = col "age" $ integer
@@ -117,7 +129,7 @@ module Database.Hedsql.Common.Constructor
       related function itself.
       The reverse is not true: you cannot use a 'TableRef' in a CREATE or DROP
       statement. If you want to do this, you can use the 'Database.Hedsql.Ext'
-      module. It comes of course at the cost of lesser type safety.
+      module. It comes of course at the expense of lesser type safety.
       -}
       ToTable
     , table
