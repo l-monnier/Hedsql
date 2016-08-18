@@ -137,6 +137,8 @@ module Database.Hedsql.Common.AST
 
       -- ** CREATE
     , Create(CreateTable, CreateView)
+    , _CreateTable
+    , _CreateView
     , createTableIfNotExists
     , createT
     , createViewIfNotExists
@@ -1496,6 +1498,7 @@ makeLenses ''Column
 makeLenses ''ColConstraint
 makeLenses ''View
 makeLenses ''Create
+makePrisms ''Create
 makeLenses ''Drop
 
 makeLenses ''TableRef

@@ -58,7 +58,7 @@ UPDATE "People" SET "age" = "age" + 1 WHERE "countryId" IN
 updateSelect :: Update Void dbVendor
 updateSelect =
        update "People" [assign age $ age /+ intVal 1]
-    |> where_ (countryId `in_` execStmt subSelect)
+    |> where_ (countryId `in_` subSelect)
     |> end
     where
         subSelect =

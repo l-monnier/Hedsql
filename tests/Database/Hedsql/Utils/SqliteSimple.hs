@@ -51,7 +51,7 @@ toQuery = S.Query . toStrict
 --------------------------------------------------------------------------------
 
 -- | Create a table.
-createTable :: S.Connection -> H.CreateStmt H.SqLite -> IO ()
+createTable :: S.Connection -> H.Create H.SqLite -> IO ()
 createTable = execute
 
 -- | Delete values in a table.

@@ -45,8 +45,8 @@ module Database.Hedsql.Statements.Create
 -- IMPORTS
 --------------------------------------------------------------------------------
 
+import Database.Hedsql
 import Database.Hedsql.Ext()
-import Database.Hedsql.SqLite
 
 --------------------------------------------------------------------------------
 -- PUBLIC
@@ -64,7 +64,7 @@ PostgreSQL: @ CREATE TABLE "Countries" ( "countryId" serial PRIMARY
 KEY, "name" varchar(256) NOT NUL, UNIQUE, "size" integer,
 "inhabitants" integer ) @
 -}
-countries :: CreateStmt dbVendor
+countries :: CreateTableStmt dbVendor
 countries = createTable "Countries"
     [ wrap (col "countryId" integer) /++ primary True
     , wrap (col "name" (varchar 256)) /++ [notNull, unique]
@@ -87,7 +87,7 @@ PostgreSQL: @ CREATE TABLE "People" ( "personId" serial PRIMARY KEY,
 UNIQUE, "father" integer REFERENCES "People"("personId") "countryId"
 integer REFERENCES "Countries"("countryId") ) @
 -}
-people :: CreateStmt dbVendor
+people :: CreateTableStmt dbVendor
 people = createTable "People"
     [ wrap (col "personId" integer) /++ primary True
     , wrap (col "title" (char 2)) /++ defaultValue (value "Ms")
@@ -105,12 +105,13 @@ people = createTable "People"
 ----------------------------------------
 
 -- | > CREATE TABLE "People" ("firstName" varchar(256))
-simpleTable :: CreateStmt dbVendor
+simpleTable :: Create dbVendor
 simpleTable = createTable "People"
     [wrap (col "firstName" $ varchar 256)]
+    |> end
 
 -- | CREATE TABLE "People" ("country" integer DEFAULT(1))
-defaultVal :: CreateStmt dbVendor
+defaultVal :: CreateTableStmt dbVendor
 defaultVal = createTable "People"
     [wrap (col "country" integer) /++ defaultValue (value (1::Int))]
 
@@ -129,7 +130,7 @@ Maria DB and SqLite:
 PostgreSQL:
 > CREATE TABLE "People" ("personId" integer PRIMARY KEY)
 -}
-primaryKeyCol :: CreateStmt dbVendor
+primaryKeyCol :: CreateTableStmt dbVendor
 primaryKeyCol =
     createTable "People" [wrap (col "personId" integer) /++ primary False]
 
@@ -140,7 +141,7 @@ Maria DB and SqLite:
 PostgreSQL:
 > CREATE TABLE "People" ("id" serial PRIMARY KEY)
 -}
-primaryKeyColAuto :: CreateStmt dbVendor
+primaryKeyColAuto :: CreateTableStmt dbVendor
 primaryKeyColAuto =
     createTable "People" [wrap (col "personId" integer) /++ primary True]
 
@@ -151,20 +152,21 @@ CREATE TABLE "People" (
     CONSTRAINT "pk" PRIMARY KEY ("firstName", "lastName")
 )
 -}
-primaryKeyTable :: CreateStmt dbVendor
-primaryKeyTable = do
-    createTable
-        "People"
-        [ wrap $ col "firstName" (varchar 256)
-        , wrap $ col "lastName" (varchar 256)]
-    constraint "pk" (primaryT ["firstName", "lastName"])
+primaryKeyTable :: Create dbVendor
+primaryKeyTable =
+      createTable
+          "People"
+          [ wrap $ col "firstName" (varchar 256)
+          , wrap $ col "lastName" (varchar 256)]
+    |> constraints (primaryT (Just "pk") ["firstName", "lastName"])
+    |> end
 
 --------------------
 -- UNIQUE
 --------------------
 
 -- | CREATE TABLE "People" ("passportNo" varchar(256) UNIQUE)
-createUnique :: CreateStmt dbVendor
+createUnique :: CreateTableStmt dbVendor
 createUnique =
     createTable "People" [wrap (col "passportNo" (varchar 256)) /++ unique]
 
@@ -175,10 +177,11 @@ CREATE TABLE "People" (
     UNIQUE ("firstName", "lastName")
 )
 -}
-createUniqueT :: CreateStmt dbVendor
-createUniqueT = do
-    createTable "People" cs
-    uniqueT cs
+createUniqueT :: Create dbVendor
+createUniqueT =
+       createTable "People" cs
+    |> constraints (uniqueT Nothing cs)
+    |> end
     where
         cs =
             [ wrap $ col "firstName" $ varchar 256
@@ -195,7 +198,7 @@ CREATE TABLE "People" (
     "lastName"  varchar(256) NOT NULL
 )
 -}
-noNulls :: CreateStmt dbVendor
+noNulls :: CreateTableStmt dbVendor
 noNulls =
     createTable "People" cs
     where
@@ -212,7 +215,7 @@ noNulls =
 {-|
 CREATE TABLE "People" ("countryId" integer REFERENCES "Countries"("countryId"))
 -}
-createFK :: CreateStmt dbVendor
+createFK :: CreateTableStmt dbVendor
 createFK =
     createTable
         "People"
@@ -223,7 +226,7 @@ createFK =
 --------------------
 
 -- | CREATE TABLE "People" ("age" integer CHECK ("age" > -1))
-createCheck :: CreateStmt dbVendor
+createCheck :: CreateTableStmt dbVendor
 createCheck =
     createTable
         "People"
@@ -238,18 +241,17 @@ CREATE TABLE "People" (
     CONSTRAINT "checks" CHECK ("age" > -1 AND "lastName" <> '')
 )
 -}
-createChecks :: CreateStmt dbVendor
-createChecks = do
-    createTable
-        "People"
-        [ wrap lastName
-        , wrap age
-        ]
-    c1
+createChecks :: Create dbVendor
+createChecks =
+       createTable
+           "People"
+           [ wrap lastName
+           , wrap age
+           ]
+    |> c1
+    |> end
     where
         age = col "age"integer
         lastName = col "lastName" $ varchar 256
-        c1 =
-            constraint "checks" $
-                  checkT $
-                      (age /> intVal (-1)) `and_` (lastName /<> value "")
+        c1 = constraints $ checkT (Just "checks")
+                         $ (age /> intVal (-1)) `and_` (lastName /<> value "")

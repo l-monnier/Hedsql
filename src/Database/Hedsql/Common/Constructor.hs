@@ -163,7 +163,6 @@ module Database.Hedsql.Common.Constructor
     , (/++)
     , (|>)
     , end
-    , execStmt
 
       {-|
       Type synonym for a 'State' monad. It allows to have simpler type signature
@@ -183,7 +182,7 @@ module Database.Hedsql.Common.Constructor
     , nullable
     , primary
     , primaryT
-    , constraint
+    , constraints
     , unique
     , uniqueT
     , createView
@@ -353,11 +352,9 @@ module Database.Hedsql.Common.Constructor
 -- IMPORTS
 --------------------------------------------------------------------------------
 
-import Data.Maybe
 import Unsafe.Coerce
 
 import Control.Lens hiding (assign, from, (|>))
-import Control.Monad.State.Lazy
 
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Grammar
@@ -586,34 +583,123 @@ This function is actually just a reverse function composition:
 (|>) :: a -> (a -> b) -> b
 (|>) = flip ($)
 
-type CreateStmt dbVendor = State (Create dbVendor) ()
+{-|
+Clauses a SQL statement by giving its final type.
+
+Without this class SQL statements with different structures would
+have different types. For example:
+> SELECT * FROM table1;
+would have a different type than:
+> SELECT * FROM table1 WHERE id = 1;
+
+The 'end' function can be seen as the semi-column used to terminate
+a SQL statement.
+-}
+class End a b | a -> b where
+    end :: a -> b
+
+instance End (CreateTableStmt dbVendor) (Create dbVendor) where
+    end (CreateTableStmt e t) = CreateTable e t
+
+instance End (CreateTableConstraintStmt dbVendor) (Create dbVendor) where
+    end (CreateTableConstraintStmt c stmt) =
+        end stmt & _CreateTable . _2 . tableConsts .~ c
+
+instance End (Select colType dbVendor) (Select colType dbVendor) where
+    end = id
+
+instance End (SelectSingleStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectSingleStmt t s) = Single $
+        SelectQ
+            t
+            s
+            Nothing
+            Nothing
+            Nothing
+            Nothing
+            Nothing
+            Nothing
+            Nothing
+
+instance End (SelectFromStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectFromStmt f selectFromStmt) =
+        end selectFromStmt & _Single . selectFrom .~ Just f
+
+instance End (SelectWhereStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectWhereStmt w selectFromStmt) =
+        end selectFromStmt & _Single . selectWhere .~ Just w
+
+instance End
+    (SelectGroupByStmt colType dbVendor)
+    (Select colType dbVendor)
+    where
+        end (SelectFromGroupByStmt g stmt) =
+            end stmt & _Single . selectGroupBy .~ Just g
+        end (SelectWhereGroupByStmt g stmt) =
+            end stmt & _Single . selectGroupBy .~ Just g
+
+instance End
+    (SelectHavingStmt colType dbVendor)
+    (Select colType dbVendor)
+    where
+        end (SelectHavingStmt h stmt) =
+            end stmt & _Single . selectHaving .~ Just h
+
+instance End
+    (SelectOrderByStmt colType dbVendor)
+    (Select colType dbVendor)
+    where
+        end (SelectFromOrderByStmt o stmt) =
+            end stmt & _Single . selectOrderBy .~ Just o
+        end (SelectWhereOrderByStmt o stmt) =
+            end stmt & _Single . selectOrderBy .~ Just o
+        end (SelectGroupByOrderByStmt o stmt) =
+            end stmt & _Single . selectOrderBy .~ Just o
+        end (SelectHavingOrderByStmt o stmt) =
+            end stmt & _Single . selectOrderBy .~ Just o
+
+instance End (SelectLimitStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectLimitStmt l stmt) = end stmt & _Single . selectLimit .~ Just l
+
+
+instance End (SelectOffsetStmt colType dbVendor) (Select colType dbVendor) where
+    end (SelectOffsetStmt o stmt) = end stmt & _Single . selectOffset .~ Just o
+
+instance End (InsertFromStmt dbVendor) (Insert Void dbVendor) where
+    end (InsertFromStmt t a) = Insert t a Nothing
+
+instance End
+    (InsertReturningStmt colType dbVendor)
+    (Insert colType dbVendor)
+    where
+        end (InsertReturningStmt r stmt) = end stmt & insertReturning .~ Just r
 
 {-|
-Execute the state of the 'State' monad.
-Concretely, it allows to retrieve a statement "encapsulated" inside the 'State'
-monad.
+For UPDATE statement the possibility to create a statement without a WHERE
+clause is missing on purpose for avoiding the risk to UPDATE all records
+of a table by accident.
 -}
-class ToExec a b | a -> b where
-    execStmt :: a -> b
+instance End (UpdateWhereStmt dbVendor) (Update Void dbVendor) where
+    end (UpdateWhereStmt w (UpdateSetStmt t a)) = Update t a (Just w) Nothing
 
-instance ToExec (CreateStmt dbVendor) (Create dbVendor) where
-    execStmt q = execState q $ CreateTable False (Table "" [] [])
+instance End
+    (UpdateReturningStmt colType dbVendor)
+    (Update colType dbVendor)
+    where
+        end (UpdateReturningStmt r stmt) = end stmt & updateReturning .~ Just r
 
-instance ToExec (TableConstraintType dbVendor) (Create dbVendor) where
-    execStmt c =
-        CreateTable False (Table "" [] [TableConstraint Nothing c Nothing])
+instance End (DeleteFromStmt dbVendor) (Delete Void dbVendor) where
+    end (DeleteFromStmt t) = Delete t Nothing Nothing
 
-instance ToExec (Select colType dbVendor) (Select colType dbVendor) where
-    execStmt = id
+instance End (DeleteWhereStmt dbVendor) (Delete Void dbVendor) where
+    end (DeleteWhereStmt w stmt) = end stmt & deleteWhere .~ Just w
 
-instance ToExec (Insert colType dbVendor) (Insert colType dbVendor) where
-    execStmt = id
-
-instance ToExec (Delete colType dbVendor) (Delete colType dbVendor) where
-    execStmt = id
-
-instance ToExec (Update colType dbVendor) (Update colType dbVendor) where
-    execStmt = id
+instance End
+    (DeleteReturningStmt colType dbVendor) (Delete colType dbVendor) where
+        end (DeleteFromReturningStmt r stmt) =
+            end stmt & deleteReturning .~ Just r
+        end (DeleteWhereReturningStmt r stmt) =
+            end stmt & deleteReturning .~ Just r
 
 {-|
 Allow to easily add optional elements to data types using the '/++' infix
@@ -705,8 +791,8 @@ check :: Expression Bool dbVendor -> ColConstraintType dbVendor
 check = Check
 
 -- | Create a CHECK constraint to be used in a table constraint.
-checkT :: Expression Bool dbVendor -> TableConstraintType dbVendor
-checkT = TCCheck
+checkT :: Maybe String -> Expression Bool dbVendor -> TableConstraint dbVendor
+checkT name e = TableConstraint name (TCCheck e) Nothing
 
 -- | Create a constraint which shall then be applied on a column.
 colConstraint :: String -> ColConstraintType dbVendor -> ColConstraint dbVendor
@@ -717,17 +803,16 @@ createTable ::
        ToTable a (Table dbVendor)
     => a
     -> [ColWrap dbVendor]
-    -> CreateStmt dbVendor
-createTable t c = modify (\_ -> CreateTable False $ table t & tableCols .~ c)
+    -> CreateTableStmt dbVendor
+createTable t c = CreateTableStmt False (table t & tableCols .~ c)
 
 -- | Create a CREATE TABLE IF NOT EXIST statement.
 createTableIfNotExist ::
        ToTable a (Table dbVendor)
     => a
     -> [ColWrap dbVendor]
-    -> CreateStmt dbVendor
-createTableIfNotExist t c =
-    modify (\_ -> CreateTable True (table t & tableCols .~ c))
+    -> Create dbVendor
+createTableIfNotExist t c = CreateTable True (table t & tableCols .~ c)
 
 -- | Create a CREATE VIEW statement.
 createView ::
@@ -801,37 +886,36 @@ primary ::
     -> ColConstraintType dbVendor
 primary = Primary
 
--- | Add a PRIMARY KEY constraint to a table constraint 'State'.
+-- | Add a PRIMARY KEY constraint to a CREATE statement.
 primaryT ::
        (ToList a [b], ToCol b (Column colType dbVendor))
+    => Maybe String -- ^ Optional name of the constraint.
+    -> a
+    -> TableConstraint dbVendor
+primaryT name c =
+    TableConstraint
+        name
+        (TCPrimaryKey $ map (ColWrap . toCol) $ toList c)
+        Nothing
+
+-- | Add one or more constraints to a CREATE statement.
+constraints ::
+       (ToList a [TableConstraint dbVendor])
     => a
-    -> CreateStmt dbVendor
-primaryT c = constraint "" $ TCPrimaryKey $ map (ColWrap . toCol) $ toList c
-
--- | Add a table constraint to a table.
-constraint :: ToExec a (Create dbVendor) => String -> a -> CreateStmt dbVendor
-constraint name con =
-    modify modifyCreate
-    where
-        modifyCreate (CreateTable c t) = CreateTable c $ modifyTable t
-        modifyCreate v                 = v
-
-        modifyTable t = over tableConsts (\xs -> xs ++ tcs) t
-        tcs = maybe [] makeTableConst constType
-        makeTableConst t = [TableConstraint (maybeString name) t Nothing]
-        constType = fmap (view tableConstraintType) getMaybeConsts
-        getMaybeConsts = listToMaybe $ getCreateConsts $ execStmt con
-
-        getCreateConsts (CreateTable _ t) = t^.tableConsts
-        getCreateConsts _                 = []
+    -> CreateTableStmt dbVendor
+    -> CreateTableConstraintStmt dbVendor
+constraints = CreateTableConstraintStmt . toList
 
 -- | Create an UNIQUE column constraint.
 unique :: ColConstraintType dbVendor
 unique = Unique
 
 -- | Create an UNIQUE table constraint
-uniqueT :: [ColWrap dbVendor] -> CreateStmt dbVendor
-uniqueT cs = constraint "" $ TCUnique cs
+uniqueT ::
+       Maybe String -- ^ Optional name of the constraint.
+    -> [ColWrap dbVendor]
+    -> TableConstraint dbVendor
+uniqueT name cs = TableConstraint name (TCUnique cs) Nothing
 
 --------------------------------------------------------------------------------
 -- SELECT
@@ -1214,11 +1298,11 @@ rightJoin = columnJoin RightJoin
 
 -- | Create a sub-query in a FROM clause.
 subQuery ::
-       (ToExec a (Select b dbVendor))
+       (End a (Select b dbVendor))
     => a                 -- ^ Sub-query.
     -> String            -- ^ Alias of the sub-query.
     -> TableRef dbVendor -- ^ Table reference.
-subQuery sub name = SelectRef (SelectWrap $ execStmt sub) $ TableRefAs name []
+subQuery sub name = SelectRef (SelectWrap $ end sub) $ TableRefAs name []
 
 ----------------------------------------
 -- WHERE
@@ -1383,16 +1467,16 @@ Combine two SELECT queries using the provided combination clause
 (UNION, EXCEPT, etc.).
 -}
 combinedQuery ::
-       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
+       (End a (Select colType dbVendor), End b (Select colType dbVendor))
     => Combination dbVendor
     -> a
     -> b
     -> Select colType dbVendor
-combinedQuery cType c1 c2 = Combined cType [execStmt c1, execStmt c2]
+combinedQuery cType c1 c2 = Combined cType [end c1, end c2]
 
 -- | Apply an EXCEPT to two queries.
 except ::
-       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
+       (End a (Select colType dbVendor), End b (Select colType dbVendor))
     => a
     -> b
     -> Select colType dbVendor
@@ -1400,7 +1484,7 @@ except = combinedQuery Except
 
 -- | Apply an EXCEPT ALL to two queries.
 exceptAll ::
-       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
+       (End a (Select colType dbVendor), End b (Select colType dbVendor))
     => a
     -> b
     -> Select colType dbVendor
@@ -1408,7 +1492,7 @@ exceptAll = combinedQuery ExceptAll
 
 -- | Apply an INTERSECT to two queries.
 intersect ::
-       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
+       (End a (Select colType dbVendor), End b (Select colType dbVendor))
     => a
     -> b
     -> Select colType dbVendor
@@ -1416,7 +1500,7 @@ intersect = combinedQuery Intersect
 
 -- | Apply an INTERSECT ALL to two queries.
 intersectAll ::
-       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
+       (End a (Select colType dbVendor), End b (Select colType dbVendor))
     => a
     -> b
     -> Select colType dbVendor
@@ -1424,7 +1508,7 @@ intersectAll = combinedQuery IntersectAll
 
 -- | Create an UNION operation between two queries.
 union ::
-       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
+       (End a (Select colType dbVendor), End b (Select colType dbVendor))
     => a
     -> b
     -> Select colType dbVendor
@@ -1432,7 +1516,7 @@ union = combinedQuery Union
 
 -- | Create an UNION ALL operation between two queries.
 unionAll ::
-       (ToExec a (Select colType dbVendor), ToExec b (Select colType dbVendor))
+       (End a (Select colType dbVendor), End b (Select colType dbVendor))
     => a
     -> b
     -> Select colType dbVendor
@@ -1480,114 +1564,6 @@ deleteFrom ::
     => a
     -> DeleteFromStmt dbVendor
 deleteFrom = DeleteFromStmt . table
-
-{-|
-Clauses a SQL statement by giving its final type.
-
-Without this class SQL statements with different structures would
-have different types. For example:
-> SELECT * FROM table1;
-would have a different type than:
-> SELECT * FROM table1 WHERE id = 1;
-
-The 'end' function can be seen as the semi-column used to terminate
-a SQL statement.
--}
-class End a b | a -> b where
-    end :: a -> b
-
-instance End (SelectSingleStmt colType dbVendor) (Select colType dbVendor) where
-    end (SelectSingleStmt t s) = Single $
-        SelectQ
-            t
-            s
-            Nothing
-            Nothing
-            Nothing
-            Nothing
-            Nothing
-            Nothing
-            Nothing
-
-instance End (SelectFromStmt colType dbVendor) (Select colType dbVendor) where
-    end (SelectFromStmt f selectFromStmt) =
-        end selectFromStmt & _Single . selectFrom .~ Just f
-
-instance End (SelectWhereStmt colType dbVendor) (Select colType dbVendor) where
-    end (SelectWhereStmt w selectFromStmt) =
-        end selectFromStmt & _Single . selectWhere .~ Just w
-
-instance End
-    (SelectGroupByStmt colType dbVendor)
-    (Select colType dbVendor)
-    where
-        end (SelectFromGroupByStmt g stmt) =
-            end stmt & _Single . selectGroupBy .~ Just g
-        end (SelectWhereGroupByStmt g stmt) =
-            end stmt & _Single . selectGroupBy .~ Just g
-
-instance End
-    (SelectHavingStmt colType dbVendor)
-    (Select colType dbVendor)
-    where
-        end (SelectHavingStmt h stmt) =
-            end stmt & _Single . selectHaving .~ Just h
-
-instance End
-    (SelectOrderByStmt colType dbVendor)
-    (Select colType dbVendor)
-    where
-        end (SelectFromOrderByStmt o stmt) =
-            end stmt & _Single . selectOrderBy .~ Just o
-        end (SelectWhereOrderByStmt o stmt) =
-            end stmt & _Single . selectOrderBy .~ Just o
-        end (SelectGroupByOrderByStmt o stmt) =
-            end stmt & _Single . selectOrderBy .~ Just o
-        end (SelectHavingOrderByStmt o stmt) =
-            end stmt & _Single . selectOrderBy .~ Just o
-
-instance End (SelectLimitStmt colType dbVendor) (Select colType dbVendor) where
-    end (SelectLimitStmt l stmt) = end stmt & _Single . selectLimit .~ Just l
-
-
-instance End (SelectOffsetStmt colType dbVendor) (Select colType dbVendor) where
-    end (SelectOffsetStmt o stmt) = end stmt & _Single . selectOffset .~ Just o
-
-instance End (InsertFromStmt dbVendor) (Insert Void dbVendor) where
-    end (InsertFromStmt t a) = Insert t a Nothing
-
-instance End
-    (InsertReturningStmt colType dbVendor)
-    (Insert colType dbVendor)
-    where
-        end (InsertReturningStmt r stmt) = end stmt & insertReturning .~ Just r
-
-{-|
-For UPDATE statement the possibility to create a statement without a WHERE
-clause is missing on purpose for avoiding the risk to UPDATE all records
-of a table by accident.
--}
-instance End (UpdateWhereStmt dbVendor) (Update Void dbVendor) where
-    end (UpdateWhereStmt w (UpdateSetStmt t a)) = Update t a (Just w) Nothing
-
-instance End
-    (UpdateReturningStmt colType dbVendor)
-    (Update colType dbVendor)
-    where
-        end (UpdateReturningStmt r stmt) = end stmt & updateReturning .~ Just r
-
-instance End (DeleteFromStmt dbVendor) (Delete Void dbVendor) where
-    end (DeleteFromStmt t) = Delete t Nothing Nothing
-
-instance End (DeleteWhereStmt dbVendor) (Delete Void dbVendor) where
-    end (DeleteWhereStmt w stmt) = end stmt & deleteWhere .~ Just w
-
-instance End
-    (DeleteReturningStmt colType dbVendor) (Delete colType dbVendor) where
-        end (DeleteFromReturningStmt r stmt) =
-            end stmt & deleteReturning .~ Just r
-        end (DeleteWhereReturningStmt r stmt) =
-            end stmt & deleteReturning .~ Just r
 
 --------------------------------------------------------------------------------
 -- Values
@@ -1973,6 +1949,8 @@ lastInsertId = LastInsertId
 -- Statement
 --------------------------------------------------------------------------------
 
+-- TODO: probably possible to use a single parameter type class.
+
 -- | Convert a value to a 'Statement'.
 class ToStmt a b | a -> b where
     statement :: a -> b
@@ -1983,8 +1961,11 @@ instance ToStmt [Statement dbVendor] (Statement dbVendor) where
 instance ToStmt (Create dbVendor) (Statement dbVendor) where
     statement = CreateStmt
 
-instance ToStmt (CreateStmt dbVendor) (Statement dbVendor) where
-    statement = statement . execStmt
+instance ToStmt (CreateTableStmt dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt (CreateTableConstraintStmt dbVendor) (Statement dbVendor) where
+    statement = statement . end
 
 instance ToStmt (Delete colType dbVendor) (Statement dbVendor) where
     statement = DeleteStmt . DeleteWrap
@@ -2029,6 +2010,12 @@ instance ToList (TableRef dbVendor) [TableRef dbVendor] where
     toList x = [x]
 
 instance ToList [TableRef dbVendor] [TableRef dbVendor] where
+    toList = id
+
+instance ToList (TableConstraint dbVendor) [TableConstraint dbVendor] where
+    toList x = [x]
+
+instance ToList [TableConstraint dbVendor] [TableConstraint dbVendor] where
     toList = id
 
 instance ToList (Join dbVendor) [Join dbVendor] where

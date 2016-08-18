@@ -11,8 +11,14 @@ Portability : portable
 Description of the grammar to build SQL statements.
 -}
 module Database.Hedsql.Common.Grammar
-    ( -- * Select
-      SelectCombinedStmt(..)
+    ( -- * Create
+      CreateStmt(..)
+    , CreateTableStmt(..)
+    , CreateViewStmt(..)
+    , CreateTableConstraintStmt(..)
+
+      -- * Select
+    , SelectCombinedStmt(..)
     , SelectSingleStmt(..)
     , SelectFromStmt(..)
     , SelectWhereStmt(..)
@@ -38,6 +44,25 @@ module Database.Hedsql.Common.Grammar
     ) where
 
 import Database.Hedsql.Common.AST
+
+--------------------------------------------------------------------------------
+-- CREATE
+--------------------------------------------------------------------------------
+
+data CreateStmt dbVendor =
+      CreateStmtTable (CreateTableStmt dbVendor)
+    | CreateStmtView (CreateViewStmt dbVendor)
+
+data CreateTableStmt dbVendor =
+    CreateTableStmt Bool (Table dbVendor)
+
+data CreateViewStmt dbVendor =
+    CreateViewStmt dbVendor
+
+data CreateTableConstraintStmt dbVendor =
+    CreateTableConstraintStmt
+        [TableConstraint dbVendor]
+        (CreateTableStmt dbVendor)
 
 --------------------------------------------------------------------------------
 -- SELECT

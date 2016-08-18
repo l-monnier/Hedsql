@@ -36,7 +36,7 @@ dbName :: String
 dbName = "test.db"
 
 -- | SqLite CREATE function.
-sqLiteCreate :: H.CreateStmt H.SqLite -> IO ()
+sqLiteCreate :: H.Create H.SqLite -> IO ()
 sqLiteCreate f = do
     conn <- open dbName
     createTable conn f
@@ -59,7 +59,7 @@ testDropIfExists :: (H.Drop a -> IO ()) -> Test
 testDropIfExists f =
     testCase "Drop a table if already existing" $ f dropTableIfExistsStmt
 
-testCreate :: (H.CreateStmt a -> IO ()) -> Test
+testCreate :: (H.Create a -> IO ()) -> Test
 testCreate f = testCase "Create a simple table" $ f simpleTable
 
 {-
@@ -73,7 +73,7 @@ testDefaultVal createFunc insertFunc =
 -}
 
 -- | Create the tests for a given DB vendor.
-makeTests :: String -> ((H.CreateStmt a -> IO ()), (H.Drop a -> IO ())) -> Test
+makeTests :: String -> ((H.Create a -> IO ()), (H.Drop a -> IO ())) -> Test
 makeTests name (createFunc, dropFunc) = testGroup name
     [ -- Tests initialisation.
       testDropIfExists dropFunc
