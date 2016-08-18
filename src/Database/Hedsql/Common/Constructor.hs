@@ -1949,8 +1949,6 @@ lastInsertId = LastInsertId
 -- Statement
 --------------------------------------------------------------------------------
 
--- TODO: probably possible to use a single parameter type class.
-
 -- | Convert a value to a 'Statement'.
 class ToStmt a b | a -> b where
     statement :: a -> b
@@ -1970,14 +1968,59 @@ instance ToStmt (CreateTableConstraintStmt dbVendor) (Statement dbVendor) where
 instance ToStmt (Delete colType dbVendor) (Statement dbVendor) where
     statement = DeleteStmt . DeleteWrap
 
+instance ToStmt (DeleteFromStmt dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt (DeleteWhereStmt dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt
+    (DeleteReturningStmt colType dbVendor)
+    (Statement dbVendor)
+    where
+        statement = statement . end
+
 instance ToStmt (Drop dbVendor) (Statement dbVendor) where
     statement = DropStmt
 
 instance ToStmt (Insert colType dbVendor) (Statement dbVendor) where
     statement = InsertStmt . InsertWrap
 
+instance ToStmt (InsertFromStmt dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt
+    (InsertReturningStmt colType dbVendor)
+    (Statement dbVendor)
+    where
+        statement = statement . end
+
 instance ToStmt (Select colType dbVendor) (Statement dbVendor) where
     statement = SelectStmt . SelectWrap
+
+instance ToStmt (SelectSingleStmt colType dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt (SelectFromStmt colType dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt (SelectWhereStmt colType dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt (SelectGroupByStmt colType dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt (SelectHavingStmt colType dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt (SelectOrderByStmt colType dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt (SelectLimitStmt colType dbVendor) (Statement dbVendor) where
+    statement = statement . end
+
+instance ToStmt (SelectOffsetStmt colType dbVendor) (Statement dbVendor) where
+    statement = statement . end
 
 instance ToStmt (SelectWrap dbVendor) (Statement dbVendor) where
     statement = SelectStmt
