@@ -209,10 +209,8 @@ module Database.Hedsql.Common.Constructor
       -- * SELECT
 
       -- ** Selection clause
-    , SelectConstr
     , select
     , selectDistinct
-    , simpleSelect
     , isDistinctFrom
     , isNotDistinctFrom
     , SelectionConstr
@@ -1016,10 +1014,6 @@ tableJoin joinType tableRef1 tableRef2 =
 -- SELECT
 ----------------------------------------
 
--- | Create a Select query with only a column selection clause.
-simpleSelect :: Selection colType dbVendor -> SelectSingleStmt colType dbVendor
-simpleSelect = SelectSingleStmt All
-
 {-|
 Allow the creation of SELECT queries with correct types.
 
@@ -1029,63 +1023,11 @@ A SELECT query returning only one column will have type:
 A SELECT query returning many columns will have type:
 > Select [[b]] a
 -}
-class SelectConstr a b | a -> b where
-    -- | Create a SELECT query.
-    select :: a -> b
-
-instance SelectConstr
-    (ColRefWrap dbVendor)
-    (SelectSingleStmt [Undefined] dbVendor)
-    where
-        select = simpleSelect . selection
-
-instance SelectConstr
-    [ColRefWrap dbVendor]
-    (SelectSingleStmt [[Undefined]] dbVendor)
-    where
-        select = simpleSelect . selection
-
-instance SelectConstr
-    (Column colType dbVendor)
-    (SelectSingleStmt [colType] dbVendor)
-    where
-        select = simpleSelect . selection
-
-instance SelectConstr
-    [Column colType dbVendor]
-    (SelectSingleStmt [[colType]] dbVendor)
-    where
-        select = simpleSelect . selection
-
-instance SelectConstr
-    (ColWrap dbVendor)
-    (SelectSingleStmt [Undefined] dbVendor)
-    where
-        select = simpleSelect . selection
-
-instance SelectConstr
-    [ColWrap dbVendor]
-    (SelectSingleStmt [[Undefined]] dbVendor)
-    where
-        select = simpleSelect . selection
-
-instance SelectConstr
-    (ColRef colType dbVendor)
-    (SelectSingleStmt [colType] dbVendor)
-    where
-        select = simpleSelect . selection
-
-instance SelectConstr
-    [ColRef colType dbVendor]
-    (SelectSingleStmt [[colType]] dbVendor)
-    where
-        select = simpleSelect . selection
-
-instance SelectConstr
-    (Expression colType dbVendor)
-    (SelectSingleStmt [colType] dbVendor)
-    where
-        select = simpleSelect . selection
+select ::
+       SelectionConstr a (Selection colType dbVendor)
+    => a
+    -> SelectSingleStmt colType dbVendor
+select = SelectSingleStmt All . selection
 
 {-|
 Create a SELECT DISTINCT query.

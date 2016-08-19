@@ -74,7 +74,7 @@ module Database.Hedsql.Ext
       Additional instances which allow to construct a SELECT clause directly
       from 'String' or 'Text'.
       -}
-    , SelectConstr
+    , SelectionConstr
 
       -- * FROM
     , ToJoinClause
@@ -95,7 +95,6 @@ import qualified Data.Text as T
 
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Constructor
-import Database.Hedsql.Common.Grammar
 
 --------------------------------------------------------------------------------
 -- Table and table reference
@@ -211,25 +210,6 @@ instance SelectionConstr
     (Selection [[Undefined]] dbVendor)
     where
         selection = UsSelection . map (ColRefWrap . colRef . T.unpack)
-
-instance SelectConstr
-    (SqlString' colType dbVendor) (SelectSingleStmt [Undefined] dbVendor) where
-        select = simpleSelect . USelection . ColRefWrap . colRef
-
-instance SelectConstr
-    (SqlText' colType dbVendor) (SelectSingleStmt [Undefined] dbVendor) where
-        select = simpleSelect . USelection . ColRefWrap . colRef . T.unpack
-
-instance SelectConstr
-    [SqlString' colType dbVendor]
-    (SelectSingleStmt [[Undefined]] dbVendor)
-    where
-        select = simpleSelect . UsSelection . map (ColRefWrap . colRef)
-
-instance SelectConstr
-    [SqlText' colType dbVendor] (SelectSingleStmt [[Undefined]] dbVendor) where
-        select =
-            simpleSelect . UsSelection . map (ColRefWrap . colRef . T.unpack)
 
 --------------------------------------------------------------------------------
 -- FROM
