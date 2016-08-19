@@ -75,7 +75,7 @@ module Database.Hedsql.Statements.Select
     , selectRandom
     , selectLastInsertId
     , selectTrim
-      
+
       -- ** Combined queries
     , unionQuery
     , unionCombined
@@ -921,8 +921,11 @@ selectRandom =
        select random
     |> end
 
-selectTrim :: Query [String] dbVendor
-selectTrim = do
+{-|
+> SELECT TRIM("name")
+-}
+selectTrim :: SelectSingleStmt [String] dbVendor
+selectTrim =
   select $ trim name
   where
     name = col "name" $ varchar 256
