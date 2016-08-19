@@ -651,7 +651,7 @@ data Expression colType dbVendor where
     LastInsertId :: Expression colType dbVendor
 
     -- - String functions.
-    
+
     -- | TRIM function.
     Trim :: ColRef String dbVendor -> Expression String dbVendor
 
@@ -1213,14 +1213,14 @@ data Selection colType dbVendor where
     --   The returned type is a list representation of the type of that column.
     --   For example, if the column is a Numeric type
     --   then the returned type "b" is [Numeric].
-    TSelection :: ColRef colType dbVendor -> Selection colType dbVendor
+    TSelection :: ColRef colType dbVendor -> Selection [colType] dbVendor
 
     -- | Multiple columns of the same type.
     --   The returned type is a list of list representation of the type of
     --   the columns.
     --   For example, if the columns are of type Numeric the return type "b"
     --   will be [[Numeric]].
-    TsSelection :: [ColRef colType dbVendor] -> Selection colType dbVendor
+    TsSelection :: [ColRef colType dbVendor] -> Selection [[colType]] dbVendor
 
     -- | A single column of undefined type.
     --   The returned type is [Undefined].

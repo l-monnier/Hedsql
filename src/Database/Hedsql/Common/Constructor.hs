@@ -1082,19 +1082,11 @@ instance SelectionConstr
 
 instance SelectionConstr
     (Column colType dbVendor) (Selection [colType] dbVendor) where
-        selection c = TSelection $ colRef column
-            where
-                -- Unsafe coercion to the correct phantom types parameter.
-                column :: Column [colType] dbVendor
-                column = unsafeCoerce c
+        selection = TSelection . colRef
 
 instance SelectionConstr
     [Column colType dbVendor] (Selection [[colType]] dbVendor) where
-        selection cs = TsSelection $ map colRef columns
-            where
-                -- Unsafe coercion to the correct phantom types parameter.
-                columns :: [Column [[colType]] dbVendor]
-                columns = unsafeCoerce cs
+        selection = TsSelection . map colRef
 
 instance SelectionConstr
     (ColWrap dbVendor) (Selection [Undefined] dbVendor) where
@@ -1108,27 +1100,15 @@ instance SelectionConstr
 
 instance SelectionConstr
     (ColRef colType dbVendor) (Selection [colType] dbVendor) where
-        selection c = TSelection cRef
-            where
-                -- Unsafe coercion to the correct phantom types parameter.
-                cRef :: ColRef [colType] dbVendor
-                cRef = unsafeCoerce c
+        selection = TSelection
 
 instance SelectionConstr
     [ColRef colType dbVendor] (Selection [[colType]] dbVendor) where
-        selection cs = TsSelection cRefs
-            where
-                -- Unsafe coercion to the correct phantom types parameter.
-                cRefs :: [ColRef [[colType]] dbVendor]
-                cRefs = unsafeCoerce cs
+        selection = TsSelection
 
 instance SelectionConstr
     (Expression colType dbVendor) (Selection [colType] dbVendor) where
-        selection c = TSelection $ colRef cRef
-            where
-                -- Unsafe coercion to the correct phantom types parameter.
-                cRef :: Expression [colType] dbVendor
-                cRef = unsafeCoerce c
+        selection = TSelection . colRef
 
 -- | Create a joker - "*" - character.
 (//*) :: Expression [Undefined] dbVendor
