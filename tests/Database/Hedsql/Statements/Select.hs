@@ -15,6 +15,7 @@ module Database.Hedsql.Statements.Select
       -- ** SELECT
       selectAll
     , selectTwoCols
+    , selectTuple
     , distinctSelect
 
       -- ** FROM
@@ -132,6 +133,17 @@ selectTwoCols =
        select ["firstName", "lastName"]
     |> from "People"
     |> end
+
+selectTuple :: Select [(String, Int)] dbVendor
+selectTuple =
+       select cols
+    |> from "People"
+    |> end
+    where
+       cols :: (ColRef String dbVendor, ColRef Int dbVendor)
+       cols = (c1, c2)
+       c1 = colRef $ col "firstName" (varchar 256)
+       c2 = colRef $ col "age" integer
 
 -- | > SELECT DISTINCT "firstName" FROM "People"
 distinctSelect :: Select [Undefined] dbVendor

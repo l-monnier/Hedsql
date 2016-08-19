@@ -46,6 +46,15 @@ testSelectDistinctSqLite = testCase "Select distinct" assertSelect
             "SELECT DISTINCT \"firstName\" FROM \"People\""
             (S.codeGen distinctSelect)
 
+testSelectTuple :: Test
+testSelectTuple = testCase "Select uple" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "Select tuple query is incorrect"
+            "SELECT \"firstName\", \"age\" FROM \"People\""
+            (S.codeGen selectTuple)
+
 ----------------------------------------
 -- Functions
 ----------------------------------------
@@ -596,6 +605,7 @@ tests = testGroup "Select"
     [ testGroup "All vendors"
         [ testSelectAllSqLite
         , testSelectDistinctSqLite
+        , testSelectTuple
         , testAdditionSqLite
         , testCurrentDateSqLite
         , testMultiplicationSqLite

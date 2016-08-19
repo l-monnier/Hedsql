@@ -1073,6 +1073,12 @@ class SelectionConstr a b | a -> b where
     selection :: a -> b
 
 instance SelectionConstr
+    (ColRef colType1 dbVendor, ColRef colType2 dbVendor)
+    (Selection [(colType1, colType2)] dbVendor)
+    where
+        selection = T2Selection
+
+instance SelectionConstr
     (ColRefWrap dbVendor) (Selection [Undefined] dbVendor) where
         selection = USelection
 

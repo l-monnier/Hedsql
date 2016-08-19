@@ -1215,6 +1215,10 @@ data Selection colType dbVendor where
     --   then the returned type "b" is [Numeric].
     TSelection :: ColRef colType dbVendor -> Selection [colType] dbVendor
 
+    T2Selection ::
+           (ColRef colType1 dbVendor, ColRef colType2 dbVendor)
+        -> Selection [(colType1, colType2)] dbVendor
+
     -- | Multiple columns of the same type.
     --   The returned type is a list of list representation of the type of
     --   the columns.
@@ -1256,14 +1260,15 @@ data SelectionWrap dbVendor where
 
 -- | Return the selected columns of a Selection.
 getSelectedCols :: Selection colType dbVendor -> [ColRefWrap dbVendor]
-getSelectedCols (TSelection   col)  = [ColRefWrap col]
-getSelectedCols (TsSelection  cols) = map ColRefWrap cols
-getSelectedCols (USelection   col)  = [col]
-getSelectedCols (UsSelection  cols) = cols
-getSelectedCols (ASelection   col)  = [ColRefWrap col]
-getSelectedCols (AsSelection  cols) = map ColRefWrap cols
-getSelectedCols (APSelection  col)  = [ColRefWrap col]
-getSelectedCols (APsSelection cols) = map ColRefWrap cols
+getSelectedCols (TSelection   col)     = [ColRefWrap col]
+getSelectedCols (T2Selection (c1, c2)) = [ColRefWrap c1, ColRefWrap c2]
+getSelectedCols (TsSelection  cols)    = map ColRefWrap cols
+getSelectedCols (USelection   col)     = [col]
+getSelectedCols (UsSelection  cols)    = cols
+getSelectedCols (ASelection   col)     = [ColRefWrap col]
+getSelectedCols (AsSelection  cols)    = map ColRefWrap cols
+getSelectedCols (APSelection  col)     = [ColRefWrap col]
+getSelectedCols (APsSelection cols)    = map ColRefWrap cols
 
 -- FROM clause
 --------------------
