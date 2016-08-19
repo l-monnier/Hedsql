@@ -1047,10 +1047,10 @@ SELECT * FROM "Countries", LATERAL (
 fromLateral :: Select [[Undefined]] Pg.PostgreSQL
 fromLateral =
        select (//*)
-    |> from [tableRef "Countries", P.lateral (wrap subQuery) "C"]
+    |> from [tableRef "Countries", P.lateral (wrap sQuery) "C"]
     |> end
     where
-        subQuery =
+        sQuery =
                select (//*)
             |> from "People"
             |> where_ ("People"/."countryId" /== "Countries"/."countryId")
