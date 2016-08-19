@@ -86,6 +86,16 @@ testRandomSqLite = testCase "Random" assertSelect
             "SELECT random()"
             (S.codeGen selectRandom)
 
+testTrim :: Test
+testTrim = testCase "Trim" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "TRIM function in query is incorrect"
+            "SELECT TRIM(\"name\")"
+            (S.codeGen selectTrim)
+
+
 testLastInsertIdPostgreSQL :: Test
 testLastInsertIdPostgreSQL =
     testCase "Last Insert ID for PostgresQL" assertSelect
@@ -627,6 +637,7 @@ tests = testGroup "Select"
         , testExcept
         , testExceptAll
         , testRandomSqLite
+        , testTrim
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL

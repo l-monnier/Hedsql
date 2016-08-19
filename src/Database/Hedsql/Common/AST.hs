@@ -650,6 +650,11 @@ data Expression colType dbVendor where
     -}
     LastInsertId :: Expression colType dbVendor
 
+    -- - String functions.
+    
+    -- | TRIM function.
+    Trim :: ColRef String dbVendor -> Expression String dbVendor
+
     -- - Date functions.
 
     -- | CURRENT DATE.

@@ -74,7 +74,8 @@ module Database.Hedsql.Statements.Select
     , selectCurrentDate
     , selectRandom
     , selectLastInsertId
-
+    , selectTrim
+      
       -- ** Combined queries
     , unionQuery
     , unionCombined
@@ -919,6 +920,12 @@ selectRandom :: Select [Int] dbVendor
 selectRandom =
        select random
     |> end
+
+selectTrim :: Query [String] dbVendor
+selectTrim = do
+  select $ trim name
+  where
+    name = col "name" $ varchar 256
 
 {-|
 PostgreSQL:

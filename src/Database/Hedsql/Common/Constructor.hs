@@ -335,6 +335,9 @@ module Database.Hedsql.Common.Constructor
     , random
     , sum_
 
+    -- ** Strings
+    , trim
+
     -- ** Utils
     , lastInsertId
 
@@ -1932,6 +1935,13 @@ sum_ ::
     => a
     -> Expression colType dbVendor
 sum_ = Sum . colRef
+
+-- | Create a SUM function.
+trim ::
+      (ToColRef a (ColRef String dbVendor))
+    => a
+    -> Expression String dbVendor
+trim = Trim . colRef
 
 ---------------------------------------
 -- Dates
