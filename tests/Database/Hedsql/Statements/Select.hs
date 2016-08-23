@@ -150,8 +150,8 @@ selectTuple =
     |> from "People"
     |> end
     where
-       c1 = colRef $ col "firstName" (varchar 256)
-       c2 = colRef $ col "age" integer
+       c1 = col "firstName" (varchar 256)
+       c2 = col "age" integer
 
 {-|
 @
@@ -168,9 +168,9 @@ select3Tuple =
     |> from "People"
     |> end
     where
-       c1 = colRef $ col "firstName" (varchar 256)
-       c2 = colRef $ col "lastName" (varchar 256)
-       c3 = colRef $ col "age" integer
+       c1 = col "firstName" (varchar 256)
+       c2 = col "lastName" (varchar 256)
+       c3 = col "age" integer
 
 -- | > SELECT DISTINCT "firstName" FROM "People"
 distinctSelect :: Select [Undefined] dbVendor
