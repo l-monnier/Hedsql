@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 {-|
 Module      : Database/Hedsql/Common/Constructor.hs
@@ -1072,11 +1073,26 @@ A selection with many columns will have type:
 class SelectionConstr a b | a -> b where
     selection :: a -> b
 
-instance SelectionConstr
-    (ColRef colType1 dbVendor, ColRef colType2 dbVendor)
-    (Selection [(colType1, colType2)] dbVendor)
+instance
+    ( ToColRef a (ColRef c1 db)
+    , ToColRef b (ColRef c2 db)
+    )
+    => SelectionConstr
+    (a, b)
+    (Selection [(c1, c2)] db)
     where
-        selection = T2Selection
+        selection (x, y) = T2Selection (colRef x, colRef y)
+
+instance
+    ( ToColRef a (ColRef c1 db)
+    , ToColRef b (ColRef c2 db)
+    , ToColRef c (ColRef c3 db)
+    )
+    => SelectionConstr
+    (a, b, c)
+    (Selection [(c1, c2, c3)] db)
+    where
+        selection (x, y, z) = T3Selection (colRef x, colRef y, colRef z)
 
 instance SelectionConstr
     (ColRefWrap dbVendor) (Selection [Undefined] dbVendor) where

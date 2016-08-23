@@ -1215,9 +1215,22 @@ data Selection colType dbVendor where
     --   then the returned type "b" is [Numeric].
     TSelection :: ColRef colType dbVendor -> Selection [colType] dbVendor
 
+    {-|
+    2 columns.
+    -}
     T2Selection ::
            (ColRef colType1 dbVendor, ColRef colType2 dbVendor)
         -> Selection [(colType1, colType2)] dbVendor
+
+    {-|
+    3 columns.
+    -}
+    T3Selection ::
+           ( ColRef colType1 dbVendor
+           , ColRef colType2 dbVendor
+           , ColRef colType3 dbVendor
+           )
+        -> Selection [(colType1, colType2, colType3)] dbVendor
 
     -- | Multiple columns of the same type.
     --   The returned type is a list of list representation of the type of
@@ -1262,6 +1275,8 @@ data SelectionWrap dbVendor where
 getSelectedCols :: Selection colType dbVendor -> [ColRefWrap dbVendor]
 getSelectedCols (TSelection   col)     = [ColRefWrap col]
 getSelectedCols (T2Selection (c1, c2)) = [ColRefWrap c1, ColRefWrap c2]
+getSelectedCols (T3Selection (c1, c2, c3)) =
+    [ColRefWrap c1, ColRefWrap c2, ColRefWrap c3]
 getSelectedCols (TsSelection  cols)    = map ColRefWrap cols
 getSelectedCols (USelection   col)     = [col]
 getSelectedCols (UsSelection  cols)    = cols

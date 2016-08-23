@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-|
 Module      : Database/Hedsql/Statements/Query.hs
 Description : Collection of SELECT queries.
@@ -16,6 +17,7 @@ module Database.Hedsql.Statements.Select
       selectAll
     , selectTwoCols
     , selectTuple
+    , select3Tuple
     , distinctSelect
 
       -- ** FROM
@@ -134,16 +136,41 @@ selectTwoCols =
     |> from "People"
     |> end
 
+{-|
+@
+SELECT
+  "firstName",
+  "age"
+FROM "People"
+@
+-}
 selectTuple :: Select [(String, Int)] dbVendor
 selectTuple =
-       select cols
+       select (c1, c2)
     |> from "People"
     |> end
     where
-       cols :: (ColRef String dbVendor, ColRef Int dbVendor)
-       cols = (c1, c2)
        c1 = colRef $ col "firstName" (varchar 256)
        c2 = colRef $ col "age" integer
+
+{-|
+@
+SELECT
+  "firstName",
+  "lastName",
+  "age"
+FROM "People"
+@
+-}
+select3Tuple :: Select [(String, String, Int)] dbVendor
+select3Tuple =
+       select (c1, c2, c3)
+    |> from "People"
+    |> end
+    where
+       c1 = colRef $ col "firstName" (varchar 256)
+       c2 = colRef $ col "lastName" (varchar 256)
+       c3 = colRef $ col "age" integer
 
 -- | > SELECT DISTINCT "firstName" FROM "People"
 distinctSelect :: Select [Undefined] dbVendor
