@@ -191,25 +191,25 @@ instance SelectionConstr
     (SqlString' colType dbVendor)
     (Selection [Undefined] dbVendor)
     where
-        selection = USelection . ColRefWrap . colRef
+        selection c = Selection [ColRefWrap $ colRef c]
 
 instance SelectionConstr
     (SqlText' colType dbVendor)
     (Selection [Undefined] dbVendor)
     where
-        selection = USelection . ColRefWrap . colRef . T.unpack
+        selection c = Selection [ColRefWrap $ colRef $ T.unpack c]
 
 instance SelectionConstr
     [SqlString' colType dbVendor]
     (Selection [[Undefined]] dbVendor)
     where
-        selection = UsSelection . map (ColRefWrap . colRef)
+        selection = Selection . map (ColRefWrap . colRef)
 
 instance SelectionConstr
     [SqlText' colType dbVendor]
     (Selection [[Undefined]] dbVendor)
     where
-        selection = UsSelection . map (ColRefWrap . colRef . T.unpack)
+        selection = Selection . map (ColRefWrap . colRef . T.unpack)
 
 --------------------------------------------------------------------------------
 -- FROM

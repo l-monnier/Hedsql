@@ -542,7 +542,7 @@ codeGenSelectFunc codeGenerator (SelectWrap (Single select)) =
 
         -- Columns flow in the SELECT clause.
         infixl 4 $+> -- Infix 5 is important to get things properly aligned!
-        ($+>) = if (length $ getSelectedCols $ select^.selectCols) > 1
+        ($+>) = if (length $ select ^. selectCols ^. _Selection) > 1
                 then (<$>)
                 else (<+>)
 
@@ -563,13 +563,12 @@ SELECT
 @
 -}
 codeGenSelectionFunc :: CodeGenerator dbVendor -> SelectionWrap dbVendor -> Doc
-codeGenSelectionFunc codeGenerator (SelectionWrap selection)
+codeGenSelectionFunc codeGenerator (SelectionWrap (Selection cols))
     | nb == 0   = "*"
     | nb > 1    = indent 2 $ vsep $ mapButLast com $ map codeGen cols
     | otherwise = codeGen (head cols)
     where
         nb = length cols
-        cols = getSelectedCols selection
         com x = x <> comma
         codeGen = (_codeGenColRef codeGenerator)
 

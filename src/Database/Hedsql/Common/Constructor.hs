@@ -1081,7 +1081,10 @@ instance
     (a, b)
     (Selection [(c1, c2)] db)
     where
-        selection (x, y) = T2Selection (colRef x, colRef y)
+        selection (x, y) = Selection
+            [ ColRefWrap $ colRef x
+            , ColRefWrap $ colRef y
+            ]
 
 instance
     ( ToColRef a (ColRef c1 db)
@@ -1092,45 +1095,49 @@ instance
     (a, b, c)
     (Selection [(c1, c2, c3)] db)
     where
-        selection (x, y, z) = T3Selection (colRef x, colRef y, colRef z)
+        selection (x, y, z) = Selection
+            [ ColRefWrap $ colRef x
+            , ColRefWrap $ colRef y
+            , ColRefWrap $ colRef z
+            ]
 
 instance SelectionConstr
     (ColRefWrap dbVendor) (Selection [Undefined] dbVendor) where
-        selection = USelection
+        selection c = Selection [c]
 
 instance SelectionConstr
     [ColRefWrap dbVendor] (Selection [[Undefined]] dbVendor) where
-        selection = UsSelection
+        selection = Selection
 
 instance SelectionConstr
     (Column colType dbVendor) (Selection [colType] dbVendor) where
-        selection = TSelection . colRef
+        selection c = Selection [ColRefWrap $ colRef c]
 
 instance SelectionConstr
     [Column colType dbVendor] (Selection [[colType]] dbVendor) where
-        selection = TsSelection . map colRef
+        selection = Selection . map (ColRefWrap . colRef)
 
 instance SelectionConstr
     (ColWrap dbVendor) (Selection [Undefined] dbVendor) where
-        selection (ColWrap c) = USelection $ ColRefWrap $ colRef c
+        selection (ColWrap c) = Selection [ColRefWrap $ colRef c]
 
 instance SelectionConstr
     [ColWrap dbVendor] (Selection [[Undefined]] dbVendor) where
-        selection = UsSelection . map toColRef
+        selection = Selection . map toColRef
             where
                 toColRef (ColWrap c) = ColRefWrap $ colRef c
 
 instance SelectionConstr
     (ColRef colType dbVendor) (Selection [colType] dbVendor) where
-        selection = TSelection
+        selection c = Selection [ColRefWrap c]
 
 instance SelectionConstr
     [ColRef colType dbVendor] (Selection [[colType]] dbVendor) where
-        selection = TsSelection
+        selection = Selection . map ColRefWrap
 
 instance SelectionConstr
     (Expression colType dbVendor) (Selection [colType] dbVendor) where
-        selection = TSelection . colRef
+        selection c = Selection [ColRefWrap $ colRef c]
 
 -- | Create a joker - "*" - character.
 (//*) :: Expression [Undefined] dbVendor

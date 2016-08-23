@@ -199,8 +199,8 @@ module Database.Hedsql.Common.AST
       -- *** Selection clause
     , SelectType(..)
     , Selection(..)
+    , _Selection
     , SelectionWrap(..)
-    , getSelectedCols
 
       -- *** FROM clause
     , From(From)
@@ -1207,83 +1207,11 @@ data SelectType dbVendor =
    | DistinctOn [ColRefWrap dbVendor]
 
 -- | Columns selected by a SELECT query.
-data Selection colType dbVendor where
-
-    -- | A single column.
-    --   The returned type is a list representation of the type of that column.
-    --   For example, if the column is a Numeric type
-    --   then the returned type "b" is [Numeric].
-    TSelection :: ColRef colType dbVendor -> Selection [colType] dbVendor
-
-    {-|
-    2 columns.
-    -}
-    T2Selection ::
-           (ColRef colType1 dbVendor, ColRef colType2 dbVendor)
-        -> Selection [(colType1, colType2)] dbVendor
-
-    {-|
-    3 columns.
-    -}
-    T3Selection ::
-           ( ColRef colType1 dbVendor
-           , ColRef colType2 dbVendor
-           , ColRef colType3 dbVendor
-           )
-        -> Selection [(colType1, colType2, colType3)] dbVendor
-
-    -- | Multiple columns of the same type.
-    --   The returned type is a list of list representation of the type of
-    --   the columns.
-    --   For example, if the columns are of type Numeric the return type "b"
-    --   will be [[Numeric]].
-    TsSelection :: [ColRef colType dbVendor] -> Selection [[colType]] dbVendor
-
-    -- | A single column of undefined type.
-    --   The returned type is [Undefined].
-    USelection  :: ColRefWrap dbVendor -> Selection [Undefined] dbVendor
-
-    -- | Multiple columns of different or undefined types.
-    --   The return type is [[Undefined]].
-    UsSelection :: [ColRefWrap dbVendor] -> Selection [[Undefined]] dbVendor
-
-    -- | Single column containing an aggregate value (see 'Aggregate' to get
-    --   more information).
-    --   The returned type is Numeric.
-    ASelection :: ColRef Aggregate dbVendor -> Selection Numeric dbVendor
-
-    -- | Multiple columns containing aggregate values (see 'Aggregate' to get
-    --   more information).
-    --   The returned type is [Numeric].
-    AsSelection :: [ColRef Aggregate dbVendor] -> Selection [Numeric] dbVendor
-
-    -- | Single column containing an aggregate predicate
-    --   (see 'AggrPred' to get more information).
-    --   The returned type is Bool.
-    APSelection :: ColRef AggrPred dbVendor -> Selection Bool dbVendor
-
-    -- | Multiple columns containing aggregate predicates
-    --   (see 'AggrPred' to get more information).
-    --   The returned type is [Bool].
-    APsSelection :: [ColRef AggrPred dbVendor] -> Selection [Bool] dbVendor
+data Selection colType dbVendor = Selection [ColRefWrap dbVendor]
 
 -- | Selection wrapper.
 data SelectionWrap dbVendor where
     SelectionWrap :: Selection colType dbVendor -> SelectionWrap dbVendor
-
--- | Return the selected columns of a Selection.
-getSelectedCols :: Selection colType dbVendor -> [ColRefWrap dbVendor]
-getSelectedCols (TSelection   col)     = [ColRefWrap col]
-getSelectedCols (T2Selection (c1, c2)) = [ColRefWrap c1, ColRefWrap c2]
-getSelectedCols (T3Selection (c1, c2, c3)) =
-    [ColRefWrap c1, ColRefWrap c2, ColRefWrap c3]
-getSelectedCols (TsSelection  cols)    = map ColRefWrap cols
-getSelectedCols (USelection   col)     = [col]
-getSelectedCols (UsSelection  cols)    = cols
-getSelectedCols (ASelection   col)     = [ColRefWrap col]
-getSelectedCols (AsSelection  cols)    = map ColRefWrap cols
-getSelectedCols (APSelection  col)     = [ColRefWrap col]
-getSelectedCols (APsSelection cols)    = map ColRefWrap cols
 
 -- FROM clause
 --------------------
@@ -1532,6 +1460,7 @@ makeLenses ''ColDef
 makeLenses ''ColRef
 makeLenses ''Select
 makePrisms ''Select
+makePrisms ''Selection
 makeLenses ''SelectQ
 makeLenses ''From
 makeLenses ''Join
