@@ -656,6 +656,19 @@ testNotBetween = testCase "SELECT not between" assertSelect
             (S.codeGen selectNotBetween)
 
 ----------------------------------------
+-- Boolean operators
+----------------------------------------
+
+testIsNull :: Test
+testIsNull = testCase "SELECT is null" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "SELECT is null is incorrect"
+            "SELECT * FROM \"People\" WHERE \"passeportNumber\" IS NULL"
+            (S.codeGen isNullQuery)
+
+----------------------------------------
 -- PostgreSQL
 ----------------------------------------
 
@@ -745,6 +758,7 @@ tests = testGroup "Select"
         , testEqualTo
         , testNotEqualTo
         , testNotBetween
+        , testIsNull
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL

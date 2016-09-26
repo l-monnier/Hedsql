@@ -72,7 +72,7 @@ module Database.Hedsql.Statements.Select
       -- ** Full
     , selectFull
 
-      -- *** Comparison operators
+      -- ** Comparison operators
     , selectGreaterThan
     , selectGreaterThanOrEqualTo
     , selectSmallerThan
@@ -80,6 +80,9 @@ module Database.Hedsql.Statements.Select
     , selectEqualTo
     , selectNotEqualTo
     , selectNotBetween
+
+      -- ** Boolean operators
+    , isNullQuery
 
       -- ** Functions
     , addition
