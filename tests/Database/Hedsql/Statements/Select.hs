@@ -72,6 +72,11 @@ module Database.Hedsql.Statements.Select
       -- ** Full
     , selectFull
 
+      -- *** Comparison operators
+    , selectGreaterThan
+    , selectGreaterThanOrEqualTo
+    , selectSmallerThan
+
       -- ** Functions
     , addition
     , multiplication
@@ -87,9 +92,6 @@ module Database.Hedsql.Statements.Select
     , intersectAllQuery
     , exceptQuery
     , exceptAllQuery
-
-      -- *** Comparison operators
-    , selectGreaterThan
 
     -- * PostgreSQL
     , distinctOnSelect
