@@ -86,6 +86,8 @@ module Database.Hedsql.Statements.Select
     , isNotNullQuery
     , isDistinctFromQuery
     , isNotDistinctFromQuery
+    , isTrueQuery
+    , isNotTrueQuery
 
       -- ** Functions
     , addition
