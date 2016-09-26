@@ -120,8 +120,6 @@ module Database.Hedsql.Statements.Select
 
 import Database.Hedsql
 import Database.Hedsql.Ext
-import Database.Hedsql.SqLite
-
 import qualified Database.Hedsql.Drivers.PostgreSQL.Constructor as P
 import qualified Database.Hedsql.PostgreSQL                     as Pg
 
@@ -1138,56 +1136,3 @@ fromLateral =
             |> from "People"
             |> where_ ("People"/."countryId" /== "Countries"/."countryId")
             |> end
-
-----------------------------------------
--- Quick start tutorial
-----------------------------------------
-
-myQueryOne :: Select [[Undefined]] dbVendor
-myQueryOne =
-       select (//*)
-    |> from (table "films")
-    |> end
-
-myQueryTwo :: Select [[Int]] SqLite
-myQueryTwo =
-       select [id', age]
-    |> from films
-    |> where_ (age /+ intVal 20 `in_` subSelect)
-    |> end
-    where
-        id' = col "id" integer
-        age = col "age" integer
-        films = table "films"
-        actor = table "actors"
-        subSelect =
-               select age
-            |> from actor
-            |> end
-
-myQueryThree :: Select [[Undefined]] Pg.PostgreSQL
-myQueryThree =
-           select (//*)
-        |> from [tableRef $ table "foo", Pg.lateral (wrap sub) "s"]
-        |> end
-        where
-            sub =
-                   select (//*)
-                |> from "bar"
-                |> end
-
-myQueryFour :: Select [[Undefined]] dbVendor
-myQueryFour =
-       select ["firstName", "lastName"]
-    |> from "People"
-    |> where_ ("age" /> genVal (18::Int))
-    |> end
-
-myQueryFive :: Select [[Undefined]] dbVendor
-myQueryFive =
-       select [wrap name, wrap age]
-    |> from (table "People")
-    |> end
-    where
-        name = col "name" $ varchar 256
-        age = col "age" integer
