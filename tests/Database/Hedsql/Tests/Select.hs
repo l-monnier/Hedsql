@@ -636,6 +636,15 @@ testEqualTo = testCase "SELECT equal to" assertSelect
             "SELECT * FROM \"People\" WHERE \"age\" = 18"
             (S.codeGen selectEqualTo)
 
+testNotEqualTo :: Test
+testNotEqualTo = testCase "SELECT not equal to" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "SELECT not equal to is incorrect"
+            "SELECT * FROM \"People\" WHERE \"age\" <> 18"
+            (S.codeGen selectNotEqualTo)
+
 ----------------------------------------
 -- PostgreSQL
 ----------------------------------------
@@ -724,6 +733,7 @@ tests = testGroup "Select"
         , testSmallerThan
         , testSmallerThanOrEqualTo
         , testEqualTo
+        , testNotEqualTo
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL
