@@ -601,11 +601,11 @@ testGreaterThan = testCase "SELECT greater than" assertSelect
             (S.codeGen selectGreaterThan)
 
 testGreaterThanOrEqualTo :: Test
-testGreaterThanOrEqualTo = testCase "SELECT greater than" assertSelect
+testGreaterThanOrEqualTo = testCase "SELECT greater or equal to" assertSelect
     where
         assertSelect :: Assertion
         assertSelect = assertEqual
-            "SELECT greater than is incorrect"
+            "SELECT greater or equal to is incorrect"
             "SELECT * FROM \"People\" WHERE \"age\" >= 18"
             (S.codeGen selectGreaterThanOrEqualTo)
 
@@ -617,6 +617,15 @@ testSmallerThan = testCase "SELECT smaller than" assertSelect
             "SELECT smaller than is incorrect"
             "SELECT * FROM \"People\" WHERE \"age\" < 18"
             (S.codeGen selectSmallerThan)
+
+testSmallerThanOrEqualTo :: Test
+testSmallerThanOrEqualTo = testCase "SELECT smaller or equal to" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "SELECT smaller or equal to is incorrect"
+            "SELECT * FROM \"People\" WHERE \"age\" <= 18"
+            (S.codeGen selectSmallerThanOrEqualTo)
 
 ----------------------------------------
 -- PostgreSQL
@@ -704,6 +713,7 @@ tests = testGroup "Select"
         , testGreaterThan
         , testGreaterThanOrEqualTo
         , testSmallerThan
+        , testSmallerThanOrEqualTo
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL

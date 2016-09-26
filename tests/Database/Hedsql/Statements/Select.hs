@@ -76,6 +76,7 @@ module Database.Hedsql.Statements.Select
     , selectGreaterThan
     , selectGreaterThanOrEqualTo
     , selectSmallerThan
+    , selectSmallerThanOrEqualTo
 
       -- ** Functions
     , addition
