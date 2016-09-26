@@ -18,6 +18,7 @@ module Database.Hedsql.Statements.Select
     , selectTwoCols
     , selectTuple
     , select3Tuple
+    , select4Tuple
     , distinctSelect
 
       -- ** FROM
@@ -171,6 +172,28 @@ select3Tuple =
        c1 = col "firstName" (varchar 256)
        c2 = col "lastName" (varchar 256)
        c3 = col "age" integer
+
+{-|
+@
+SELECT
+  "firstName",
+  "lastName",
+  "age",
+  "title"
+FROM "People"
+@
+-}
+select4Tuple :: Select [(String, String, Int, String)] dbVendor
+select4Tuple =
+       select (c1, c2, c3, c4)
+    |> from "People"
+    |> end
+    where
+       c1 = col "firstName" (varchar 256)
+       c2 = col "lastName" (varchar 256)
+       c3 = col "age" integer
+       c4 = col "title" (varchar 4)
+
 
 -- | > SELECT DISTINCT "firstName" FROM "People"
 distinctSelect :: Select [Undefined] dbVendor

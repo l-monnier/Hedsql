@@ -64,6 +64,17 @@ testSelect3Tuple = testCase "Select 3-tuple" assertSelect
             "SELECT \"firstName\", \"lastName\", \"age\" FROM \"People\""
             (S.codeGen select3Tuple)
 
+testSelect4Tuple :: Test
+testSelect4Tuple = testCase "Select 4-tuple" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "Select 4-tuple query is incorrect"
+            (   "SELECT \"firstName\", \"lastName\", \"age\", \"title\" "
+             <> "FROM \"People\""
+            )
+            (S.codeGen select4Tuple)
+
 ----------------------------------------
 -- Functions
 ----------------------------------------
@@ -616,6 +627,7 @@ tests = testGroup "Select"
         , testSelectDistinctSqLite
         , testSelectTuple
         , testSelect3Tuple
+        , testSelect4Tuple
         , testAdditionSqLite
         , testCurrentDateSqLite
         , testMultiplicationSqLite
