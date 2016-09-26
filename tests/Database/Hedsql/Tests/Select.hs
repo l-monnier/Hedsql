@@ -588,6 +588,19 @@ testExceptAll = testCase "SELECT EXCEPT ALL" assertUnion
             (S.codeGen exceptAllQuery)
 
 ----------------------------------------
+-- Comparison operators
+----------------------------------------
+
+testGreaterThan :: Test
+testGreaterThan = testCase "SELECT greater than" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "SELECT greater than is incorrect"
+            "SELECT * FROM \"People\" WHERE \"age\" > 18"
+            (S.codeGen selectGreaterThan)
+
+----------------------------------------
 -- PostgreSQL
 ----------------------------------------
 
@@ -670,6 +683,7 @@ tests = testGroup "Select"
         , testExceptAll
         , testRandomSqLite
         , testTrim
+        , testGreaterThan
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL

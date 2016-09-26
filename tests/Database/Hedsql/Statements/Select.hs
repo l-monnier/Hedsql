@@ -88,6 +88,9 @@ module Database.Hedsql.Statements.Select
     , exceptQuery
     , exceptAllQuery
 
+      -- *** Comparison operators
+    , selectGreaterThan
+
     -- * PostgreSQL
     , distinctOnSelect
     , fromLateral
