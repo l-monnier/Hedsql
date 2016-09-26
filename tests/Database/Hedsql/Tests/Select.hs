@@ -720,6 +720,15 @@ testIsNotTrue = testCase "SELECT is not true" assertSelect
             "SELECT * FROM \"People\" WHERE \"married\" IS NOT TRUE"
             (S.codeGen isNotTrueQuery)
 
+testIsFalse :: Test
+testIsFalse = testCase "SELECT is false" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "SELECT is false is incorrect"
+            "SELECT * FROM \"People\" WHERE \"married\" IS FALSE"
+            (S.codeGen isFalseQuery)
+
 ----------------------------------------
 -- PostgreSQL
 ----------------------------------------
@@ -816,6 +825,7 @@ tests = testGroup "Select"
         , testIsNotDistinctFrom
         , testIsTrue
         , testIsNotTrue
+        , testIsFalse
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL
