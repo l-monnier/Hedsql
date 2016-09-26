@@ -735,7 +735,7 @@ testIsNotFalse = testCase "SELECT is not false" assertSelect
         assertSelect :: Assertion
         assertSelect = assertEqual
             "SELECT is not false is incorrect"
-            "SELECT * FROM \"People\" WHERE \"married\" IS NOT FALSE false"
+            "SELECT * FROM \"People\" WHERE \"married\" IS NOT FALSE"
             (S.codeGen isNotFalseQuery)
 
 ----------------------------------------
