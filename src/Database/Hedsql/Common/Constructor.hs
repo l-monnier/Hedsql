@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
@@ -372,6 +373,7 @@ import Control.Lens hiding (assign, from, (|>))
 
 import Database.Hedsql.Common.AST
 import Database.Hedsql.Common.Grammar
+import Database.Hedsql.TH.Instances
 
 --------------------------------------------------------------------------------
 -- Table
@@ -1073,33 +1075,8 @@ A selection with many columns will have type:
 class SelectionConstr a b | a -> b where
     selection :: a -> b
 
-instance
-    ( ToColRef a (ColRef c1 db)
-    , ToColRef b (ColRef c2 db)
-    )
-    => SelectionConstr
-    (a, b)
-    (Selection [(c1, c2)] db)
-    where
-        selection (x, y) = Selection
-            [ ColRefWrap $ colRef x
-            , ColRefWrap $ colRef y
-            ]
-
-instance
-    ( ToColRef a (ColRef c1 db)
-    , ToColRef b (ColRef c2 db)
-    , ToColRef c (ColRef c3 db)
-    )
-    => SelectionConstr
-    (a, b, c)
-    (Selection [(c1, c2, c3)] db)
-    where
-        selection (x, y, z) = Selection
-            [ ColRefWrap $ colRef x
-            , ColRefWrap $ colRef y
-            , ColRefWrap $ colRef z
-            ]
+-- Note: for tuples (from 1 to 15), the instances are generated using template
+-- Haskell. The code is located at the end of this file.
 
 instance SelectionConstr
     (ColRefWrap dbVendor) (Selection [Undefined] dbVendor) where
@@ -2069,3 +2046,10 @@ instance ToList (SortRef dbVendor) [SortRef dbVendor] where
 
 instance ToList [SortRef dbVendor] [SortRef dbVendor] where
     toList = id
+
+--------------------------------------------------------------------------------
+-- Template Haskell
+--------------------------------------------------------------------------------
+
+-- | Create all the tuple SelectionConstrs instances from tuple size = 2 to 15.
+$(mkSelectionConstrs 15)
