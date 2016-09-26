@@ -83,6 +83,7 @@ module Database.Hedsql.Statements.Select
 
       -- ** Boolean operators
     , isNullQuery
+    , isNotNullQuery
 
       -- ** Functions
     , addition

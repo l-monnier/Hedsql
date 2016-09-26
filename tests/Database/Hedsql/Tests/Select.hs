@@ -668,6 +668,15 @@ testIsNull = testCase "SELECT is null" assertSelect
             "SELECT * FROM \"People\" WHERE \"passeportNumber\" IS NULL"
             (S.codeGen isNullQuery)
 
+testIsNotNull :: Test
+testIsNotNull = testCase "SELECT is not null" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "SELECT is not null is incorrect"
+            "SELECT * FROM \"People\" WHERE \"passeportNumber\" IS NOT NULL"
+            (S.codeGen isNotNullQuery)
+
 ----------------------------------------
 -- PostgreSQL
 ----------------------------------------
@@ -759,6 +768,7 @@ tests = testGroup "Select"
         , testNotEqualTo
         , testNotBetween
         , testIsNull
+        , testIsNotNull
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL
