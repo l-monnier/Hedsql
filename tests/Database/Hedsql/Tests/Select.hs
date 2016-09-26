@@ -645,6 +645,16 @@ testNotEqualTo = testCase "SELECT not equal to" assertSelect
             "SELECT * FROM \"People\" WHERE \"age\" <> 18"
             (S.codeGen selectNotEqualTo)
 
+
+testNotBetween :: Test
+testNotBetween = testCase "SELECT not between" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "SELECT not between is incorrect"
+            "SELECT * FROM \"People\" WHERE \"age\" NOT BETWEEN 5 AND 18"
+            (S.codeGen selectNotBetween)
+
 ----------------------------------------
 -- PostgreSQL
 ----------------------------------------
@@ -734,6 +744,7 @@ tests = testGroup "Select"
         , testSmallerThanOrEqualTo
         , testEqualTo
         , testNotEqualTo
+        , testNotBetween
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL
