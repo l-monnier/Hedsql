@@ -89,6 +89,7 @@ module Database.Hedsql.Statements.Select
     , isTrueQuery
     , isNotTrueQuery
     , isFalseQuery
+    , isNotFalseQuery
 
       -- ** Functions
     , addition
