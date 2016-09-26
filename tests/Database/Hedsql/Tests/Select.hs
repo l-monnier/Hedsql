@@ -633,7 +633,7 @@ testEqualTo = testCase "SELECT equal to" assertSelect
         assertSelect :: Assertion
         assertSelect = assertEqual
             "SELECT equal to is incorrect"
-            "SELECT * FROM \"People\" WHERE \"age\" = 18 false"
+            "SELECT * FROM \"People\" WHERE \"age\" = 18"
             (S.codeGen selectEqualTo)
 
 ----------------------------------------

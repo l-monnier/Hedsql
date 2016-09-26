@@ -77,7 +77,7 @@ module Database.Hedsql.Statements.Select
     , selectGreaterThanOrEqualTo
     , selectSmallerThan
     , selectSmallerThanOrEqualTo
-    , selectEqual
+    , selectEqualTo
 
       -- ** Functions
     , addition
@@ -843,8 +843,8 @@ selectSmallerThanOrEqualTo =
     |> end
 
 -- | > SELECT * FROM "People" WHERE "age" = 18
-selectEqual :: Select [[Undefined]] dbVendor
-selectEqual =
+selectEqualTo :: Select [[Undefined]] dbVendor
+selectEqualTo =
        selectPeople
     |> where_ (col "age" integer /== intVal 18)
     |> end
