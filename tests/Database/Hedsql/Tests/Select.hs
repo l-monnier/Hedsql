@@ -677,6 +677,19 @@ testIsNotNull = testCase "SELECT is not null" assertSelect
             "SELECT * FROM \"People\" WHERE \"passeportNumber\" IS NOT NULL"
             (S.codeGen isNotNullQuery)
 
+testIsDistinctFrom :: Test
+testIsDistinctFrom = testCase "SELECT is distinct from" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "SELECT is distinct from is incorrect"
+            ( "SELECT * "
+            <> "FROM \"People\" "
+            <> "WHERE \"nickNameAsKind\" IS DISTINCT FROM \"nickNameAsAdult\""
+            )
+            (S.codeGen isDistinctFromQuery)
+
+
 ----------------------------------------
 -- PostgreSQL
 ----------------------------------------
@@ -769,6 +782,7 @@ tests = testGroup "Select"
         , testNotBetween
         , testIsNull
         , testIsNotNull
+        , testIsDistinctFrom
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL
