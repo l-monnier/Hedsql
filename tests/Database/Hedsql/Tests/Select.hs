@@ -750,6 +750,18 @@ testIsUnknown = testCase "SELECT is Unknown" assertSelect
             )
             (S.codeGen isUnknownQuery)
 
+testIsNotUnknown :: Test
+testIsNotUnknown = testCase "SELECT is not Unknown" assertSelect
+    where
+        assertSelect :: Assertion
+        assertSelect = assertEqual
+            "SELECT is not unknown is incorrect"
+            ( "SELECT * "
+            <> "FROM \"People\" "
+            <> "WHERE \"nickNameAsKind\" = \"nickNameAsAdult\" IS NOT UNKNOWN"
+            )
+            (S.codeGen isNotUnknownQuery)
+
 ----------------------------------------
 -- PostgreSQL
 ----------------------------------------
@@ -849,6 +861,7 @@ tests = testGroup "Select"
         , testIsFalse
         , testIsNotFalse
         , testIsUnknown
+        , testIsNotUnknown
         ]
     , testGroup "PostgreSQL"
         [ testLastInsertIdPostgreSQL
