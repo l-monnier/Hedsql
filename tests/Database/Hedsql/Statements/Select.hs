@@ -368,8 +368,10 @@ nestedJoins =
     |> from join2
     |> end
     where
-        join1 = innerJoin "People" "Countries" $ "People" /. "countryId" /== "Countries" /. "countryId"
-        join2 = innerJoin join1 "Addresses" $ "People" /. "personId" /== "Addresses" /. "personId"
+        join1 = innerJoin "People" "Countries" cond1
+        cond1 = "People" /. "countryId" /== "Countries" /. "countryId"
+        join2 = innerJoin join1 "Addresses" cond2
+        cond2 = "People" /. "personId" /== "Addresses" /. "personId"
 
 -- Sub-queries
 --------------------
